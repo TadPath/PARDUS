@@ -6,26 +6,26 @@ Remote (network) control robotics and vision automation standard
 ---
 
 ----------------------- ------------------------------------
-> :warning: **NOTE**: **The PARDUS project is NOT accepting pull requests at this stage of development. Any pull requests will be either blocked, ignored and/or deleted. I welcome bug reports, feature reqeusts and issues / queries.**
+> :warning: **NOTE**: **The PARDUS project is NOT accepting pull requests at this stage of development. Any pull requests will be either blocked, ignored and/or deleted. I welcome bug reports, feature requests and issues / queries.**
 ----------------------------------------------------------------
 
 ---
 
 This project is released under the following licenses:
 
- For source code (including CAD files, STL files and computer programs) and compiled code: the GNU GENERAL PUBLIC LICENSE Version 3
+For source code (including CAD files, STL files and computer programs) and compiled code: the GNU GENERAL PUBLIC LICENSE Version 3
  
  For documentation: the GNU Free Documentation License, Version 1.3
 
- PARDUS was published in abstract form in the Journal of Pathology, 2020. Citation is: Tadrous, P. J. (2020, March). Pardus: An Affordable Open Source Hardware and Software Robotic Platform for Standard Microscopes. In JOURNAL OF PATHOLOGY (Vol. 250, pp. 15-15). 111 RIVER ST, HOBOKEN 07030-5774, NJ USA: WILEY.
+PARDUS was published in abstract form in the Journal of Pathology, 2020. Citation is: Tadrous, P. J. (2020, March). Pardus: An Affordable Open Source Hardware and Software Robotic Platform for Standard Microscopes. In JOURNAL OF PATHOLOGY (Vol. 250, pp. 15-15). 111 RIVER ST, HOBOKEN 07030-5774, NJ USA: WILEY.
 
  You can get free open access to the article through the following links:
  
- > [Plain text abstract](docs/PARD_Abstract.txt)
+ * [Plain text abstract](docs/PARD_Abstract.txt)
  
- > [Full PDF poster](docs/PARD_Poster.pdf)
+ * [Full PDF poster](docs/PARD_Poster.pdf)
  
- > [PDF of all abstracts for the meeting](https://www.pathsoc.org/_userfiles/pages/files/meetings/archive/WM2020AbsFile.pdf)
+ * [PDF of all abstracts for the meeting](https://www.pathsoc.org/_userfiles/pages/files/meetings/archive/WM2020AbsFile.pdf)
 
 ---
                        
@@ -35,11 +35,19 @@ The [P]rogrammable, [A]ffordable, [R]emote-controlled [D]rive [U]tility [S]tanda
 
 This software part of the standard is composed of three cooperating and communicating programs:
 
-1. The Pardus Main Program and Server: This runs on the Raspberry Pi (using Raspbian and the Pigpio daemon) connected to the motors (via a separate driver board) and camera and it receives instructions from the user as to how to move the motors and when and how to acquire images from the camera and where to send them. The user can give many instructions via the Main Program GUI but can also give instructions from a remote computer using the client program discussed below.
-2. The Pardus Client Program runs on a remote computer (multiple OS are supported including MS Windows). The client may also be run on the same Raspberry Pi as the main program simultaneously but this is not recommended because it puts a lot of strain on the Pi. Via the client program the user can give instructions to the remote motor/camera system either as single manual commands or through a script for automatic execution of a series of commands such as whole slide XY scanning or Z scanning (or both) and many other procedures that may involve image capture at each stage. The images captured are sent via the network to be saved on the client computer.
-3. The Pardus Daemon. What has been described so far with client/server is the ability to remotely move a stage and automatically acquire images which is fine if all you want to do is acquire image datasets such as create a whole slide image for archiving or 3D deconvolution or digital pathology. However, the Pardus system goes one step further and allows you to perform custom image processes on the images acquired during acquisition via a third program called the Pardus Daemon which runs in the background on the client computer an communicates with the client program to execute custom commands via the host OS command processor. 
+1. The **PARD Server**: This computer runs a frame grabber connected to a video device and controls multiple stepper motors with inputs from limit switches. It receives instructions from the user as to how to move the motors and when and how to acquire images from the camera and where to send those images. The user can give many instructions via a GUI running on the server but teh real power comes from the fact that the user can instead log in remotely and give instructions from a remote computer over the internet or intranet using the client program discussed below.
+2. The **PARD Client** program runs on a remote computer (multiple OS are supported including MS Windows). The client may also be run on server machine. Via the PARD client the user can give instructions to the remote motor/camera system either as single manual commands or through a script for automatic execution of a series of commands such as whole slide XY scanning or Z scanning (or both) and many other procedures that may involve image capture at each stage. The images captured are sent via the network to be saved and / or processed on the client computer.
+3. The **PARD Daemon**. What has been described so far with the client/server system is the ability to remotely move a series of motors and automatically acquire images which is fine if all you want to do is acquire image datasets such as create a whole slide image for archiving or 3D deconvolution or digital pathology using a robotic microscope. So far, that has all been done before with previous systems. However, the PARDUS system goes one step further and allows you to perform custom image processes on the images acquired during acquisition via a third program called the PARD Daemon which runs in the background on the client computer and communicates with the client program to execute custom commands via the host OS command processor. These commands may use completely different software to the PARDUS system but the results may still be used by it. This allows information derived from the processing of captured images to be fed back into and guide the progress of the remote image and robotic procedures according to some custom algorithm designed by the user. 
 
+State of Development
+--------------------
+A full working demo system was built and tested mid 2019 using a Raspberry Pi as server connected to 3 Nema 17 motors, limit switches and a USB camera. These were fitted to a Zeiss Standard microscope (shown in the above title picture) to effect automated slide scanning for AAFB detection (detection of tuberculosis bacilli in biopsies) using an MS Windows-based remote client. My [Pathological Society Poster PDF](docs/PARD_Poster.pdf) will give you more details of the system and some results.
 
+Unfortunately the COVID Pandemic got in the way of me preparing the code for release back then and after that I was in the middle of making the PUMA Microscope system which took precedence. Only now have I returned to the PARDUS system because it fits in well with the stage of development of the PUMA - being ready to explore image acquisition and more advanced techniques. So I have begun the long job of putting the PARDUS code into a state that would allow useful publication.
+
+I have decided to move away from the Raspberry Pi platform for the PARD Server because, although this worked well for the low powered applications I was doing for the demo system in 2019, it is not very scaleable and limits the potential of the project. I will continue to develop the PARD server on generic Linux-based systems. The code - and the standard itself - thus need extensive revision and I will do what I can but **this project is unfunded and done in my own time** so progress may be quite slow as I have many other commitments.
+
+For now I have managed to extract the basic image acquisition aspects of the PARD Server and put them into a 'Stand Alone' program called **PARDUS Capture** which is available here in this repository. This has some extended features not available in the original server but it also lacks many others (there is no server loop and no PARDUS Command Script (PCS) interpreter). However, it's a start and hopefully a useful image capture program for microscopy, astronomy and other scientific imaging applications. See the ReadMe.md file in the PARDUS_Capture folder of this repository for more detail about that.
 
 PJT
 
