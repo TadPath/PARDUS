@@ -832,8 +832,12 @@ void show_message(char *,char *,int,int);
 #define MT_INFO 1 // Equivalent of printf - usually for info only
 #define MT_ERR  2 // Equivalent of fprintf(sderr, - to indicate an error
 #define MT_QUIT 3 // Message given upon program quit request.
-char LogFilename[PATH_MAX];   // Name of file used to store log information of a user session
-FILE* fplog = NULL;           // For the log file - always set to NULL when not in use so it can also be used as a flag to let us know
+char LogFilename[PATH_MAX];   // Name of file used to store log
+                              // information of a user session.
+FILE* fplog = NULL;           // For the log file - always set to NULL
+                              // when not in use so it can also be used
+                              // as a flag to let us know if the file is
+                              // open.
 int Log_wanted = 0; // A global to let us know if log entries to a file
                     // are to be attempted.
 
