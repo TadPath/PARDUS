@@ -20,8 +20,11 @@ This project is released under the following licenses:
  PARDUS was published in abstract form in the Journal of Pathology, 2020. Citation is: Tadrous, P. J. (2020, March). Pardus: An Affordable Open Source Hardware and Software Robotic Platform for Standard Microscopes. In JOURNAL OF PATHOLOGY (Vol. 250, pp. 15-15). 111 RIVER ST, HOBOKEN 07030-5774, NJ USA: WILEY.
 
  You can get free open access to the article through the following links:
+ 
  > [Plain text abstract](docs/PARD_Abstract.txt)
+ 
  > [Full PDF poster](docs/PARD_Poster.pdf)
+ 
  > [PDF of all abstracts for the meeting](https://www.pathsoc.org/_userfiles/pages/files/meetings/archive/WM2020AbsFile.pdf)
 
 ---
