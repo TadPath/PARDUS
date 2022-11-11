@@ -21,7 +21,7 @@ PARDUS was published in abstract form in the Journal of Pathology, 2020. Citatio
 
  You can get free open access to the article through the following links:
  
- * [Plain text abstract](docs/PARD_Abstract.txt)
+ * [Plain text abstract](docs/PARD_Abstract.md)
  
  * [Full PDF poster](docs/PARD_Poster.pdf)
  
