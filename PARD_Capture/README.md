@@ -34,7 +34,7 @@ PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to a
 * Facility to take image series (each image may be a multi-frame average with all the above corrections applied as required).
 * Facility to do time-lapse sequences.
 * Facility for delayed start to image capture.
-* For a complete list of options, see the user's manual
+* For a complete list of options, see the full [User's manual](https://github.com/TadPath/PARDUS/tree/main/PARD_Capture#full-user-manual)
 
 
 Background
