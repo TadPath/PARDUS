@@ -35,6 +35,7 @@ PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to a
 * Facility to do time-lapse sequences.
 * Facility for delayed start to image capture.
 * For a complete list of options, see the full [User's manual](#full-user-manual)
+* Not all cameras can work with this software. It has only been extensivelty tested with the AF51 from OptArc.co.uk and some tests with a few other UVC cameras have worked but some do not. A compatible camera must be able to emit a video stream in either or both YUYV and MJPEG formats (only) - other output formats are not supported. Resolutions with a vertical dimensions of 144 or 288 will not be supported even if a camera is otherwise supported.
 
 
 Background
