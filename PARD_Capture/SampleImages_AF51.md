@@ -4,7 +4,7 @@ Scientific image acquisition software, FLOSS GPL v3
                        
 Desription
 ------------
-Below are links to some images taken with the AF51 (5 megapixel USB 2.0 camera) from [OptArc](https://www.optarc.co.uk) using the PARD Capture software. These are large full resolutio (5 megapixel) uncompressed files so may take some time to load depending on your connection speed.
+Below are links to some images taken with the AF51 camera from [OptArc](https://www.optarc.co.uk) using the PARD Capture software. These are large full resolutio (5 megapixel) uncompressed files so may take some time to load depending on your connection speed.
 
 1. [Colour_1_png](Images/x40yuyvOA_avg_rgb.png) 3.4 MB PNG image. This is an image of a histological section of human skin stained with H&E taken through a PUMA microscope using an OptArc x40 objective. The image is a 64 frame average using the YUYV raw output of the camera. No dark field of flat field corrections was used. No corrections mask was used. The camera 'Sharpening' setting was set to 1 (out of a possible range of 0 to 100). The scale bar was added after acquisition in a separate software package.
 
