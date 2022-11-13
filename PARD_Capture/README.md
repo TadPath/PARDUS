@@ -47,7 +47,7 @@ Now I have released the first experimental camera system for the PUMA microscope
 
 How to Install
 --------------
-PARD Capture is only available as C source code from this (the official) repository. You will need to compile it to run it. I have only tested it with gcc. There is no make file or package manager installer route for PARDUS capture at this time. 
+PARD Capture is only available as C source code from this (the official) repository. You will need to compile it to run it. I have only tested it with gcc. So far it has been tested successfully with Arch/LXDE and Fedora/Gnome on 64 bit x86 Intel platforms. There is no make file or package manager installer route for PARDUS capture at this time. 
 The program itself comes as a single self-contained source file but to compile it into an executable program you will need to ensure first that you have installed all the libraries it depends on (i.e. its dependencies).
 You will need the developer libs for v4l2, gtk3, libjpeg and libpng. The audio GUI signals require the PulseAudio libraries which may already come with your Linux as standard but, if not, you must install it. The below table shows the libraries you need to install with their names as used in Arch, Fedora, Debian and Ubuntu Linux distros:
 
@@ -61,7 +61,7 @@ You will need the developer libs for v4l2, gtk3, libjpeg and libpng. The audio G
 
 Table: Dependencies for PARD Capture. Install these using your Linux installation method before compiling the PARD Capture software.
 
-Note: Arch Linux (and its derivatives) installs the developer parts of a lib as standard with each lib. Other Linux distros need to specifically install the ‘dev’ or ‘devel’ versions of each lib as shown in teh table.
+Note: Arch Linux (and its derivatives) installs the developer parts of a lib as standard with each lib. Other Linux distros need to specifically install the ‘dev’ or ‘devel’ versions of each lib as shown in the table.
 
 Once all the dependencies are installed compile the PARD Capture code itself (called pardcap.c) with gcc using the following command:
 
