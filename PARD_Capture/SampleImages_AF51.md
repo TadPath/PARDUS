@@ -2,7 +2,7 @@
 Scientific image acquisition software, FLOSS GPL v3
 
                        
-Desription
+Description
 ------------
 Below are links to some images taken with the AF51 camera from [OptArc](https://www.optarc.co.uk) using the PARD Capture software. These are large full resolutio (5 megapixel) uncompressed files so may take some time to load depending on your connection speed.
 
