@@ -12,7 +12,7 @@ Scientific image acquisition software, FLOSS GPL v3
                        
 Introduction
 ------------
-PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to acquire images from a video device such as a USB camera or any other device that will interface as /dev/video0. Currently it is only for Linux. There are many free image grabber programs out there so why use PARD Capture?
+PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to acquire images from a video device such as a USB camera or any other device that will interface as /dev/video0. Currently it is only for Linux. Some sample images taken with this software can be seen [here](SampleImages_AF51.md). There are many free image grabber programs out there so why use PARD Capture?
 
 * Designed for scientific quantitative image capture
 * Real-time preview with option for rolling multi-frame integration for night vision / low light preview
