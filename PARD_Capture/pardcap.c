@@ -67,7 +67,7 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 11.11.22)                      */
+/* P. J. Tadrous 31.01.2020 (last edit 20.11.22)                      */
 /**********************************************************************/
 
 // Linux:
@@ -7874,6 +7874,7 @@ static int init_flatfield_image(int normalise_ff)
  
  imfmt=0; 
  rawdou=0; // Is the FF image raw doubles format?
+
  
  // Read the image file header to get dimensions and file type
  if(!get_pgm_header(Selected_FF_filename, &lht,&lwd))     imfmt=SAF_YP5;   // It's a pgm greyscale image
@@ -9155,7 +9156,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   // but only if they say they want to use it.
   // This is done here AFTER the mask initialisation above for the
   // reasons stated above.
-  if(ff_pending && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usedfcor))==TRUE){
+  if(ff_pending && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useffcor))==TRUE){
     if(mask_alloced==MASK_NO){
        show_message("Although a flat field image was selected it cannot be processed or used due to failure to load or generate a mask.","FYI: ",MT_INFO,1);
       } else if(init_flatfield_image(0)){
