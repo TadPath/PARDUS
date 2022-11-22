@@ -67,7 +67,7 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 20.11.22)                      */
+/* P. J. Tadrous 31.01.2020 (last edit 21.11.22)                      */
 /**********************************************************************/
 
 // Linux:
@@ -103,7 +103,7 @@
 
 
 // Version number
-#define PARDCAP_VERN "1.0"
+#define PARDCAP_VERN "1.0.21.11.22"
 
 // This is needed for general programming
 #include <stdio.h>
@@ -558,6 +558,14 @@ int            PreviewImg_size,PreviewImg_rgb_size;
 int            PreviewHt,PreviewWd,PreviewWd_stride;
 int            Preview_impossible,Need_to_preview;
 int            Preview_integral,Preview_bias,PreviewIDX;
+double        *Preview_dark; // Master dark for live preview
+int            PrevDark_BtnStatus = 0; // State of preview master dark
+int            PrevDark_Loaded = 0; // Whether a preview dark is loaded
+// PrevDark_BtnStatus values (determines the action of the preview dark
+// button)
+#define PD_LOAD  0 // Button will load a master dark
+#define PD_SAVE  1 // Button will save a master dark
+#define PD_EJECT 2 // Button will eject a loaded master dark
 
 // Values for preview frame rate
 const char *fps_options[] = {"1","2","3","4","5","7","10","15","25","30"};
@@ -754,20 +762,9 @@ GtkWidget *load_file_dialog,*save_file_dialog;
 GtkWidget *About_dialog;
 GtkWidget *preview_integration_sbutton;
 GtkWidget *preview_bias_sbutton;
+GtkWidget *preview_dark_button;
 GtkWidget *prev_int_label,*prev_bias_label;
 
-// These are for a file load dialog to enable a flat field correction
-// reference image, dark field correction reference image, correction
-// mask image and camera settings file to be selected to get the file
-// path for loading/saving these files:
-GtkFileChooser *ffimg_load_chooser; // Flat field reference image
-GtkFileFilter  *ffimg_load_filter;
-GtkFileChooser *dfimg_load_chooser; // Dark field reference image
-GtkFileFilter  *dfimg_load_filter;
-GtkFileChooser *mask_load_chooser;  // Mask image
-GtkFileFilter  *mask_load_filter;
-GtkFileChooser *csf_file_chooser;   // Camera settings file load/save
-GtkFileFilter  *csf_file_filter;
 
 // These are for the interactive slider control for real-time setting of
 // a camera control value:
@@ -3772,6 +3769,178 @@ int write_fits(char *fname, int colchan, int is_avg)
  return 1;
 }
 
+int write_preview_dark(char *fname)
+// Write the current preview image as a master dark for live preview
+// with a qih external header. 
+// Return 1 on error, 0 on success.
+{
+ FILE *fpo,*fph;
+ char *headername;
+ double dn;
+ size_t len,rgbpos,nobj;
+ 
+ // Allocate memory for header file name
+ headername=(char *)calloc(sizeof(char),FILENAME_MAX);
+ if(headername==NULL){
+   show_message("Failed to allocate memory for preview master dark header.","Preview Dark Save FAILED: ",MT_ERR,1); 
+   return 1;
+ }
+
+ // Attempt to write the data
+ if( (fpo=fopen(fname,"wb"))==NULL ){
+   show_message("Could not open output file to write the preview master dark data.","Preview Dark Save FAILED: ",MT_ERR,1); 
+   goto error_return;
+  }
+ 
+ len=(size_t)PreviewHt*(size_t)PreviewWd_stride;
+
+ for(rgbpos=0;rgbpos<len;rgbpos+=3){
+    dn=PreviewImg[rgbpos];
+    nobj=fwrite(&dn,sizeof(double),1,fpo);
+    if(nobj<1){
+        show_message("Checksum error writing preview master dark.","Preview Dark Save FAILED: ",MT_ERR,1); 
+        fclose(fpo); goto error_return;
+       }
+   }
+ fclose(fpo);
+ 
+ // Now write the header file
+ len=strlen(fname);
+ if(len>=FILENAME_MAX){
+   show_message("Cannot create header (image file name is too long).","Preview Dark Save FAILED: ",MT_ERR,1); 
+   goto error_return;
+ }
+ sprintf(headername,"%s",fname);
+ if(headername[len-4]!='.'){
+   show_message("Cannot create header file name extension.","Preview Dark Save FAILED: ",MT_ERR,1); 
+   goto error_return;
+  }
+ headername[len-3]='q';
+ headername[len-2]='i';
+ headername[len-1]='h';
+ if( (fph=fopen(headername,"wb"))==NULL ){
+   show_message("Cannot open output file to write qih header data.","Preview Dark Save FAILED: ",MT_ERR,1); 
+   goto error_return;
+  }
+ fprintf(fph,"{qih: BiaQIm Header File }\n[Signed_?] depends\n[Datatype] depends\n[Height] %d\n[Width] %d\n",PreviewHt,PreviewWd);
+ fclose(fph);
+
+ free(headername);
+ return 0;
+ 
+ error_return:
+ free(headername);
+ return 1;
+}
+
+int read_preview_dark(char *fname)
+// Reads a preview image master dark frame image. This must be in raw
+// doubles format with a .qih external header confirming its size as
+// PreviewHt x PreviewWd - no other size is allowed.
+{
+ FILE *fph;
+ size_t len,nobj;
+ char *headername;
+ int nmagic,fgc,lht,lwd;
+ 
+ // Allocate memory for header file name
+ headername=(char *)calloc(sizeof(char),FILENAME_MAX);
+ if(headername==NULL){
+   show_message("Failed to allocate memory for the qih header.","QIH Read FAILED: ",MT_ERR,1); 
+   return 1;
+ }
+ 
+ // Created the expected header file name
+ len=strlen(fname);
+ if(len>=FILENAME_MAX){
+   show_message("Cannot create header (image file name is too long).","QIH Read FAILED: ",MT_ERR,1); 
+   goto error_return;
+ }
+ sprintf(headername,"%s",fname);
+  
+ // Read the extension - it must be '.dou' or '.DOU'
+ if(check_extn(headername, "dou", 3, "QIH Read FAILED: ")){
+    if(check_extn(headername, "DOU", 3, "QIH Read FAILED: ")) goto error_return;
+  }
+
+
+ // Now create the expected QIH file name from the raw image file name
+ headername[len-3]='q';
+ headername[len-2]='i';
+ headername[len-1]='h';
+ 
+ // Attempt to read the header file information and ensure it is
+ // consistent:
+ if( (fph=fopen(headername,"rb"))==NULL ){
+     show_message("Cannot open qih file to read it (Preview dark).","QIH Read FAILED: ",MT_ERR,1); 
+     goto error_return;
+    }
+
+ // Read the QIH file to see if it is of the correct format
+ nmagic=0;
+ fgc=fgetc(fph);
+ if(fgc==EOF) goto format_error;
+ if(fgc=='{') nmagic++;
+ fgc=fgetc(fph);
+ if(fgc==EOF) goto format_error;
+ if(fgc=='q') nmagic++;
+ fgc=fgetc(fph);
+ if(fgc==EOF) goto format_error;
+ if(fgc=='i') nmagic++;
+ fgc=fgetc(fph);
+ if(fgc==EOF) goto format_error;
+ if(fgc=='h') nmagic++;
+ fgc=fgetc(fph);
+ if(fgc==EOF) goto format_error;
+ if(fgc==':') nmagic++;
+ if(nmagic!=5) goto format_error;
+ // Ignore the header comments ...
+ FOREVER{ 
+   if(feof(fph)){
+     goto format_error;
+    } else if(fgetc(fph)=='}') break;
+  }
+ //Now read the values
+ fgc=fscanf(fph,"%*s %*s %*s %*s %*s %d %*s %d",&lht,&lwd);
+ fclose(fph);
+
+ if(fgc==EOF){
+   show_message("An error occured when reading the header file (Preview dark).","QIH Read FAILED: ",MT_ERR,1); 
+   goto error_return;
+  }
+ // Test if the header gives the correct dimensions
+ if((lht != PreviewHt) || (lwd != PreviewWd)){
+   show_message("The header file does not have the correct preview dimensions.","QIH Read FAILED: ",MT_ERR,1); 
+   goto error_return;
+  }
+ 
+ // Now attempt to read the data into the Preview dark frame buffer
+ if( (fph=fopen(fname,"rb"))==NULL ){
+     show_message("Cannot open the file to read it (Preview dark).","Preview Dark Load FAILED: ",MT_ERR,1); 
+     goto error_return;
+    }
+ len=(size_t)PreviewHt*(size_t)PreviewWd;
+ nobj=fread((void *)Preview_dark,sizeof(double),len,fph);
+ if(nobj<len){
+        show_message("Checksum error reading preview master dark.","Preview Dark Load FAILED: ",MT_ERR,1); 
+        fclose(fph); 
+        goto error_return;
+       }
+ fclose(fph);
+
+ free(headername);
+ PrevDark_Loaded=1;
+ return 0;
+ 
+ format_error:
+   fclose(fph);
+   show_message("The header file is not of the correct format.","QIH Read FAILED: ",MT_ERR,1); 
+  
+ error_return:
+ free(headername);
+ return 1;
+}
+
 
 int write_rawdou(char *fname,int colchan)
  // Write the image doubles Frm buffer(s) as raw doubles file(s) with a
@@ -4864,8 +5033,9 @@ static int colour_convert(const unsigned short *p)
                      ipos=SSrow[prow]+SScol[pcol];
                      PreviewBuff[PreviewIDX][pipos]=(int)(p[ipos] & 0xff);
                      for(fidx=0,ival=Preview_bias;fidx<Preview_integral;fidx++) ival+=PreviewBuff[fidx][pipos];
+                     uy1=uchar_from_d((double)ival-Preview_dark[pipos]);
                      pipos++;
-                     uy1=uchar_from_d((double)ival);
+
                      PreviewImg[Prev_startcol+rgbpos++]=uy1;
                      PreviewImg[rgbpos++]=uy1;
                      PreviewImg[rgbpos++]=uy1;
@@ -5033,8 +5203,9 @@ static int colour_convert(const unsigned short *p)
                      if(uy3>=max) max=uy3;
                      PreviewBuff[PreviewIDX][pipos]=(int)max;
                      for(fidx=0,ival=Preview_bias;fidx<Preview_integral;fidx++) ival+=PreviewBuff[fidx][pipos];
+                     uy1=uchar_from_d((double)ival-Preview_dark[pipos]);
                      pipos++;
-                     uy1=uchar_from_d((double)ival);
+
                      PreviewImg[Prev_startcol+rgbpos++]=uy1;
                      PreviewImg[rgbpos++]=uy1;
                      PreviewImg[rgbpos++]=uy1;
@@ -6734,6 +6905,10 @@ void tidy_up(void)
    show_message("> Freeing preview image.","",MT_INFO,0);
    free(PreviewImg);
   }
+ if(Preview_dark!=NULL){
+   show_message("> Freeing preview master dark.","",MT_INFO,0);
+   free(Preview_dark);
+  }
  if(PreviewRow!=NULL){
    show_message("> Freeing preview row buffer.","",MT_INFO,0);
    free(PreviewRow);
@@ -7574,12 +7749,159 @@ int test_selected_df_filename(char *filename)
  return 0;
 }
 
+void nullify_preview_darkfield(void)
+// Eject a loaded live preview master dark.
+{
+ int idx;
+
+ for(idx=0;idx<PreviewImg_size;idx++) Preview_dark[idx]=0.0;
+ PrevDark_Loaded=0;
+ PrevDark_BtnStatus=PD_LOAD;
+ gtk_button_set_label(GTK_BUTTON(preview_dark_button),"Load P.Dark");
+ show_message("Preview dark field image has been nullified.","FYI: ",MT_INFO,1);
+ return;
+}
+
+static void btn_io_prev_darkfield_click(GtkWidget *widget, gpointer data) 
+// This attempts to load/save a live preview master dark.
+{
+ gint res;
+ gint choice;
+ GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooserAction fca_save = GTK_FILE_CHOOSER_ACTION_SAVE;
+ GtkFileChooser *dfprev_file_chooser; // Master Dark for live preview
+ GtkFileFilter  *dfprev_file_filter;
+ gchar *btn_markup;
+ const char *loaded_format = "<span foreground=\"green\" weight=\"bold\">\%s</span>";
+ GtkWidget *btnlabel;
+
+ // Take action according to current status of button
+ switch(PrevDark_BtnStatus){
+    case PD_LOAD:
+    // Set up the 'file load' dialogue with the dark field image 
+    // choosing settings:
+    dfprev_file_filter  = gtk_file_filter_new();
+    gtk_file_filter_set_name (dfprev_file_filter,"Preview Dark Field Images");
+    gtk_file_filter_add_pattern (dfprev_file_filter, "*.dou");
+    load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Dark Field Image",
+                                      GTK_WINDOW(Win_main),
+                                      fca_open,
+                                      "_Cancel",
+                                      GTK_RESPONSE_CANCEL,
+                                      "_Open",
+                                      GTK_RESPONSE_ACCEPT,
+                                      NULL);
+                                    
+    dfprev_file_chooser = GTK_FILE_CHOOSER (load_file_dialog);
+    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
+    gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
+    // Run the 'file load' dialogue
+    res = gtk_dialog_run (GTK_DIALOG (load_file_dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+     {
+      gchar *filename;
+      filename = gtk_file_chooser_get_filename (dfprev_file_chooser);
+      read_preview_dark((char *)filename);
+      g_free(filename);
+     }
+     // Remove the filter from the file load dialogue and close it:
+     gtk_file_chooser_remove_filter(dfprev_file_chooser,dfprev_file_filter);
+     gtk_widget_destroy(load_file_dialog);
+    break;
+    case PD_SAVE:
+    // Set up the 'file save' dialogue with the dark field image 
+    // choosing settings:
+    dfprev_file_filter  = gtk_file_filter_new();
+    gtk_file_filter_set_name (dfprev_file_filter,"Preview Dark Field Images");
+    gtk_file_filter_add_pattern (dfprev_file_filter, "*.dou");
+    save_file_dialog = gtk_file_chooser_dialog_new ("Save a Preview Dark Field Image",
+                                      GTK_WINDOW(Win_main),
+                                      fca_save,
+                                      "_Cancel",
+                                      GTK_RESPONSE_CANCEL,
+                                      "_Save",
+                                      GTK_RESPONSE_ACCEPT,
+                                      NULL);
+                                    
+    dfprev_file_chooser = GTK_FILE_CHOOSER (save_file_dialog);
+    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
+    gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
+    // Run the 'file save' dialogue
+    res = gtk_dialog_run (GTK_DIALOG (save_file_dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+     {
+      gchar *filename;
+      filename = gtk_file_chooser_get_filename (dfprev_file_chooser);
+      write_preview_dark((char *)filename);
+      g_free(filename);
+     }
+     // Remove the filter from the file save dialogue and close it:
+     gtk_file_chooser_remove_filter(dfprev_file_chooser,dfprev_file_filter);
+     gtk_widget_destroy(save_file_dialog);
+    break;
+    case PD_EJECT:
+    // Ask if sure they really want to eject the current preview dark.
+    // If yes, eject it. In either case, cycle the button action
+    gtk_window_set_title (GTK_WINDOW (dlg_choice), "Really eject current preview master dark?");
+    gtk_message_dialog_set_markup(GTK_MESSAGE_DIALOG(dlg_choice),"Do you really want to eject the preview master dark?");
+    choice = gtk_dialog_run(GTK_DIALOG(dlg_choice));
+    switch (choice)
+      {
+       case GTK_RESPONSE_YES:
+       nullify_preview_darkfield();
+       break;
+       default:
+       break;
+     }
+    break;
+   }
+
+ 
+  // Cycle the action of the preview dark button
+   PrevDark_BtnStatus++;
+   if(PrevDark_BtnStatus>2) PrevDark_BtnStatus = 0;
+recycle:
+   switch(PrevDark_BtnStatus){
+    case PD_LOAD:
+      if(PrevDark_Loaded) {
+        btn_markup = g_markup_printf_escaped (loaded_format, "Load P.Dark");
+        btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+        gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+        g_free (btn_markup);
+       } else gtk_button_set_label(GTK_BUTTON(widget),"Load P.Dark");
+    break;
+    case PD_SAVE:
+      if(PrevDark_Loaded) {
+        btn_markup = g_markup_printf_escaped (loaded_format, "Save P.Dark");
+        btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+        gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+        g_free (btn_markup);
+       } else gtk_button_set_label(GTK_BUTTON(widget),"Save P.Dark");
+    break;
+    case PD_EJECT:
+      if(PrevDark_Loaded) {
+        btn_markup = g_markup_printf_escaped (loaded_format, "Eject P.Dark");
+        btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+        gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+        g_free (btn_markup);
+       } else { // Can't eject if there is nothing loaded
+         PrevDark_BtnStatus=PD_LOAD;
+         goto recycle;
+       }
+    break;
+   }
+
+ return;
+}
+
 static void btn_cs_load_darkfield_click(GtkWidget *widget, gpointer data) 
 // This just gets the file name and checks the format - it doesn't load
 // the image.
 {
  gint res;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooser *dfimg_load_chooser; // Dark field reference image
+ GtkFileFilter  *dfimg_load_filter;
 
  df_pending=0;
  
@@ -7776,6 +8098,8 @@ static void btn_cs_load_flatfield_click(GtkWidget *widget, gpointer data)
 {
  gint res;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooser *ffimg_load_chooser;
+ GtkFileFilter  *ffimg_load_filter;
  
  ff_pending=0;
  
@@ -8218,6 +8542,8 @@ static void btn_cs_load_mask_click(GtkWidget *widget, gpointer data)
 {
  gint res;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooser *mask_load_chooser;  // Mask image
+ GtkFileFilter  *mask_load_filter;
  
  msk_pending=0;
  
@@ -8504,6 +8830,8 @@ static void btn_cs_load_cset_click(GtkWidget *widget, gpointer data)
 {
  gint res;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooser *csf_file_chooser;   // Camera settings file load/save
+ GtkFileFilter  *csf_file_filter;
  
  // Set up the 'settings load' dialogue with the settings file choosing
  // settings:
@@ -8628,6 +8956,8 @@ static void btn_cs_save_cset_click(GtkWidget *widget, gpointer data)
 {
  gint res;
  GtkFileChooserAction fca_save = GTK_FILE_CHOOSER_ACTION_SAVE;
+ GtkFileChooser *csf_file_chooser;   // Camera settings file load/save
+ GtkFileFilter  *csf_file_filter;
  
  // Set up the 'settings load' dialogue with the settings file choosing
  // settings:
@@ -8957,6 +9287,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        gtk_widget_show(prev_bias_label);
        gtk_widget_show(preview_integration_sbutton);
        gtk_widget_show(preview_bias_sbutton);
+       gtk_widget_show(preview_dark_button);
    } else {
        col_conv_type=CCOL_TO_RGB ;
        numstr = g_strdup_printf("No");
@@ -8964,6 +9295,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        gtk_widget_hide(prev_bias_label);
        gtk_widget_hide(preview_integration_sbutton);
        gtk_widget_hide(preview_bias_sbutton);
+       gtk_widget_hide(preview_dark_button);
    }
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_yo]),numstr);
   sprintf(msgtxt,"You chose: Preview in monochrome? - %s",numstr);
@@ -10636,6 +10968,11 @@ if(!strcmp(argv[1],"-l")){
    prev_bias_label=gtk_label_new ("Preview Bias");
    gtk_widget_set_valign (prev_bias_label, GTK_ALIGN_END);
 
+   // Preview master dark button
+   add_button(&preview_dark_button,"Load P.Dark",GTK_ALIGN_CENTER);
+   g_signal_connect (preview_dark_button, "clicked", G_CALLBACK (btn_io_prev_darkfield_click), preview_dark_button);
+
+
    // Preview on/off toggle control
    chk_cam_preview = gtk_check_button_new_with_label("Preview");
    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_cam_preview), FALSE);
@@ -10649,7 +10986,7 @@ if(!strcmp(argv[1],"-l")){
    gtk_widget_set_halign (chk_audio, GTK_ALIGN_START);
     
 // Create the image preview box widgets and timeout and allocate memory
-// to the preview image pixel array and sab-sampler arrays:
+// to the preview image pixel array and sub-sampler arrays:
    PreviewWd = 640;
    PreviewHt = 480;
    PreviewImg_size = PreviewHt*PreviewWd;
@@ -10660,9 +10997,17 @@ if(!strcmp(argv[1],"-l")){
          show_message("No RAM available for preview image pixels.","Error: ",MT_ERR,0);
          return 1;
     }
+
+   Preview_dark = (double *)calloc(PreviewImg_size,sizeof(double));
+   if(Preview_dark==NULL){
+         show_message("No RAM available for preview image master dark.","Error: ",MT_ERR,0);
+         return 1;
+    }
+   for(idx=0;idx<PreviewImg_size;idx++) Preview_dark[idx]=0.0;
+
    PreviewRow = (unsigned char *)calloc(PreviewWd_stride,sizeof(unsigned char));
-   if(PreviewImg==NULL){
-         show_message("No RAM available for preview row sampler.","Error: ",MT_ERR,0);
+   if(PreviewRow==NULL){
+         show_message("No RAM available for preview row buffer.","Error: ",MT_ERR,0);
          return 1;
     }
 
@@ -10769,13 +11114,14 @@ if(!strcmp(argv[1],"-l")){
   gtk_grid_attach (GTK_GRID (grid_main), preview_integration_sbutton,      0, gridrow+3, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), prev_bias_label,                  0, gridrow+4, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), preview_bias_sbutton,             0, gridrow+5, 2, 1);
-  gtk_grid_attach (GTK_GRID (grid_main), chk_cam_preview,                  0, gridrow+6, 2, 1);
-  gtk_grid_attach (GTK_GRID (grid_main), chk_audio,                        0, gridrow+7, 2, 1);
-  gtk_grid_attach (GTK_GRID (grid_main), btn_av_interrupt,                 0, gridrow+8, 2, 1);
-  gtk_grid_attach (GTK_GRID (grid_main), btn_cam_save,                     0, gridrow+9, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), preview_dark_button,              0, gridrow+6, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), chk_cam_preview,                  0, gridrow+7, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), chk_audio,                        0, gridrow+8, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), btn_av_interrupt,                 0, gridrow+9, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), btn_cam_save,                     0, gridrow+10, 2, 1);
   // Increment / decrement the last figure below when adding / removing
   // components from the main left control panel.  
-  gtk_grid_attach (GTK_GRID (grid_main), Overlay_preview, 6, gridrow, 7, 10);
+  gtk_grid_attach (GTK_GRID (grid_main), Overlay_preview, 6, gridrow, 7, 11);
 
 // Show the widgets in the main window (and hide exceptions):
     gtk_widget_show_all(Win_main);
@@ -10784,6 +11130,7 @@ if(!strcmp(argv[1],"-l")){
     gtk_widget_hide(prev_bias_label);
     gtk_widget_hide(preview_integration_sbutton);
     gtk_widget_hide(preview_bias_sbutton);
+    gtk_widget_hide(preview_dark_button);
     
         
 
