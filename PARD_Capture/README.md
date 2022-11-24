@@ -41,7 +41,7 @@ PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to a
 Background
 ----------
 This program is the first stage of publication of the open source PARDUS system.
-PARD Capture is the image frame grabber component of the PARD Server. In addition to PARD Capture the PARD server has a network server loop (so all the functions can be controlled remotely over a network) a hardware interface so multiple motors, actuators and limit switched can be controlled in addition to image capture / optical feedback) and a command script interpreter (so complex image acquisition and robotic activities can be run as an algorithm that may adapt to input and image process results). For more detail see the [home page of this repository](../README.md).
+PARD Capture is the image frame grabber component of the PARD Server. In addition to PARD Capture the PARD server has a network server loop (so all the functions can be controlled remotely over a network) a hardware interface so multiple motors, actuators and limit switches can be controlled in addition to image capture / optical feedback) and a command script interpreter (so complex image acquisition and robotic activities can be run as an algorithm that may adapt to input and image process results). For more detail see the [home page of this repository](../README.md).
 I made the first working PARDUS system back in 2019 but the Pandemic got in the way of publication and I have been working on my [PUMA microscope](https://github.com/TadPath/PUMA) project instead.
 Now I have released the first experimental camera system for the PUMA microscope - the [OptArc AF51](https://www.optarc.co.uk/products/cameras-2/) - and I needed a frame grabber that would do justice to both the camera and the microscope. Realising I had already done most of the programming for that in the PARDUS project I took the opportunity to bring the code up-to-date and begin the release of PARDUS by making this stand alone PARD Capture program derived from the original PARD Server.
 
@@ -114,4 +114,4 @@ PJT
 
 First Written: 12.11.2022
 
-Last Edit: 13.11.2022
+Last Edit: 24.11.2022
