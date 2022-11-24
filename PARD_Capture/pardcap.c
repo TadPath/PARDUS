@@ -67,7 +67,7 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 21.11.22)                      */
+/* P. J. Tadrous 31.01.2020 (last edit 23.11.22)                      */
 /**********************************************************************/
 
 // Linux:
@@ -103,7 +103,7 @@
 
 
 // Version number
-#define PARDCAP_VERN "1.0.21.11.22"
+#define PARDCAP_VERN "1.0.23.11.22"
 
 // This is needed for general programming
 #include <stdio.h>
@@ -559,13 +559,17 @@ int            PreviewHt,PreviewWd,PreviewWd_stride;
 int            Preview_impossible,Need_to_preview;
 int            Preview_integral,Preview_bias,PreviewIDX;
 double        *Preview_dark; // Master dark for live preview
-int            PrevDark_BtnStatus = 0; // State of preview master dark
+double        *Preview_flat; // Master flat for live preview
+int            PrevCorr_BtnStatus = 0; // Preview correction btn state
 int            PrevDark_Loaded = 0; // Whether a preview dark is loaded
-// PrevDark_BtnStatus values (determines the action of the preview dark
+int            PrevFlat_Loaded = 0; // Whether a preview flat is loaded
+// PrevCorr_BtnStatus values (determines the action of the preview dark
 // button)
-#define PD_LOAD  0 // Button will load a master dark
-#define PD_SAVE  1 // Button will save a master dark
-#define PD_EJECT 2 // Button will eject a loaded master dark
+#define PD_LOADD 0 // Button will load a master dark
+#define PD_LOADF 1 // Button will load a master flat
+#define PD_EJECT 2 // Button will eject a loaded master dark +/ flat
+void nullify_preview_darkfield(void);
+void nullify_preview_flatfield(void);
 
 // Values for preview frame rate
 const char *fps_options[] = {"1","2","3","4","5","7","10","15","25","30"};
@@ -762,7 +766,7 @@ GtkWidget *load_file_dialog,*save_file_dialog;
 GtkWidget *About_dialog;
 GtkWidget *preview_integration_sbutton;
 GtkWidget *preview_bias_sbutton;
-GtkWidget *preview_dark_button;
+GtkWidget *preview_corr_button;
 GtkWidget *prev_int_label,*prev_bias_label;
 
 
@@ -2716,8 +2720,9 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
         else if (!strcmp(argstr1, "windex_rdfi")) {
             // windex_rdfi <fname>
             sscanf(line, "%s %s", argstr1,argstr2);
-           if(!strcmp(argstr2,"[None]")) nullify_darkfield();
-           else if(test_selected_df_filename(argstr2)){
+           if(!strcmp(argstr2,"[None]")){
+              if(dffile_loaded != DFIMG_NONE) nullify_darkfield();
+             } else if(test_selected_df_filename(argstr2)){
              esdx++;
              dfoff++;
             }
@@ -2725,8 +2730,9 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
         else if (!strcmp(argstr1, "windex_rffi")) {
             // windex_rffi <fname>
             sscanf(line, "%s %s", argstr1,argstr2);
-            if(!strcmp(argstr2,"[None]")) nullify_flatfield();
-             else if(test_selected_ff_filename(argstr2)){
+            if(!strcmp(argstr2,"[None]")) {
+                if(fffile_loaded != FFIMG_NONE) nullify_flatfield();
+              } else if(test_selected_ff_filename(argstr2)){
              esdx++;
              ffoff++;
             }
@@ -3769,98 +3775,48 @@ int write_fits(char *fname, int colchan, int is_avg)
  return 1;
 }
 
-int write_preview_dark(char *fname)
-// Write the current preview image as a master dark for live preview
-// with a qih external header. 
-// Return 1 on error, 0 on success.
-{
- FILE *fpo,*fph;
- char *headername;
- double dn;
- size_t len,rgbpos,nobj;
- 
- // Allocate memory for header file name
- headername=(char *)calloc(sizeof(char),FILENAME_MAX);
- if(headername==NULL){
-   show_message("Failed to allocate memory for preview master dark header.","Preview Dark Save FAILED: ",MT_ERR,1); 
-   return 1;
- }
-
- // Attempt to write the data
- if( (fpo=fopen(fname,"wb"))==NULL ){
-   show_message("Could not open output file to write the preview master dark data.","Preview Dark Save FAILED: ",MT_ERR,1); 
-   goto error_return;
-  }
- 
- len=(size_t)PreviewHt*(size_t)PreviewWd_stride;
-
- for(rgbpos=0;rgbpos<len;rgbpos+=3){
-    dn=PreviewImg[rgbpos];
-    nobj=fwrite(&dn,sizeof(double),1,fpo);
-    if(nobj<1){
-        show_message("Checksum error writing preview master dark.","Preview Dark Save FAILED: ",MT_ERR,1); 
-        fclose(fpo); goto error_return;
-       }
-   }
- fclose(fpo);
- 
- // Now write the header file
- len=strlen(fname);
- if(len>=FILENAME_MAX){
-   show_message("Cannot create header (image file name is too long).","Preview Dark Save FAILED: ",MT_ERR,1); 
-   goto error_return;
- }
- sprintf(headername,"%s",fname);
- if(headername[len-4]!='.'){
-   show_message("Cannot create header file name extension.","Preview Dark Save FAILED: ",MT_ERR,1); 
-   goto error_return;
-  }
- headername[len-3]='q';
- headername[len-2]='i';
- headername[len-1]='h';
- if( (fph=fopen(headername,"wb"))==NULL ){
-   show_message("Cannot open output file to write qih header data.","Preview Dark Save FAILED: ",MT_ERR,1); 
-   goto error_return;
-  }
- fprintf(fph,"{qih: BiaQIm Header File }\n[Signed_?] depends\n[Datatype] depends\n[Height] %d\n[Width] %d\n",PreviewHt,PreviewWd);
- fclose(fph);
-
- free(headername);
- return 0;
- 
- error_return:
- free(headername);
- return 1;
-}
-
-int read_preview_dark(char *fname)
-// Reads a preview image master dark frame image. This must be in raw
-// doubles format with a .qih external header confirming its size as
-// PreviewHt x PreviewWd - no other size is allowed.
+int read_preview_master(char *fname, int corrtype)
+// Reads a preview image master dark frame image if corrtype = 1.
+// Reads a preview image master flat frame image if corrtype = 2.
+// In either case the supplied file must be in raw doubles format with a
+// .qih external header confirming its size as PreviewHt x PreviewWd
+// - no other size is allowed.
 {
  FILE *fph;
  size_t len,nobj;
- char *headername;
+ char *headername,mstype[32];
  int nmagic,fgc,lht,lwd;
+ double dval;
+
+ switch(corrtype){
+   case 1: sprintf(mstype,"QIH Error (P.Dark): "); break;
+   case 2: sprintf(mstype,"QIH Error (P.Flat): "); break;
+  }
  
  // Allocate memory for header file name
  headername=(char *)calloc(sizeof(char),FILENAME_MAX);
  if(headername==NULL){
-   show_message("Failed to allocate memory for the qih header.","QIH Read FAILED: ",MT_ERR,1); 
+   show_message("Failed to allocate memory for the qih header.",mstype,MT_ERR,1); 
    return 1;
  }
  
  // Created the expected header file name
  len=strlen(fname);
  if(len>=FILENAME_MAX){
-   show_message("Cannot create header (image file name is too long).","QIH Read FAILED: ",MT_ERR,1); 
+   show_message("Cannot create header (image file name is too long).",mstype,MT_ERR,1); 
    goto error_return;
  }
  sprintf(headername,"%s",fname);
   
  // Read the extension - it must be '.dou' or '.DOU'
- if(check_extn(headername, "dou", 3, "QIH Read FAILED: ")){
-    if(check_extn(headername, "DOU", 3, "QIH Read FAILED: ")) goto error_return;
+ switch(corrtype){
+   case 1: sprintf(mstype,"Error reading P.Dark: "); break;
+   case 2: sprintf(mstype,"Error reading P.Flat: "); break;
+   default: return 1;
+  }
+
+ if(check_extn(headername, "dou", 3, mstype)){
+    if(check_extn(headername, "DOU", 3, mstype)) goto error_return;
   }
 
 
@@ -3872,7 +3828,7 @@ int read_preview_dark(char *fname)
  // Attempt to read the header file information and ensure it is
  // consistent:
  if( (fph=fopen(headername,"rb"))==NULL ){
-     show_message("Cannot open qih file to read it (Preview dark).","QIH Read FAILED: ",MT_ERR,1); 
+     show_message("Cannot open qih file to read it.",mstype,MT_ERR,1); 
      goto error_return;
     }
 
@@ -3905,31 +3861,52 @@ int read_preview_dark(char *fname)
  fclose(fph);
 
  if(fgc==EOF){
-   show_message("An error occured when reading the header file (Preview dark).","QIH Read FAILED: ",MT_ERR,1); 
+   show_message("An error occured when reading the header file.",mstype,MT_ERR,1); 
    goto error_return;
   }
  // Test if the header gives the correct dimensions
  if((lht != PreviewHt) || (lwd != PreviewWd)){
-   show_message("The header file does not have the correct preview dimensions.","QIH Read FAILED: ",MT_ERR,1); 
+   show_message("The header file does not have the correct preview dimensions.",mstype,MT_ERR,1); 
    goto error_return;
   }
  
- // Now attempt to read the data into the Preview dark frame buffer
+ // Now attempt to read the data into the Preview dark or flat buffer
  if( (fph=fopen(fname,"rb"))==NULL ){
-     show_message("Cannot open the file to read it (Preview dark).","Preview Dark Load FAILED: ",MT_ERR,1); 
+     show_message("Cannot open the file to read it.",mstype,MT_ERR,1); 
      goto error_return;
     }
  len=(size_t)PreviewHt*(size_t)PreviewWd;
- nobj=fread((void *)Preview_dark,sizeof(double),len,fph);
+
+ switch(corrtype){
+   case 1: nobj=fread((void *)Preview_dark,sizeof(double),len,fph); break;
+   case 2: nobj=fread((void *)Preview_flat,sizeof(double),len,fph); break;
+  }
+ 
  if(nobj<len){
-        show_message("Checksum error reading preview master dark.","Preview Dark Load FAILED: ",MT_ERR,1); 
+        show_message("Checksum error reading file.",mstype,MT_ERR,1); 
         fclose(fph); 
         goto error_return;
        }
  fclose(fph);
 
+ switch(corrtype){
+   case 1: PrevDark_Loaded=1; break;
+   case 2:
+   // In the case of a flat field image we must normalise it
+     dval=0.0;
+     for(nobj=0;nobj<len;nobj++) dval+=Preview_flat[nobj];
+     dval/=(double)len; // The mean value
+         if(dval<0.5){
+           show_message("Preview master flat is not useable (no pixel is greater than 0).","FAILED: ",MT_ERR,1);
+           goto error_return;
+         }
+     for(nobj=0;nobj<len;nobj++) Preview_flat[nobj]/=dval;
+     PrevFlat_Loaded=1;
+   break;
+  } 
+
  free(headername);
- PrevDark_Loaded=1;
+
  return 0;
  
  format_error:
@@ -3938,9 +3915,12 @@ int read_preview_dark(char *fname)
   
  error_return:
  free(headername);
+ switch(corrtype){
+   case 1: nullify_preview_darkfield();  break;
+   case 2: nullify_preview_flatfield(); break;
+  }
  return 1;
 }
-
 
 int write_rawdou(char *fname,int colchan)
  // Write the image doubles Frm buffer(s) as raw doubles file(s) with a
@@ -5009,21 +4989,6 @@ static int colour_convert(const unsigned short *p)
          switch(col_conv_type){
           case CCOL_TO_Y:    // Just extract the Y component (a fast op)
              rgbpos=Prev_startrow; 
-             if(Preview_integral<=1){ // No preview integration
-              for(prow=0;prow<PreviewHt;prow++){ 
-                  if(SSrow[prow]<0) continue;
-                  for(pcol=0;pcol<PreviewWd;pcol++){
-                     if(SScol[pcol]<0) continue;
-                     ipos=SSrow[prow]+SScol[pcol];
-            
-                     uy1= (unsigned char)(p[ipos] & 0xff);
-            
-                     PreviewImg[Prev_startcol+rgbpos++]=uy1;
-                     PreviewImg[rgbpos++]=uy1;
-                     PreviewImg[rgbpos++]=uy1;
-                  }
-              }
-             } else { // Rolling preview integration requested
               if(PreviewIDX>=Preview_integral) PreviewIDX=0;
                pipos=0;
                for(prow=0;prow<PreviewHt;prow++){ 
@@ -5032,8 +4997,12 @@ static int colour_convert(const unsigned short *p)
                      if(SScol[pcol]<0) continue;
                      ipos=SSrow[prow]+SScol[pcol];
                      PreviewBuff[PreviewIDX][pipos]=(int)(p[ipos] & 0xff);
-                     for(fidx=0,ival=Preview_bias;fidx<Preview_integral;fidx++) ival+=PreviewBuff[fidx][pipos];
-                     uy1=uchar_from_d((double)ival-Preview_dark[pipos]);
+                     for(fidx=0,dval1=(double)Preview_bias;fidx<Preview_integral;fidx++){
+                        dval2=(double)(PreviewBuff[fidx][pipos])-Preview_dark[pipos];
+                        dval2/=Preview_flat[pipos];
+                        dval1+=dval2;
+                       }
+                     uy1=uchar_from_d(dval1);
                      pipos++;
 
                      PreviewImg[Prev_startcol+rgbpos++]=uy1;
@@ -5042,7 +5011,6 @@ static int colour_convert(const unsigned short *p)
                   }
               }
               PreviewIDX++;
-             }
               preview_stored = PREVIEW_STORED_MONO;
           break;
           case CCOL_TO_RGB:  // Convert to full RGB
@@ -5167,26 +5135,6 @@ static int colour_convert(const unsigned short *p)
          switch(col_conv_type){
           case CCOL_TO_Y:    // Calculate the Y component from RGB
              rgbpos=Prev_startrow; 
-             if(Preview_integral<=1){ // No preview integration
-               for(prow=0;prow<PreviewHt;prow++){
-                  if(SSrow[prow]<0) continue;
-                  for(pcol=0;pcol<PreviewWd;pcol++){
-                     if(SScol[pcol]<0) continue;
-                     ipos=SSrow[prow]+SScol[pcol];
-            
-                     uy1= RGBimg[ipos++]; // R
-                     uy2= RGBimg[ipos++]; // G
-                     uy3= RGBimg[ipos];   // B
-
-                     max=(uy2>uy1)?uy2:uy1;
-                     if(uy3>=max) max=uy3;
-            
-                     PreviewImg[Prev_startcol+rgbpos++]=max;
-                     PreviewImg[rgbpos++]=max;
-                     PreviewImg[rgbpos++]=max;
-                  }
-                }
-             } else { // Rolling preview integration requested
               if(PreviewIDX>=Preview_integral) PreviewIDX=0;
                pipos=0;
                for(prow=0;prow<PreviewHt;prow++){ 
@@ -5202,8 +5150,12 @@ static int colour_convert(const unsigned short *p)
                      max=(uy2>uy1)?uy2:uy1;
                      if(uy3>=max) max=uy3;
                      PreviewBuff[PreviewIDX][pipos]=(int)max;
-                     for(fidx=0,ival=Preview_bias;fidx<Preview_integral;fidx++) ival+=PreviewBuff[fidx][pipos];
-                     uy1=uchar_from_d((double)ival-Preview_dark[pipos]);
+                     for(fidx=0,dval1=(double)Preview_bias;fidx<Preview_integral;fidx++){
+                        dval2=(double)(PreviewBuff[fidx][pipos])-Preview_dark[pipos];
+                        dval2/=Preview_flat[pipos];
+                        dval1+=dval2;
+                       }
+                     uy1=uchar_from_d(dval1);
                      pipos++;
 
                      PreviewImg[Prev_startcol+rgbpos++]=uy1;
@@ -5212,7 +5164,7 @@ static int colour_convert(const unsigned short *p)
                   }
               }
               PreviewIDX++;
-             }              preview_stored = PREVIEW_STORED_MONO;
+              preview_stored = PREVIEW_STORED_MONO;
           break;
           case CCOL_TO_RGB:  // Convert to full RGB
           case CCOL_TO_BGR:  // Convert to full RGB (for preview)
@@ -6909,6 +6861,10 @@ void tidy_up(void)
    show_message("> Freeing preview master dark.","",MT_INFO,0);
    free(Preview_dark);
   }
+ if(Preview_flat!=NULL){
+   show_message("> Freeing preview master flat.","",MT_INFO,0);
+   free(Preview_flat);
+  }
  if(PreviewRow!=NULL){
    show_message("> Freeing preview row buffer.","",MT_INFO,0);
    free(PreviewRow);
@@ -7753,36 +7709,53 @@ void nullify_preview_darkfield(void)
 // Eject a loaded live preview master dark.
 {
  int idx;
-
+ if(PrevDark_Loaded==0) return;
  for(idx=0;idx<PreviewImg_size;idx++) Preview_dark[idx]=0.0;
  PrevDark_Loaded=0;
- PrevDark_BtnStatus=PD_LOAD;
- gtk_button_set_label(GTK_BUTTON(preview_dark_button),"Load P.Dark");
+ PrevCorr_BtnStatus=PD_LOADD;
+ gtk_button_set_label(GTK_BUTTON(preview_corr_button),"Load P.Dark");
  show_message("Preview dark field image has been nullified.","FYI: ",MT_INFO,1);
  return;
 }
 
-static void btn_io_prev_darkfield_click(GtkWidget *widget, gpointer data) 
-// This attempts to load/save a live preview master dark.
+void nullify_preview_flatfield(void)
+// Eject a loaded live preview master flat.
+{
+ int idx;
+ if(PrevFlat_Loaded==0) return;
+ for(idx=0;idx<PreviewImg_size;idx++) Preview_flat[idx]=1.0;
+ PrevFlat_Loaded=0;
+ PrevCorr_BtnStatus=PD_LOADF;
+ gtk_button_set_label(GTK_BUTTON(preview_corr_button),"Load P.Flat");
+ show_message("Preview flat field image has been nullified.","FYI: ",MT_INFO,1);
+ return;
+}
+
+static void btn_io_prev_corrfield_click(GtkWidget *widget, gpointer data) 
+// This attempts to load/save/eject a live preview master dark / flat.
 {
  gint res;
  gint choice;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
- GtkFileChooserAction fca_save = GTK_FILE_CHOOSER_ACTION_SAVE;
- GtkFileChooser *dfprev_file_chooser; // Master Dark for live preview
- GtkFileFilter  *dfprev_file_filter;
+ GtkFileChooser *prevmaster_file_chooser;
+ GtkFileFilter  *prevmaster_file_filter;
  gchar *btn_markup;
- const char *loaded_format = "<span foreground=\"green\" weight=\"bold\">\%s</span>";
+ char *loaded_df_format = "<span foreground=\"red\" weight=\"bold\">\%s</span>";
+ char *loaded_ff_format = "<span foreground=\"green\" weight=\"bold\">\%s</span>";
+ char *loaded_af_format = "<span foreground=\"blue\" weight=\"bold\">\%s</span>";
+ char *loaded_nf_format = "<span foreground=\"black\" weight=\"normal\">\%s</span>";
+ char *mfb_format;
  GtkWidget *btnlabel;
+ int lfval=1;
 
  // Take action according to current status of button
- switch(PrevDark_BtnStatus){
-    case PD_LOAD:
+ switch(PrevCorr_BtnStatus){
+    case PD_LOADD:
     // Set up the 'file load' dialogue with the dark field image 
     // choosing settings:
-    dfprev_file_filter  = gtk_file_filter_new();
-    gtk_file_filter_set_name (dfprev_file_filter,"Preview Dark Field Images");
-    gtk_file_filter_add_pattern (dfprev_file_filter, "*.dou");
+    prevmaster_file_filter  = gtk_file_filter_new();
+    gtk_file_filter_set_name (prevmaster_file_filter,"Preview Dark Field Images");
+    gtk_file_filter_add_pattern (prevmaster_file_filter, "*.dou");
     load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Dark Field Image",
                                       GTK_WINDOW(Win_main),
                                       fca_open,
@@ -7792,63 +7765,68 @@ static void btn_io_prev_darkfield_click(GtkWidget *widget, gpointer data)
                                       GTK_RESPONSE_ACCEPT,
                                       NULL);
                                     
-    dfprev_file_chooser = GTK_FILE_CHOOSER (load_file_dialog);
-    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
-    gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
+    prevmaster_file_chooser = GTK_FILE_CHOOSER (load_file_dialog);
+    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (prevmaster_file_chooser),prevmaster_file_filter);
+    gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (prevmaster_file_chooser),prevmaster_file_filter);
     // Run the 'file load' dialogue
     res = gtk_dialog_run (GTK_DIALOG (load_file_dialog));
     if (res == GTK_RESPONSE_ACCEPT)
      {
       gchar *filename;
-      filename = gtk_file_chooser_get_filename (dfprev_file_chooser);
-      read_preview_dark((char *)filename);
+      filename = gtk_file_chooser_get_filename (prevmaster_file_chooser);
+      lfval=read_preview_master((char *)filename,1);
+      if(lfval==0) show_message(filename,"P.Dark: ",MT_INFO,0);
       g_free(filename);
      }
      // Remove the filter from the file load dialogue and close it:
-     gtk_file_chooser_remove_filter(dfprev_file_chooser,dfprev_file_filter);
+     gtk_file_chooser_remove_filter(prevmaster_file_chooser,prevmaster_file_filter);
      gtk_widget_destroy(load_file_dialog);
     break;
-    case PD_SAVE:
-    // Set up the 'file save' dialogue with the dark field image 
+    case PD_LOADF:
+    // Set up the 'file load' dialogue with the flat field image 
     // choosing settings:
-    dfprev_file_filter  = gtk_file_filter_new();
-    gtk_file_filter_set_name (dfprev_file_filter,"Preview Dark Field Images");
-    gtk_file_filter_add_pattern (dfprev_file_filter, "*.dou");
-    save_file_dialog = gtk_file_chooser_dialog_new ("Save a Preview Dark Field Image",
+    prevmaster_file_filter  = gtk_file_filter_new();
+    gtk_file_filter_set_name (prevmaster_file_filter,"Preview Flat Field Images");
+    gtk_file_filter_add_pattern (prevmaster_file_filter, "*.dou");
+    load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Flat Field Image",
                                       GTK_WINDOW(Win_main),
-                                      fca_save,
+                                      fca_open,
                                       "_Cancel",
                                       GTK_RESPONSE_CANCEL,
-                                      "_Save",
+                                      "_Open",
                                       GTK_RESPONSE_ACCEPT,
                                       NULL);
                                     
-    dfprev_file_chooser = GTK_FILE_CHOOSER (save_file_dialog);
-    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
-    gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (dfprev_file_chooser),dfprev_file_filter);
-    // Run the 'file save' dialogue
-    res = gtk_dialog_run (GTK_DIALOG (save_file_dialog));
+    prevmaster_file_chooser = GTK_FILE_CHOOSER (load_file_dialog);
+    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (prevmaster_file_chooser),prevmaster_file_filter);
+    gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (prevmaster_file_chooser),prevmaster_file_filter);
+    // Run the 'file load' dialogue
+    res = gtk_dialog_run (GTK_DIALOG (load_file_dialog));
     if (res == GTK_RESPONSE_ACCEPT)
      {
       gchar *filename;
-      filename = gtk_file_chooser_get_filename (dfprev_file_chooser);
-      write_preview_dark((char *)filename);
+      filename = gtk_file_chooser_get_filename (prevmaster_file_chooser);
+      lfval=read_preview_master((char *)filename,2);
+      if(lfval==0) show_message(filename,"P.Flat: ",MT_INFO,0);
       g_free(filename);
      }
-     // Remove the filter from the file save dialogue and close it:
-     gtk_file_chooser_remove_filter(dfprev_file_chooser,dfprev_file_filter);
-     gtk_widget_destroy(save_file_dialog);
+     // Remove the filter from the file load dialogue and close it:
+     gtk_file_chooser_remove_filter(prevmaster_file_chooser,prevmaster_file_filter);
+     gtk_widget_destroy(load_file_dialog);
     break;
     case PD_EJECT:
-    // Ask if sure they really want to eject the current preview dark.
+    // Ask if sure they really want to eject the current preview master
+    // dark / flat.
     // If yes, eject it. In either case, cycle the button action
-    gtk_window_set_title (GTK_WINDOW (dlg_choice), "Really eject current preview master dark?");
-    gtk_message_dialog_set_markup(GTK_MESSAGE_DIALOG(dlg_choice),"Do you really want to eject the preview master dark?");
+    gtk_window_set_title (GTK_WINDOW (dlg_choice), "Eject Preview Master Correction");
+    gtk_message_dialog_set_markup(GTK_MESSAGE_DIALOG(dlg_choice),"Do you really want to eject the preview master dark/flat?");
     choice = gtk_dialog_run(GTK_DIALOG(dlg_choice));
     switch (choice)
       {
        case GTK_RESPONSE_YES:
        nullify_preview_darkfield();
+       nullify_preview_flatfield();
+       PrevCorr_BtnStatus--;
        break;
        default:
        break;
@@ -7857,35 +7835,43 @@ static void btn_io_prev_darkfield_click(GtkWidget *widget, gpointer data)
    }
 
  
-  // Cycle the action of the preview dark button
-   PrevDark_BtnStatus++;
-   if(PrevDark_BtnStatus>2) PrevDark_BtnStatus = 0;
+  // Set the correct colour and font for the multifinction button text
+  // according to what corrective image(s) are loaded:
+  // red bold -> Only the master dark is loaded
+  // green bold -> Only the master flat is loaded
+  // blue bold -> both master flat and dark are loaded
+  // no colour (black) and no bold -> None are loaded
+  if(PrevDark_Loaded && PrevFlat_Loaded) mfb_format=loaded_af_format;
+  else if(PrevDark_Loaded) mfb_format=loaded_df_format;
+  else if(PrevFlat_Loaded) mfb_format=loaded_ff_format;
+  else mfb_format=loaded_nf_format;
+
+  // Cycle the action of the preview correction button
+   PrevCorr_BtnStatus++;
+   if(PrevCorr_BtnStatus>2) PrevCorr_BtnStatus = 0;
+
 recycle:
-   switch(PrevDark_BtnStatus){
-    case PD_LOAD:
-      if(PrevDark_Loaded) {
-        btn_markup = g_markup_printf_escaped (loaded_format, "Load P.Dark");
-        btnlabel = gtk_bin_get_child(GTK_BIN(widget));
-        gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
-        g_free (btn_markup);
-       } else gtk_button_set_label(GTK_BUTTON(widget),"Load P.Dark");
+   switch(PrevCorr_BtnStatus){
+    case PD_LOADD:
+      btn_markup = g_markup_printf_escaped (mfb_format, "Load P.Dark");
+      btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+      gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+      g_free (btn_markup);
     break;
-    case PD_SAVE:
-      if(PrevDark_Loaded) {
-        btn_markup = g_markup_printf_escaped (loaded_format, "Save P.Dark");
-        btnlabel = gtk_bin_get_child(GTK_BIN(widget));
-        gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
-        g_free (btn_markup);
-       } else gtk_button_set_label(GTK_BUTTON(widget),"Save P.Dark");
+    case PD_LOADF:
+      btn_markup = g_markup_printf_escaped (mfb_format, "Load P.Flat");
+      btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+      gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+      g_free (btn_markup);
     break;
     case PD_EJECT:
-      if(PrevDark_Loaded) {
-        btn_markup = g_markup_printf_escaped (loaded_format, "Eject P.Dark");
+      if(PrevDark_Loaded || PrevFlat_Loaded) {
+        btn_markup = g_markup_printf_escaped (mfb_format, "Eject All");
         btnlabel = gtk_bin_get_child(GTK_BIN(widget));
         gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
         g_free (btn_markup);
        } else { // Can't eject if there is nothing loaded
-         PrevDark_BtnStatus=PD_LOAD;
+         PrevCorr_BtnStatus=PD_LOADD;
          goto recycle;
        }
     break;
@@ -8154,7 +8140,7 @@ void nullify_flatfield(void)
  // error messages when loading settings from a saved settings file.
 {
  if(!strcmp(FFFile,"[None]")) return;
-
+ 
   resize_memblk((void **)&FF_Image,1,sizeof(unsigned char), "the flat field image");
   FFht=FFwd=0;
   sprintf(FFFile,"[None]");
@@ -9287,7 +9273,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        gtk_widget_show(prev_bias_label);
        gtk_widget_show(preview_integration_sbutton);
        gtk_widget_show(preview_bias_sbutton);
-       gtk_widget_show(preview_dark_button);
+       gtk_widget_show(preview_corr_button);
    } else {
        col_conv_type=CCOL_TO_RGB ;
        numstr = g_strdup_printf("No");
@@ -9295,7 +9281,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        gtk_widget_hide(prev_bias_label);
        gtk_widget_hide(preview_integration_sbutton);
        gtk_widget_hide(preview_bias_sbutton);
-       gtk_widget_hide(preview_dark_button);
+       gtk_widget_hide(preview_corr_button);
    }
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_yo]),numstr);
   sprintf(msgtxt,"You chose: Preview in monochrome? - %s",numstr);
@@ -10623,7 +10609,8 @@ static void grab_prev_adjust_value (GtkSpinButton *button, gpointer padjtype)
   case PADJUST_INTEGRAL:
    sprintf(msgtxt,"Integrating %d frames for preview",ival);
    show_message(msgtxt,"FYI: ",MT_INFO,0);
-   for(idx=0;idx<ival;idx++){
+   if(ival>1){
+   for(idx=1;idx<ival;idx++){
      if(resize_memblk((void **)&PreviewBuff[idx],(size_t)PreviewImg_size,sizeof(int), "the integration buffer")){
          show_message("No RAM available for prime preview buffer.","Error: ",MT_ERR,0);
          Preview_integral=1;
@@ -10639,6 +10626,7 @@ static void grab_prev_adjust_value (GtkSpinButton *button, gpointer padjtype)
         }
       }
      }
+    }
 
    Preview_integral=ival;
   break;
@@ -10952,15 +10940,7 @@ if(!strcmp(argv[1],"-l")){
    // Assuming you want this maximum to be displayed as white (e.g. 255)
    // you need to bias it with -(255xPREVINTMAX)+255 i.e.
    // PREVINTMAX x 255 - 255 i.e. -(PREVINTMAX-1)*255. 
-   // The upper range of bias is 255 because the absolute minimum will
-   // be a grey level of 0 with single frame 'integration' so the
-   // maximum you could possibly view this as is 255 so to turn 0 into
-   // 255 you add a bias of 255. However, in practice I don't apply
-   // frame integration (or the bias) when the number of frames to
-   // integrate is <=1 so this upper limit is reduntant - it can be used
-   // to make the preview a bit lighter (e.g. if you adjust the YUYV-to-
-   // RGB cnversion gain and bias in additio to multi-frame integration.
-   preview_bias_adjustment = gtk_adjustment_new (0.0,(double)(-(PREVINTMAX-1)*255), 255.0, 1.0, 10.0, 0.0);
+   preview_bias_adjustment = gtk_adjustment_new (0.0,(double)(-(PREVINTMAX-1)*255), 512.0, 1.0, 10.0, 0.0);
    preview_bias_sbutton = gtk_spin_button_new (preview_bias_adjustment, 1.0, 0);
    prev_bias=PADJUST_BIAS;
    g_signal_connect (GTK_SPIN_BUTTON (preview_bias_sbutton), "value-changed", G_CALLBACK (grab_prev_adjust_value), &prev_bias);
@@ -10969,8 +10949,8 @@ if(!strcmp(argv[1],"-l")){
    gtk_widget_set_valign (prev_bias_label, GTK_ALIGN_END);
 
    // Preview master dark button
-   add_button(&preview_dark_button,"Load P.Dark",GTK_ALIGN_CENTER);
-   g_signal_connect (preview_dark_button, "clicked", G_CALLBACK (btn_io_prev_darkfield_click), preview_dark_button);
+   add_button(&preview_corr_button,"Load P.Dark",GTK_ALIGN_CENTER);
+   g_signal_connect (preview_corr_button, "clicked", G_CALLBACK (btn_io_prev_corrfield_click), preview_corr_button);
 
 
    // Preview on/off toggle control
@@ -11005,6 +10985,13 @@ if(!strcmp(argv[1],"-l")){
     }
    for(idx=0;idx<PreviewImg_size;idx++) Preview_dark[idx]=0.0;
 
+   Preview_flat = (double *)calloc(PreviewImg_size,sizeof(double));
+   if(Preview_flat==NULL){
+         show_message("No RAM available for preview image master dark.","Error: ",MT_ERR,0);
+         return 1;
+    }
+   for(idx=0;idx<PreviewImg_size;idx++) Preview_flat[idx]=1.0;
+
    PreviewRow = (unsigned char *)calloc(PreviewWd_stride,sizeof(unsigned char));
    if(PreviewRow==NULL){
          show_message("No RAM available for preview row buffer.","Error: ",MT_ERR,0);
@@ -11028,6 +11015,11 @@ if(!strcmp(argv[1],"-l")){
          return 1;
       }
    }
+  // We must have at least one preview frame buffer alloced
+  if(resize_memblk((void **)&PreviewBuff[0],(size_t)PreviewImg_size,sizeof(int), "the integration buffer")){
+       show_message("No RAM available for prime preview buffer.","Error: ",MT_ERR,0);
+       return 1;
+      }
    Preview_integral=1;
    PreviewIDX=0;
    Preview_bias=0; 
@@ -11114,7 +11106,7 @@ if(!strcmp(argv[1],"-l")){
   gtk_grid_attach (GTK_GRID (grid_main), preview_integration_sbutton,      0, gridrow+3, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), prev_bias_label,                  0, gridrow+4, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), preview_bias_sbutton,             0, gridrow+5, 2, 1);
-  gtk_grid_attach (GTK_GRID (grid_main), preview_dark_button,              0, gridrow+6, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), preview_corr_button,              0, gridrow+6, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), chk_cam_preview,                  0, gridrow+7, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), chk_audio,                        0, gridrow+8, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), btn_av_interrupt,                 0, gridrow+9, 2, 1);
@@ -11130,7 +11122,7 @@ if(!strcmp(argv[1],"-l")){
     gtk_widget_hide(prev_bias_label);
     gtk_widget_hide(preview_integration_sbutton);
     gtk_widget_hide(preview_bias_sbutton);
-    gtk_widget_hide(preview_dark_button);
+    gtk_widget_hide(preview_corr_button);
     
         
 
