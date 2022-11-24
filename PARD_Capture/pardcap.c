@@ -67,7 +67,7 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 23.11.22)                      */
+/* P. J. Tadrous 31.01.2020 (last edit 24.11.22)                      */
 /**********************************************************************/
 
 // Linux:
@@ -103,7 +103,7 @@
 
 
 // Version number
-#define PARDCAP_VERN "1.0.23.11.22"
+#define PARDCAP_VERN "1.0.24.11.22"
 
 // This is needed for general programming
 #include <stdio.h>
@@ -9366,7 +9366,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   // don't select it. Use the maximum framerate instead.
   if(tdx>maxframerate[szidx]){  
    sprintf(msgtxt,"Your selected frame rate (%d) is greater than the maximum your camera can support at the chosen resolution (%u).\n"
-                  "The frame rate will we set to %d fps for now until you change it.",tdx,maxframerate[szidx],maxframerate[szidx]);
+                  "The frame rate will be set to %d fps for now until you change it.",tdx,maxframerate[szidx],maxframerate[szidx]);
    show_message(msgtxt,"Warning: ",MT_INFO,1);
    tdx=maxframerate[szidx];
    g_free(numstr);
