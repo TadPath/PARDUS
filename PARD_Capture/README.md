@@ -2,7 +2,7 @@
 Scientific image acquisition software, FLOSS GPL v3
 
 
-![PARD Capture Title](Images/PARD_Capture_Title.jpg)
+![PARD Capture Title](Images/PARD_Capture_Frontice.jpg)
 ---
 
 ----------------------- ------------------------------------
