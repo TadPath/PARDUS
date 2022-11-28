@@ -103,7 +103,7 @@
 
 
 // Version number
-#define PARDCAP_VERN "1.0.24.11.22"
+#define PARDCAP_VERN "1.0.28.11.22"
 
 // This is needed for general programming
 #include <stdio.h>
@@ -1422,7 +1422,7 @@ int resize_memblk(void **ptr,size_t blocksz, size_t unitsize, char *pname)
     show_message(emsg,"Memory Error: ",MT_ERR,1);
     *ptr=calloc(1,unitsize);
     if(*ptr==NULL){
-      sprintf("Could not get even re-initialise %s. This is a serious memory error.\nPlease save your work and exit ASAP because the program may crash at any time without further notice.",pname);
+      sprintf(emsg,"Could not get even re-initialise %s. This is a serious memory error.\nPlease save your work and exit ASAP because the program may crash at any time without further notice.",pname);
       show_message(emsg,"Memory Error: ",MT_ERR,1);
       return 1;
     } 
@@ -10316,7 +10316,7 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
         return TRUE;
        break;
    }
-   numstr = g_strdup_printf(safmt_options[saveas_fmt]);
+   numstr = g_strdup_printf("%s",safmt_options[saveas_fmt]);
    CamsetWidget[windex_safmt]=gtk_label_new (numstr);  cswt_id[windex_safmt]= CS_WTYPE_LABEL;
    g_free(numstr);
    gtk_widget_set_halign (CamsetWidget[windex_safmt], GTK_ALIGN_START);
