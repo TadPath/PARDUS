@@ -47,7 +47,7 @@ Now I have released the first experimental camera system for the PUMA microscope
 
 How to Install
 --------------
-PARD Capture is only available as C source code from this (the official) repository. You will need to compile it to run it. I have only tested it with gcc. So far it has been tested successfully with Arch/LXDE and Fedora/Gnome on 64 bit x86 Intel platforms and on an Ubuntu tablet with Intel Aton x5-Z8300 (Cherry Trail) Quad Core processor. There is no make file or package manager installer route for PARDUS capture at this time. 
+PARD Capture is only available as C source code from this (the official) repository. You will need to compile it to run it. I have only tested it with gcc. So far it has been tested successfully with Arch/LXDE and Fedora/Gnome on 64 bit x86 Intel platforms and on an Ubuntu/Gnome tablet with Intel Aton x5-Z8300 (Cherry Trail) Quad Core processor. There is no make file or package manager installer route for PARDUS capture at this time. 
 The program itself comes as a single self-contained source file but to compile it into an executable program you will need to ensure first that you have installed all the libraries it depends on (i.e. its dependencies).
 The below table shows the libraries you need to install with their names as used in Arch, Fedora, Debian and Ubuntu Linux distros:
 
