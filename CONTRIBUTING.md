@@ -6,6 +6,10 @@ Before you begin:
 - Have you read the [code of conduct](CODE_OF_CONDUCT.md)?
 - Check out the [existing issues](https://github.com/TadPath/PARDUS/issues) 
 
+## Funding
+No funds or metarial compensation is available for contributors to this site. If you contribute you do so on the understanding and agreement that you are giving of your time and expertise free of charge and without the expectation or entitlement to monetary or other material compensation.
+For the avoidance of doubt, any links to Patreon and PayPal donatation sites are for voluntary contributions to Dr Paul J. Tadrous to assist in his costs for creating and maintaining not only this GitHub project but his other teaching, research and educational activities across other websites including YouTube and OptArc.
+
 ## Pull requests
 Pull requests are **NOT** being accepted at this time. Please do not submit a pull request to this project - it will be ignored, delected and/or blocked. User's who disregard this notice may also be blocked from this GitHub account. Thank you.
 
