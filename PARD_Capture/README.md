@@ -24,7 +24,7 @@ PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to a
 * Real time stats display with optional custom masing.
 * Real time focus assist bar(s) and stats to help with focussing.
 * Real tiem absolute Laplacian gradient image on monochrome previews.
-* Preview LUT file options.
+* Preview LUT options added.
 * Facility to do dark frame subtraction on each frame as it is being captured
 * Facility to create a master dark image for the above correction.
 * Facility to create a master flat image for flat field correction.
