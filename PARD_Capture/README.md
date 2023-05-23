@@ -2,20 +2,29 @@
 Scientific image acquisition software, FLOSS GPL v3
 
 
-![PARD Capture Title](Images/PARD_Capture_Frontice.jpg)
+![PARD Capture Title](Images/Fig1.png)
+![PARD Capture Title](Images/Fig2.png)
+![PARD Capture Title](Images/Fig3.png)
 ---
 
 ----------------------- ------------------------------------
 > :warning: **NOTE**: **The PARDUS project is NOT accepting pull requests at this stage of development. Any pull requests will be either blocked, ignored and/or deleted. I welcome bug reports, feature requests and issues / queries.**
 ----------------------------------------------------------------
 
+:boom: **New** :arrow_right: **v1.1 released 23.05.2023** : Bugs fixed, new features added for live preview mode, limitations on certain image dimensions removed, etc.
+
                        
 Introduction
 ------------
 PARD Capture is a free (FLOSS) GUI (GTK3+) C program that uses the v4l2 API to acquire images from a video device such as a USB camera or any other device that will interface as /dev/video0. Currently it is only for Linux. Some sample images taken with this software can be seen [here](SampleImages_AF51.md). There are many free image grabber programs out there so why use PARD Capture?
 
-* Designed for scientific quantitative image capture
-* Real-time preview with option for rolling multi-frame integration for night vision / low light preview
+* Designed for scientific quantitative image capture.
+* Real-time preview with option for rolling multi-frame integration for night vision / low light preview.
+* Real time preview histogramming with many customisation options.
+* Real time stats display with optional custom masing.
+* Real time focu assist bar(s) and stats to help with focussing.
+* Real tiem absolute Laplacian gradient image on monochrome previews.
+* Preview LUT file options.
 * Facility to do dark frame subtraction on each frame as it is being captured
 * Facility to create a master dark image for the above correction.
 * Facility to create a master flat image for flat field correction.
@@ -114,4 +123,4 @@ PJT
 
 First Written: 12.11.2022
 
-Last Edit: 28.11.2022
+Last Edit: 23.05.2023
