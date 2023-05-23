@@ -1,5 +1,5 @@
 /**********************************************************************/
-/* TadPath PARD Capture (PardCap) Stand Alone v1.0                    */
+/* TadPath PARD Capture (PardCap) Stand Alone v1.1.0                  */
 /*                                                                    */
 /* PardCap is a stand alone version of the image capture functions of */
 /* the PARDUS robotics control system. 'Stand Alone' distinguishes    */
@@ -9,7 +9,7 @@
 /* server the communications protocol for the PARD Daemon and the     */
 /* automtion script interpreter.                                      */
 /*                                                                    */
-/* Copyright (c) Dr Paul J. Tadrous 2000-2022   All rights reserved.  */
+/* Copyright (c) Dr Paul J. Tadrous 2000-2023   All rights reserved.  */
 /*                                                                    */
 /* This program is distributed under the terms of the GNU General     */
 /* Public License (GPL v3 or later).                                  */
@@ -67,7 +67,7 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 24.11.22)                      */
+/* P. J. Tadrous 31.01.2020 (last edit 22.05.23)                      */
 /**********************************************************************/
 
 // Linux:
@@ -103,7 +103,7 @@
 
 
 // Version number
-#define PARDCAP_VERN "1.0.28.11.22"
+#define PARDCAP_VERN "1.1.0.22.05.23"
 
 // This is needed for general programming
 #include <stdio.h>
@@ -115,7 +115,7 @@
 #include <time.h>
 
 // This is needed to test for endianness for writing output in the FITS
-// format. With some systems might need to #include <netinet/in.h>
+// format. With some systems you might need to #include <netinet/in.h>
 // instead of <arpa/inet.h>
 #include <arpa/inet.h>
 
@@ -143,7 +143,7 @@ int Use_audio;
 
 
 ////////////////////////////////////////////////////////////////////////
-// Need to decompress MJPEG stream images for preview and to save
+// Needed to decompress MJPEG stream images for preview and to save
 // images to disc in JPEG format other than those stills taken directly
 // from the MJPEG stream.
 #include <jpeglib.h>
@@ -398,7 +398,7 @@ int MKht,MKwd;              // The dimensions of the currently loaded
                             // corrections mask - to check if they are
                             // identical to the current main image.
 unsigned char *MaskIm;      // To hold the corrections mask image. 
-int msk_pending=0;          // Lets settings control know if the user
+int mask_pending=0;         // Lets settings control know if the user
                             // selected a corrections mask image so it 
                             // can attempt to load it upon 'Apply'
 int mask_status;            // Let the program know whether to use
@@ -418,8 +418,9 @@ double Mask_supp_size;      // The number of pixels >0 (used for
                             // calculating mean pixel values per frame
                             
 // Values for mask_alloced
-#define MASK_NO     0  // Don't use a custom corrections mask.
+#define MASK_NO     0  // Don't use a custom corrections mask. (This must be 0)
 #define MASK_YES    1  // Yes, use a custom corrections mask.
+
 
 // Values for mskfile_loaded 
 #define MASK_NONE  0  // This is set when mask_alloced fails.
@@ -435,7 +436,7 @@ int csetfile_loaded;        // Lets functions know if a settings file is
 #define CSET_CUST  1  // A custom settings file is currently loaded
 
 
-// Values for colour channel for raw doubles IO
+// Values for colour channel for raw doubles IO (and preview overlay)
 #define CCHAN_Y 1
 #define CCHAN_R 2
 #define CCHAN_G 3
@@ -483,6 +484,8 @@ static int frame_timeout_usec; // up on getting a frame.
 #define MAX_CMDLEN 512  // Maximum length for a command string.
 int ImHeight,ImWidth,ImSize,ImWidth_stride,Need_to_save;
 int CurrDims_idx,VGA_idx;
+int CurrMax_FPS;
+int Camera_was_closed=0; // This can indicate a different camera is being used.
 int Delayed_start_on,Delayed_start_in_progress;
 double Delayed_start_seconds;
 char *ImRoot,*FFFile,*DFFile,*CSFile,*MaskFile;
@@ -586,7 +589,7 @@ int  fpx_max=10;
 
 // Variables for subsampling down monochrome images to preview size:
 int Prev_startrow,Prev_startcol; // For centering the preview image
-int Prev_startrow1; // To calculate tile offset
+int Prev_endrow,Prev_endcol;     // For blanking boundaries
 int Img_startrow,Img_startcol; // For selecting tile of full scale image
 int *SSrow,*SScol; // Subsampling index arrays
 double Prev_scaledim; // Calculate preview sampling and tile centering.
@@ -597,9 +600,83 @@ int Preview_fullsize,selected_Preview_fullsize;
 int Preview_tile_selection_made; // Has the user slected the tile yet?
 int Prevclick_X,Prevclick_Y; // The co-ords selected by the user.
 
+// A flag to prevent over-use of the preview timeout function
+int Preparing_preview = 0;
+
 // Preview frame integration and bias constants             
 #define PADJUST_INTEGRAL 1
 #define PADJUST_BIAS     2
+
+// If overlay moves refresh preview flag
+char  Prev_aspect_4_by_3;
+
+// Variables for preview stats
+typedef struct {
+    unsigned int  lsat_r,lsat_g,lsat_b; // Lower saturation pixels
+    unsigned int  usat_r,usat_g,usat_b; // Upper saturation pixels
+    unsigned char llim_r,llim_g,llim_b; // Lower limits for saturation
+    unsigned char ulim_r,ulim_g,ulim_b; // Upper limits for saturation
+    unsigned char max_r,max_g,max_b;    // Max values
+    unsigned char min_r,min_g,min_b;    // Min values
+    double        intgl_r,intgl_g,intgl_b; // Integral
+    double        var_r,var_g,var_b;       // Variance
+    unsigned int hgm_r[256],hgm_g[256],hgm_b[256]; // Histograms
+    int           hgm_origin_x,hgm_origin_y;       // Histogram overlay position
+    int           focus_origin_y;    // Focus bar overlay position
+    double        hgm_scale_r,hgm_scale_g,hgm_scale_b; // Hisogram scale factors
+    char          hgm_cum_r,hgm_cum_g,hgm_cum_b;   // Histogram cumulative flags
+    char          hgm_no_autoscale;  // If set the histograms will not autoscale
+    char          var_within_limits; // Variance calcs will ignore contributions
+                                     // from pixels with values outside the 
+                                     // the saturation limits defined above.
+    char          focuser_param_varabslap;      // Focus parameter choice
+    char          pp_laplace;    // Pre-processing flag
+    char          pp_invert;     // Pre-processing flag
+    char          focuser_param_abslap;         // Focus parameter choice
+    double        Laplace_coefficient; // For Laplacian pre-processing.
+    double        af_laplace_r;  // Autofocus Laplacian parameter
+    double        af_laplace_g;  // Autofocus Laplacian parameter
+    double        af_laplace_b;  // Autofocus Laplacian parameter
+    double        focus_max_r,focus_cur_r; // Real time focus parameter values.
+    double        focus_max_g,focus_cur_g; // Real time focus parameter values.
+    double        focus_max_b,focus_cur_b; // Real time focus parameter values.
+    double        focus_min_r,focus_min_g,focus_min_b; // As above.
+    double        npixels; // Used for mean and variance calcs
+    double        hgm_max_r,hgm_max_g,hgm_max_b; // For histogram autoscaling
+    unsigned char *MaskIm;
+    int           mask_status,mask_alloced,mskfile_loaded,mask_pending;
+    int           mask_show;
+    double        Mask_supp_size;
+    char          Selected_Mask_filename[FILENAME_MAX],*MaskFile;
+    unsigned char rlut[256],glut[256],blut[256];
+} Stats_for_Preview;
+
+Stats_for_Preview PrevStat;
+
+const char *format_rn = "<span font=\"monospace\" foreground=\"red\" weight=\"normal\">\%s</span>";
+const char *format_gn = "<span font=\"monospace\" foreground=\"green\" weight=\"normal\">\%s</span>";
+const char *format_bn = "<span font=\"monospace\" foreground=\"blue\" weight=\"normal\">\%s</span>";
+
+const char *format_gy = "<span font=\"monospace\" foreground=\"gray\" weight=\"normal\">\%s</span>";
+unsigned char Prev_blank_gb=1;// Whether to grey out the green and blue labels
+
+int Prev_overlay_hgm=0;   // Overlay histogram on preview image
+int Prev_overlay_focus=0; // Overlay focus assist on preview image
+int Focusser_y_down,Focusser_y_up; // The two Y positions of the focus bar
+
+
+int Preview_LUT;
+// Values for Preview_LUT
+const char *Preview_LUT_options[] = {"Linear","Inverted","Logarithmic","Exponential","Square_root","Square"};
+int Nplut=6;
+// Preview monochrome LUT options
+#define LUT_LIN 0
+#define LUT_INV 1
+#define LUT_LOG 2
+#define LUT_EXP 3
+#define LUT_SRT 4
+#define LUT_SQR 5
+int preview_lut_from_string(char *lut); // String must be at least size 12
 
 // Some function defs and GUI widget-related globals for the preview are
 // given below.
@@ -614,15 +691,18 @@ int Prevclick_X,Prevclick_Y; // The co-ords selected by the user.
 
 // Widget indices - used to keep track of which  CamsetWidget[] we are
 // dealing with when working with the camera settings window interface 
-int windex,rowdex,windex_gn,windex_bs,windex_sz,windex_fps;
+int windex,rowdex,windex_gn,windex_bs,windex_sz,windex_fps,windex_plut;
 int windex_camfmt,windex_safmt; // Camera stream format and save-as fmt.
-int windex_uf,windex_uf2;  // Use FF label and check box
-int windex_ud,windex_ud2;  // Use DF label and check box
-int windex_um,windex_um2;  // Use Mask label and check box
+int windex_uf,windex_uf2;    // Use FF label and check box
+int windex_ud,windex_ud2;    // Use DF label and check box
+int windex_um,windex_um2;    // Use Mask label and check box
+int windex_upm,windex_upm2;  // Use Preview mask label and check box
+int windex_dpm,windex_dpm2;  // Display the preview mask label and check box
 int windex_imroot,windex_fno,windex_pc,windex_avd,windex_yo;
 int windex_rffi,windex_rdfi; // Flat field and dark field labels
 int windex_ldcs,windex_sacs; // Load/Save camera settings labels
 int windex_rmski;            // Corrections mask label
+int windex_pmski;            // Preview mask label
 int windex_to,windex_rt;   // Frame grabber timeout and no. of retries. 
 int windex_srn,windex_srd; // Image series controls.
 int windex_sad;            // Save as raw doubles 
@@ -632,7 +712,30 @@ int windex_del;            // Delayed start to capture
 int windex_jpg;            // JPEG save as quality for averaged images
                            // (does not apply to single frames directly
                            // saved from the camera's MJPEG stream).
+int windex_lsr; // Lower saturation limit (Red/grey)
+int windex_lsg; // Lower saturation limit (Green)
+int windex_lsb; // Lower saturation limit (Blue)
+int windex_usr; // Upper saturation limit (Red/grey)
+int windex_usg; // Upper saturation limit (Green)
+int windex_usb; // Upper saturation limit (Blue)
+int windex_hsr; // Histogram scale factor (Red/Grey)
+int windex_hsg; // Histogram scale factor (Green)
+int windex_hsb; // Histogram scale factor (Blue)
+int windex_hcr; // Use cumulative histogram label and check box (R)
+int windex_hcg; // Use cumulative histogram label and check box (G)
+int windex_hcb; // Use cumulative histogram label and check box (B)
+int windex_hmn; // Don't auto-fit histograms?
+int windex_vil; // Variance and mean restricted to sat limits? 
+int windex_flv; // Use variance x mean abs. Laplacian?
+int windex_ppl; // Display Laplacian? [Monochrome only]
+int windex_ppi; // Invert intensities?
+int windex_fls; // Median Use mean abs. Laplacian?
 
+int Settings_heading_level; // When printing a heading in the settings window
+                            // this lets the GUI know what font style to use:
+                            // 0 = Main heading (Bold, italic)
+                            // 1 = Sub heading (normal font)
+                            // 2 = Sub-sub heading (italic only)
 
 int Save_raw_doubles=0;    // Save the image in raw doubles format (in
                            // addition to the primary format).
@@ -681,7 +784,7 @@ int Accumulator_status=0; // Let us know if accumulators are alloced.
 
 // Number of seconds to wait to a frame from the frame grabber while
 // capturing (not preview) and the number of times to retry
-int Gb_Timeout=4, Gb_Retry=100;
+int Gb_Timeout=360, Gb_Retry=100;
 
 // Settings for image series (including time-lapse).
 // Number of images to capture in a series and time delay between each
@@ -750,17 +853,21 @@ GtkWidget *Win_main;
 GtkWidget *dlg_choice,*dlg_info;
 GtkWidget *chk_preview_central,*chk_cam_yonly,*chk_useffcor;
 GtkWidget *chk_scale_means;
+GtkWidget *chk_usehcr,*chk_usehcg,*chk_usehcb;
+GtkWidget *chk_useppi,*chk_useppl,*chk_usefls,*chk_useflv;
+GtkWidget *chk_hgm_manual,*chk_var_inlimits;
 GtkWidget *chk_sa_rawdoubles,*chk_sa_fits;
-GtkWidget *chk_usedfcor,*chk_usemskcor;
+GtkWidget *chk_usedfcor,*chk_usemskcor,*chk_usepmsk,*chk_dsppmsk;
 GtkWidget *lab_cam_status,*btn_cam_stream,*chk_cam_preview;
 GtkWidget *chk_audio;
 GtkWidget *Img_preview,*Ebox_preview,*Ebox_lab_preview;
-GtkWidget *win_cam_settings,*grid_camset,*btn_cs_apply;
+GtkWidget *win_cam_settings,*grid_camset,*btn_cs_apply,*btn_cs_apply_nc;
 GtkWidget *btn_cs_load_ffri,*btn_cs_load_dfri,*btn_cs_load_mskri;
+GtkWidget *btn_cs_load_pmsk;
 GtkWidget *btn_cs_load_cset,*btn_cs_save_cset;
 GtkWidget *btn_av_interrupt; // To cancel an averaging sequence.
 GtkWidget *CamsetWidget[MAX_CAM_SETTINGS];
-GtkWidget *combo_sz,*combo_fps,*combo_safmt,*combo_camfmt;
+GtkWidget *combo_sz,*combo_fps,*combo_plut,*combo_safmt,*combo_camfmt;
 GtkWidget *btn_cam_save, *btn_cam_settings;
 GtkWidget *load_file_dialog,*save_file_dialog;
 GtkWidget *About_dialog;
@@ -768,7 +875,14 @@ GtkWidget *preview_integration_sbutton;
 GtkWidget *preview_bias_sbutton;
 GtkWidget *preview_corr_button;
 GtkWidget *prev_int_label,*prev_bias_label;
+GtkWidget *Grid_prevstats;
+GtkWidget *PrevSt_sat_r,*PrevSt_sat_g,*PrevSt_sat_b; // Saturation related
+GtkWidget *PrevSt_sum_r,*PrevSt_sum_g,*PrevSt_sum_b; // Summary stats
+GtkWidget *Prev_btn_hgm,*Prev_btn_focus;
+GtkWidget *lab_stats_title2;
 
+// Flag for knowing whether to set camera hardware settings or not
+int Set_camera = 1;
 
 // These are for the interactive slider control for real-time setting of
 // a camera control value:
@@ -853,6 +967,7 @@ void nullify_mask(void);
 int test_selected_ff_filename(char *);
 int test_selected_df_filename(char *);
 int test_selected_msk_filename(char *);
+int test_selected_pmsk_filename(char *);
 
 static int open_device(void);
 static int init_device(void);
@@ -1106,8 +1221,8 @@ int print_cs_file(const char *fname)
  
  fp=fopen(fname,"wb");
  if(fp==NULL){ show_message("Failed to open file for writing camera settings.","File Save FAILED: ",MT_ERR,1); return 1;}
- // Write a header to identify this file format
- fprintf(fp,"PCamSet 1 %u %d\n\n",NCSs,windex);
+ // Write a header to identify this file format (current version is 1.1)
+ fprintf(fp,"PCamSet 1.1 %u %d\n\n",NCSs,windex);
  // Now loop through the camera settings with their current values
  for(sdx=0;sdx<NCSs;sdx++){
    fprintf(fp,"\nidx:  %u\n",sdx);
@@ -1269,12 +1384,7 @@ int test_framerate_resolutions(unsigned int lwd, unsigned int lht, unsigned int 
    // by the camera for image stream of cfmt
    selectedfdx = 0;
    while(0 == ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsizeenum)){
-         // PARD Capture does not yet support these frame heights:
-         if(frmsizeenum.discrete.height==288) goto Next_resolution;
-         if(frmsizeenum.discrete.height==144) goto Next_resolution;
-
          if(lwd==frmsizeenum.discrete.width && lht==frmsizeenum.discrete.height) selectedfdx++;
-         Next_resolution:
          fdx++; // index of next frame size to query  
          frmsizeenum.index=fdx;
         }
@@ -1334,7 +1444,7 @@ int AudioUnInit(void)
 }
 
 int a_beep(int duration, int pitch)
-// Prinitive beeper function using PulseAudio-simple lib APIs.
+// Primitive beeper function using PulseAudio-simple lib APIs.
 // duration = duration of beep
 // pitch = the octave: supply 0, 1, 2 or 3.
 {
@@ -1742,9 +1852,9 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                sprintf(errmsg, "Not a valid PARDUS settings file. It does not begin with PCamSet.");
                returnvalue = PCHK_E_FORMAT; break;
               }
-            // The current version is 1
-            if (strcmp(argstr2, "1")) {
-               sprintf(errmsg, "%s: The chosen settings file version ('%s') is incompatible with the version used by this program (1).", argstr1, argstr2);
+            // The current version is 1.1
+            if (strcmp(argstr2, "1.1")) {
+               sprintf(errmsg, "%s: The chosen settings file version ('%s') is incompatible with the version used by this program (1.1).", argstr1, argstr2);
                returnvalue = PCHK_E_FORMAT; break;
               }
             // The number after this is the number of used camera
@@ -1936,15 +2046,9 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                returnvalue = PCHK_E_SYNTAX;
                break; 
               }
-            // Currently only version 1 is supported, so check for it.
+            // Currently only version 1.1 is supported, so check for it.
             sscanf(line, "%s %s", argstr1, argstr2);
-            if (is_not_integer(argstr2)) {
-                returnvalue = PCHK_E_SYNTAX;
-                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
-                break;
-               }
-            inum1=atoi(argstr2); // Get the version number
-            if(inum1!=1){
+            if (strcmp(argstr2, "1.1")) {
                returnvalue = PCHK_E_SYNTAX; 
                sprintf(errmsg, "%s: Version '%s' is not supported.", argstr1, argstr2);
                break;
@@ -2015,6 +2119,29 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                sprintf(errmsg, "%s: An FPS of '%s' is not supported.", argstr1, argstr2);
                break;
               }
+          }
+        else if (!strcmp(argstr1, "windex_plut")) {
+            // windex_plut <string1>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Put the LUT name into argstr5
+            sscanf(line, "%s %s", argstr1, argstr5);
+            // Now check that corresponds to an available preview LUT:
+            inum1=-1;
+            switch(preview_lut_from_string(argstr5)){
+              case LUT_LIN: inum1=LUT_LIN; break;
+              case LUT_INV: inum1=LUT_INV; break;
+              case LUT_EXP: inum1=LUT_EXP; break;
+              case LUT_SRT: inum1=LUT_SRT; break;
+              case LUT_SQR: inum1=LUT_SQR; break;
+              default:
+               sprintf(errmsg, "%s: Preview LUT '%s' is not available.", argstr1, argstr5);
+               returnvalue = PCHK_E_SYNTAX;
+               break;
+              }
+            if(returnvalue == PCHK_E_SYNTAX) break;
           }
         else if (!strcmp(argstr1, "windex_camfmt")) {
             // windex_camfmt <string1> [<string2>]
@@ -2344,6 +2471,312 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                 break;
                }
           }
+        else if (!strcmp(argstr1, "windex_lsr")) {
+            // windex_lsr <INT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be an integer:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_integer(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
+                break;
+               }
+            inum1=atoi(argstr2); // Get the value and check its range:
+            if(cs_int_range_check(-1, 256,"Saturation lower limit (Red/Grey)", inum1,0)){ 
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: A value of '%s' is not supported.", argstr1, argstr2);
+               break;
+              }
+          }
+        else if (!strcmp(argstr1, "windex_lsg")) {
+            // windex_lsg <INT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be an integer:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_integer(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
+                break;
+               }
+            inum1=atoi(argstr2); // Get the value and check its range:
+            if(cs_int_range_check(-1, 256,"Saturation lower limit (Green)", inum1,0)){ 
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: A value of '%s' is not supported.", argstr1, argstr2);
+               break;
+              }
+          }
+        else if (!strcmp(argstr1, "windex_lsb")) {
+            // windex_lsb <INT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be an integer:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_integer(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
+                break;
+               }
+            inum1=atoi(argstr2); // Get the value and check its range:
+            if(cs_int_range_check(-1, 256,"Saturation lower limit (Blue)", inum1,0)){ 
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: A value of '%s' is not supported.", argstr1, argstr2);
+               break;
+              }
+          }
+        else if (!strcmp(argstr1, "windex_usr")) {
+            // windex_usr <INT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be an integer:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_integer(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
+                break;
+               }
+            inum1=atoi(argstr2); // Get the value and check its range:
+            if(cs_int_range_check(-1, 256,"Saturation uppwer limit (Red/Grey)", inum1,0)){ 
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: A value of '%s' is not supported.", argstr1, argstr2);
+               break;
+              }
+          }
+        else if (!strcmp(argstr1, "windex_usg")) {
+            // windex_usg <INT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be an integer:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_integer(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
+                break;
+               }
+            inum1=atoi(argstr2); // Get the value and check its range:
+            if(cs_int_range_check(-1, 256,"Saturation upper limit (Green)", inum1,0)){ 
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: A value of '%s' is not supported.", argstr1, argstr2);
+               break;
+              }
+          }
+        else if (!strcmp(argstr1, "windex_usb")) {
+            // windex_usb <INT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be an integer:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_integer(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an integer.", argstr1, argstr2);
+                break;
+               }
+            inum1=atoi(argstr2); // Get the value and check its range:
+            if(cs_int_range_check(-1, 256,"Saturation lower limit (Blue)", inum1,0)){ 
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: A value of '%s' is not supported.", argstr1, argstr2);
+               break;
+              }
+          }
+        else if (!strcmp(argstr1, "windex_hsr")) {
+            // windex_hsr <FLOAT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be a valid float:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_float(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an valid floating point number.", argstr1, argstr2);
+                break;
+               }
+            // Must not be negative
+            if(atof(argstr2)<0.0) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' can not be negative (histogram scale (Red/Grey).", argstr1, argstr2);
+                break;
+               } 
+          }
+        else if (!strcmp(argstr1, "windex_hsg")) {
+            // windex_hsg <FLOAT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be a valid float:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_float(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an valid floating point number.", argstr1, argstr2);
+                break;
+               }
+            // Must not be negative
+            if(atof(argstr2)<0.0) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' can not be negative (histogram scale (Green).", argstr1, argstr2);
+                break;
+               } 
+          }
+        else if (!strcmp(argstr1, "windex_hsb")) {
+            // windex_hsb <FLOAT>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be a valid float:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_float(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not an valid floating point number.", argstr1, argstr2);
+                break;
+               }
+            // Must not be negative
+            if(atof(argstr2)<0.0) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' can not be negative (histogram scale (Blue).", argstr1, argstr2);
+                break;
+               } 
+          }
+        else if (!strcmp(argstr1, "windex_hcr")) {
+            // windex_hcr <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_hcg")) {
+            // windex_hcg <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_hcb")) {
+            // windex_hcb <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_hmn")) {
+            // windex_hmn <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_vil")) {
+            // windex_vil <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_flv")) {
+            // windex_flv <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_ppl")) {
+            // windex_ppl <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_ppi")) {
+            // windex_ppi <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_fls")) {
+            // windex_fls <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
         else if (!strcmp(argstr1, "windex_ud")) {
             // windex_ud <Yes/No>
             if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
@@ -2386,6 +2819,34 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                 break;
                }
           }
+        else if (!strcmp(argstr1, "windex_upm")) {
+            // windex_upm <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_dpm")) {
+            // windex_dpm <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
         else if (!strcmp(argstr1, "windex_rdfi")) {
             // windex_rdfi <fname>
             if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
@@ -2416,6 +2877,20 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
           }
         else if (!strcmp(argstr1, "windex_rmski")) {
             // windex_rmski <fname>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // <fname> must not be an empty string:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(strlen(argstr2)<1){ // Check it is >=1
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: An empty file name is not supported.", argstr1);
+               break;
+              }
+          }              
+        else if (!strcmp(argstr1, "windex_pmski")) {
+            // windex_pmski <fname>
             if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
                returnvalue = PCHK_E_SYNTAX;
                break; 
@@ -2479,13 +2954,14 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
     char  line[MAX_CMDLEN], argstr1[64], argstr2[64];
     char  argstr3[64], argstr5[256];
     char  imsg[MAX_CMDLEN+32];
-    int   esdx,dfoff,ffoff,mskoff;
+    int   esdx,dfoff,ffoff,mskoff,pmskoff;
 
-    mdx=0;   // Menu items = number of lines to skip in this check
-    esdx=0;  // To detect non-fatal errors.
-    dfoff=0; // 'Use dark field?' must be switched off flag
-    ffoff=0; // 'Use flat field?' must be switched off flag
-    mskoff=0; // 'Use mask?' must be switched off flag
+    mdx=0;     // Menu items = number of lines to skip in this check
+    esdx=0;    // To detect non-fatal errors.
+    dfoff=0;   // 'Use dark field?' must be switched off flag
+    ffoff=0;   // 'Use flat field?' must be switched off flag
+    mskoff=0;  // 'Use mask?' must be switched off flag
+    pmskoff=0; // 'Use preview mask?' must be switched off flag
  
     *linenum = 0;
     returnvalue = PCHK_TERMINUS; // Ensures improper termination flag is
@@ -2565,6 +3041,12 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
             sscanf(line, "%s %s", argstr1,argstr2);
             inum1=atoi(argstr2); // Get the fps and set the combo GUI
             gtk_combo_box_set_active(GTK_COMBO_BOX(combo_fps), fps_index(inum1));
+          }
+        else if (!strcmp(argstr1, "windex_plut")) {
+            // windex_plut <lut>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            // Get the preview LUT combo index and set the combo GUI
+            gtk_combo_box_set_active(GTK_COMBO_BOX(combo_plut), preview_lut_from_string(argstr2));
           }
         else if (!strcmp(argstr1, "windex_camfmt")) {
             // windex_camfmt <string1> [<string2>]
@@ -2696,6 +3178,114 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_scale_means), TRUE);
              else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_scale_means), FALSE);
           }
+        else if (!strcmp(argstr1, "windex_lsr")) {
+            // windex_lsr <INT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_lsr]);
+          }
+        else if (!strcmp(argstr1, "windex_lsg")) {
+            // windex_lsg <INT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_lsg]);
+          }
+        else if (!strcmp(argstr1, "windex_lsb")) {
+            // windex_lsb <INT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_lsb]);
+          }
+        else if (!strcmp(argstr1, "windex_usr")) {
+            // windex_usr <INT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_usr]);
+          }
+        else if (!strcmp(argstr1, "windex_usg")) {
+            // windex_usg <INT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_usg]);
+          }
+        else if (!strcmp(argstr1, "windex_usb")) {
+            // windex_usb <INT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_usb]);
+          }
+        else if (!strcmp(argstr1, "windex_hsr")) {
+            // windex_hsr <FLOAT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_hsr]);
+          }
+        else if (!strcmp(argstr1, "windex_hsg")) {
+            // windex_hsg <FLOAT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_hsg]);
+          }
+        else if (!strcmp(argstr1, "windex_hsb")) {
+            // windex_hsb <FLOAT>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            put_entry_txt(argstr2,CamsetWidget[windex_hsb]);
+          }
+        else if (!strcmp(argstr1, "windex_hcr")) {
+            // windex_hcr <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usehcr), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usehcr), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_hcg")) {
+            // windex_hcg <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usehcg), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usehcg), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_hcb")) {
+            // windex_hcb <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usehcb), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usehcb), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_hmn")) {
+            // windex_hmn <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_hgm_manual), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_hgm_manual), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_vil")) {
+            // windex_vil <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_var_inlimits), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_var_inlimits), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_flv")) {
+            // windex_flv <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useflv), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useflv), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_ppl")) {
+            // windex_ppl <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useppl), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useppl), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_ppi")) {
+            // windex_ppi <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useppi), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useppi), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_fls")) {
+            // windex_fls <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usefls), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usefls), FALSE);
+          }
         else if (!strcmp(argstr1, "windex_ud")) {
             // windex_ud <Yes/No>
             sscanf(line, "%s %s", argstr1,argstr2);
@@ -2716,6 +3306,20 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
             if(!strcmp(argstr2,"Yes"))
              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usemskcor), TRUE);
              else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usemskcor), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_upm")) {
+            // windex_upm <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepmsk), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepmsk), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_dpm")) {
+            // windex_dpm <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_dsppmsk), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_dsppmsk), FALSE);
           }
         else if (!strcmp(argstr1, "windex_rdfi")) {
             // windex_rdfi <fname>
@@ -2743,6 +3347,14 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
             if(test_selected_msk_filename(argstr2)){
              esdx++;
              mskoff++;
+            }
+          }              
+        else if (!strcmp(argstr1, "windex_pmski")) {
+            // windex_pmski <fname>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(test_selected_pmsk_filename(argstr2)){
+             esdx++;
+             pmskoff++;
             }
           }              
         else if (!strcmp(argstr1, "exit")) {
@@ -2774,6 +3386,8 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
   if(dfoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usedfcor), FALSE);
   if(ffoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useffcor), FALSE);
   if(mskoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usemskcor), FALSE);
+  if(pmskoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepmsk), FALSE);
+  if(pmskoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_dsppmsk), FALSE);
 
 
     return returnvalue;
@@ -2796,8 +3410,8 @@ int append_cs_file(const char *fname)
  fp=fopen(fname,"ab");
  if(fp==NULL){ show_message("Failed to open file for writing camera settings.","File Save FAILED: ",MT_ERR,1); return 1;}
  
- // Write a header to identify this file format
- fprintf(fp,"\n\n\nPCustSet 1\n\n");
+ // Write a header to identify this file format and its version
+ fprintf(fp,"\n\n\nPCustSet 1.1\n\n");
  
  // Now print the custom settings with their current values
  fprintf(fp,"# Image size and FPS for full frame capture\n");
@@ -2805,6 +3419,9 @@ int append_cs_file(const char *fname)
 
  fprintf(fp,"# Frames per second for live preview\n");
  fprintf(fp,"windex_fps %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_fps])));
+
+ fprintf(fp,"# LUT for live preview\n");
+ fprintf(fp,"windex_plut %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_plut])));
 
  fprintf(fp,"# Format stream from the camera\n");
  fprintf(fp,"windex_camfmt %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_camfmt])));
@@ -2860,6 +3477,60 @@ int append_cs_file(const char *fname)
  fprintf(fp,"# Scale mean of each frame to first?\n");
  fprintf(fp,"windex_smf %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_smf])));
 
+ fprintf(fp,"# Lower saturation limit (Red/grey)\n");
+ fprintf(fp,"windex_lsr %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_lsr+1])));
+
+ fprintf(fp,"# Lower saturation limit (Green)\n");
+ fprintf(fp,"windex_lsg %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_lsg+1])));
+
+ fprintf(fp,"# Lower saturation limit (Blue)\n");
+ fprintf(fp,"windex_lsb %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_lsb+1])));
+
+ fprintf(fp,"# Upper saturation limit (Red/grey)\n");
+ fprintf(fp,"windex_usr %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_usr+1])));
+
+ fprintf(fp,"# Upper saturation limit (Green)\n");
+ fprintf(fp,"windex_usg %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_usg+1])));
+
+ fprintf(fp,"# Upper saturation limit (Blue)\n");
+ fprintf(fp,"windex_usb %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_usb+1])));
+
+ fprintf(fp,"# Histogram scale factor (Red/Grey)\n");
+ fprintf(fp,"windex_hsr %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hsr+1])));
+
+ fprintf(fp,"# Histogram scale factor (Green)\n");
+ fprintf(fp,"windex_hsg %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hsg+1])));
+
+ fprintf(fp,"# Histogram scale factor (Blue)\n");
+ fprintf(fp,"windex_hsb %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hsb+1])));
+
+ fprintf(fp,"# Use cumulative histogram (Red/Grey)?\n");
+ fprintf(fp,"windex_hcr %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hcr])));
+
+ fprintf(fp,"# Use cumulative histogram (Green)?\n");
+ fprintf(fp,"windex_hcg %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hcg])));
+
+ fprintf(fp,"# Use cumulative histogram (Blue)?\n");
+ fprintf(fp,"windex_hcb %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hcb])));
+
+ fprintf(fp,"# Don't auto-fit histograms?\n");
+ fprintf(fp,"windex_hmn %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_hmn])));
+
+ fprintf(fp,"# Variance and mean restricted to sat limits?\n");
+ fprintf(fp,"windex_vil %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_vil])));
+
+ fprintf(fp,"# Focusser: Use variance x mean abs. Laplacian?\n");
+ fprintf(fp,"windex_flv %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_flv])));
+
+ fprintf(fp,"# Display Laplacian? [Monochrome only]\n");
+ fprintf(fp,"windex_ppl %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_ppl])));
+
+ fprintf(fp,"# Invert intensities?\n");
+ fprintf(fp,"windex_ppi %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_ppi])));
+
+ fprintf(fp,"# Focusser: Use mean abs. Laplacian?\n");
+ fprintf(fp,"windex_fls %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_fls])));
+
  fprintf(fp,"# Dark field subtraction image\n");
  fprintf(fp,"windex_rdfi %s\n\n",(dffile_loaded==DFIMG_NONE)?"[None]":DFFile);
          
@@ -2891,6 +3562,29 @@ int append_cs_file(const char *fname)
  fprintf(fp,"# Use corrections mask?\n");
  fprintf(fp,"windex_um %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_um])));
 
+
+ fprintf(fp,"# Preview mask image\n");
+ switch(PrevStat.mskfile_loaded){
+   case MASK_NONE:
+    fprintf(fp,"windex_pmski [None]\n\n");
+   break;
+   case MASK_YRGB:
+    fprintf(fp,"windex_pmski %s\n\n",PrevStat.MaskFile);
+   break;
+   case MASK_FULL:
+    fprintf(fp,"windex_pmski [Full]\n\n");
+   break;
+   default: // This should not happen
+    fprintf(fp,"windex_pmski [UNDF]\n\n");
+   break;
+ }
+
+ fprintf(fp,"# Use the preview mask for stats?\n");
+ fprintf(fp,"windex_upm %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_upm])));
+
+ fprintf(fp,"# Display the preview mask?\n");
+ fprintf(fp,"windex_dpm %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_dpm])));
+
  fprintf(fp,"exit\n"); // End of settings
  
  fprintf(fp, "Saved at: %s\n\n", ((time(&ct)) == -1) ? "[Time not available]" : ctime(&ct));
@@ -2908,6 +3602,18 @@ int camfmt_from_string(char *fmt)
  
  for(idx=0;idx<Ncamfs;idx++)
   if(!strcmp(fmt,camfmt_options[idx])) return idx;
+ 
+ return -1;
+}
+
+int preview_lut_from_string(char *lut)
+// Get the ID index of the currently selected preview LUT.
+// Return -1 on failure.
+{
+ int idx;
+ 
+ for(idx=0;idx<Nplut;idx++)
+  if(!strcmp(lut,Preview_LUT_options[idx])) return idx;
  
  return -1;
 }
@@ -3142,7 +3848,7 @@ int get_bmp(char *fname, unsigned char **cptrgb, int *ht, int *wd, void *cref)
 // Read a BMP formatted image from disk.
 {
  FILE *fp;
- unsigned int pos,ww,ww3,waw,wspill,row,offdiff,size;
+ unsigned int pos,ww,ww3,waw,wspill,row,offdiff,size,size_rgb;
  unsigned char *pad,*diffpad,rpix,bpix;
  BMPHead ImgHead;
 
@@ -3212,8 +3918,9 @@ if(ImgHead.Bitcount==24){
  if(wspill) free(pad); 
  
  // If colour, reverse R and B because BMP is BGR
+ size_rgb=size*3;
  if(ImgHead.Bitcount==24){
-   for(row=0;row<RGBsize;row+=3){
+   for(row=0;row<size_rgb;row+=3){
        bpix=*(*cptrgb+row);
        rpix=*(*cptrgb+row+2);
        *(*cptrgb+row)=rpix;
@@ -4493,6 +5200,7 @@ int update_preview_settings(int selected)
 // 3. Preview field type selected by the user (full frame or tile)
 // Returns 0 on success and 1 on failure (so preview is impossible).
 {
+
  // Blank the current preview image in case the new preview required
  // padding (we don't want part of a static old image showing in any new
  // padded regions).
@@ -4503,7 +5211,7 @@ int update_preview_settings(int selected)
  if(selected){
    if(ImHeight<=PreviewHt && ImWidth<=PreviewWd) Preview_fullsize=0;
    else Preview_fullsize=1;
-  }
+  } else Preview_fullsize=0;
   
  // If the user wants full-size tile mode:
  if(Preview_fullsize){
@@ -4520,6 +5228,7 @@ int update_preview_settings(int selected)
      show_message("Live preview is not possible with current image dimensions.","Error: ",MT_ERR,1);
      return 1;
    }
+
  return 0;
 }
 
@@ -4564,6 +5273,18 @@ void create_icon(void)
  PardIcon_pixbuf = gdk_pixbuf_new_from_data (PardIcon_data,GDK_COLORSPACE_RGB,FALSE,8,16,16,48,NULL,NULL);
  PardIcon_ready=1;
  return;
+}
+
+unsigned char is_aspect_4_by_3(void)
+// Returns 1 if aspect ratio of the main image is 4:3, zero otherwise
+{
+ double ar;
+
+ ar = (double)ImHeight / (double)ImWidth;
+ if(ar>0.7501) return 0;
+ if(ar<0.7499) return 0;
+
+ return 1;
 }
 
 int change_image_dimensions(void)
@@ -4620,6 +5341,8 @@ int change_image_dimensions(void)
     // If we get here then the new image dims have been set.
     // Set the update preview flag:
     Preview_changed=1;
+    // Test the aspect ratio for preview blanking on overlay shift
+    Prev_aspect_4_by_3 = is_aspect_4_by_3();
     // Now check that the current dimensions fit any selected dark field
     // or flat field or mask image - nullify those images if not:
     if(dffile_loaded!=DFIMG_NONE){
@@ -4717,6 +5440,39 @@ static void change_cam_status(int field, char value)
  return;  
 }
 
+static void calc_preview_base_stats(void)
+// Calculate the sample size for image preview stats taking into consideration
+// the support of teh current mask (full or custom). Also sets the final row and
+// col for image border blanking following convolution (e.g. for the Laplacian).
+// This should be called any time the mask support changes or there is a change
+// in image stream format resulting in a change of aspect ratio for the preview.
+// This function is called by the functions calculate_preview_params() and
+// btn_cs_apply_click()
+{
+ int mskpos,prow,pcol;
+
+ PrevStat.npixels=0.0;
+ Prev_endrow=Prev_endcol=0;
+ mskpos=Prev_startrow/3 + Prev_startcol/3;
+ for(prow=0;prow<PreviewHt;prow++){ 
+    if(SSrow[prow]<0){mskpos+=PreviewWd; continue;}
+    Prev_endrow=prow; // This will be the last valid row
+    for(pcol=0;pcol<PreviewWd;pcol++,mskpos++){
+       if(SScol[pcol]<0) continue;
+       Prev_endcol=pcol; // This will be the last valid col
+       if(PrevStat.mask_status){
+         if(PrevStat.MaskIm[mskpos]) PrevStat.npixels++;
+        } else PrevStat.npixels++;
+   }  }
+
+  Prev_endrow*=PreviewWd_stride; // These are used in set_border_pixels
+  Prev_endcol*=3;                // (function to blank the border after
+                                 // a convolution - only for monochrome
+                                 // previews.
+
+ return;
+}
+
 static int calculate_preview_params(void) 
 // Sets the image index arrays that are used to copy all or part of the
 // main image into the preview image. This function does not deal with
@@ -4748,14 +5504,20 @@ static int calculate_preview_params(void)
     // Now generate the tile integer arrays for height and width:
     for(idx=0;idx<PreviewHt;idx++){
      imgpos=(Img_startrow+idx);
-     if(imgpos>=ImHeight) imgpos=-1;
+     if(imgpos>=ImHeight) imgpos=-1; // See note 1 below
      SSrow[idx]=ImWidth*imgpos;
     }
     for(idx=0;idx<PreviewWd;idx++){
      imgpos=(Img_startcol+idx);
-     if(imgpos>=ImWidth) imgpos=-1;
+     if(imgpos>=ImWidth) imgpos=-1; // See note 1 below
      SScol[idx]=imgpos;
     }
+
+   // Note 1. This overshoot should never happen now that I make checks for this
+   // in the routine that checks the user's choice of start/row pos (chosen by
+   // their mouse click - I automatically adjust the start row/col to ensure it
+   // never overshoots. This use of SScol and SSrow are therefore obsolete.
+
    } else {
    // Otherwise display the 'Select area to zoom' overlay label and go 
    // to the full frame fit preview while the user makes their choice:
@@ -4794,13 +5556,16 @@ static int calculate_preview_params(void)
  // Now centre the preview in the PreviewWd x PreviewHt area
   for(idx=dooffs=0;idx<PreviewHt;idx++) if(SSrow[idx]<0){dooffs=1; break;}
   if(dooffs) Prev_startrow=(PreviewHt-idx)/2; else Prev_startrow=0;
-  Prev_startrow1=Prev_startrow; // Needed to calculate tile offset.
-  Prev_startrow*=PreviewWd*3;
+  Prev_startrow*=PreviewWd_stride;
   
   for(idx=dooffs=0;idx<PreviewWd;idx++) if(SScol[idx]<0){dooffs=1; break;}
   if(dooffs) Prev_startcol=(PreviewWd-idx)/2; else Prev_startcol=0;
   Prev_startcol*=3;
  
+ // Calculate the sample size for image preview stats
+ calc_preview_base_stats();
+
+
  // Adjust coords for use of RGB image instead of p
  switch(CamFormat){
    case V4L2_PIX_FMT_YUYV:
@@ -4901,6 +5666,45 @@ unsigned char uchar_from_d(double dval)
  return (unsigned char)(dval+0.5);
 }
 
+void set_curr_lut(int reqLUT)
+// Set the current LUT for displaying monochrome preview images
+{
+ unsigned int idx;
+ unsigned char displut[256];
+
+ switch(reqLUT){
+  case LUT_LIN:
+   for(idx=0;idx<256;idx++) displut[idx]=(unsigned char)idx;
+  break;
+  case LUT_INV:
+   for(idx=0;idx<256;idx++) displut[idx]=(unsigned char)(255-idx);
+  break;
+  case LUT_LOG:
+   for(idx=0;idx<256;idx++) displut[idx]=uchar_from_d(0.5+106*(log10(1.0+(double)idx)));
+  break;
+  case LUT_EXP:
+   for(idx=0;idx<256;idx++) displut[idx]=uchar_from_d((int)(0.5+exp((double)idx/46.0))-1);
+  break;
+  case LUT_SRT:
+   for(idx=0;idx<256;idx++) displut[idx]=uchar_from_d(0.5+sqrt(255.0*(double)idx));
+  break;
+  case LUT_SQR:
+   for(idx=0;idx<256;idx++) displut[idx]=uchar_from_d(((double)idx*(double)idx)/255.0);
+  break;
+  default:
+   for(idx=0;idx<256;idx++) displut[idx]=(unsigned char)idx;
+  break;
+ }
+
+ for(idx=0;idx<256;idx++){
+    PrevStat.rlut[idx]= displut[idx];
+    PrevStat.glut[idx]= displut[idx];
+    PrevStat.blut[idx]= displut[idx];
+   }
+
+
+}
+
 static int jpeg_convert(const unsigned char *p, int sz)
 // Decode image from the JPEG stream. Some of this code is based on the
 // libjpeg-turbo GitHub repository here:
@@ -4964,6 +5768,160 @@ static int jpeg_convert(const unsigned char *p, int sz)
      return 1;
 }
 
+double Prev_Laplace(int colchan) 
+// Perform a 3x3 Laplacian convolution on the preview image and return the mean
+// Laplacian for all pixels that do not equal 0 (when converted to unsignged
+// char). If no pixels qualify then the result 0.0 is returned.
+// If colchan is CCHAN_Y the Laplacian image result is also stored in the
+// preview image and will be displayed. If any other colour channel is used then
+// the actual preview image pixels will not be altered
+{
+ int prow,pcol,endrow,endcol,rgbpos,prgbpos,pixcolour,mskpos;
+ int p1,p2,p3,p4,p5,p6,p7,p8,pc;
+ double p,lc1,lc2,lc3; // Laplacian coefficients
+ double accum,denom;
+ unsigned char uy1;
+
+ endrow=PreviewHt-1;
+ endcol=PreviewWd-1;
+
+ lc1=-1.0;     // Centre coefficient
+ lc2=0.166667; // 4-neighbour coeficient
+ lc3=0.083333; // 8-neighbour coeficient
+
+ accum=0.0;
+ denom=0.0;
+
+ // Start at the first used row+1 and first used col+1
+ rgbpos=Prev_startrow+Prev_startcol+PreviewWd_stride;
+
+ // Select the colour channel to calculate the derivative from:
+ switch(colchan){
+     case CCHAN_Y:
+     case CCHAN_R:
+     default:
+       pixcolour=3; // Use the red channel pixel
+     break;
+     case CCHAN_G:
+       pixcolour=4; // Use the green channel pixel
+     break;
+     case CCHAN_B:
+       pixcolour=5; // Use the blue channel pixel
+     break;
+   }
+
+
+ // Perform the Laplacian convolution
+
+ mskpos=rgbpos/3; // Skip the first used row+1 and first used col+1 (mask)
+ for(prow=1;prow<endrow;prow++){ 
+    if(SSrow[prow]<0){mskpos+=PreviewWd;  rgbpos+=PreviewWd_stride; continue;}
+    mskpos++;          // Skip the first column (mask)
+    rgbpos+=pixcolour; // Skip the first column
+    for(pcol=1;pcol<endcol;pcol++,mskpos++,rgbpos+=3){
+         if(SScol[pcol]<0) continue;
+         prgbpos=+rgbpos;    // Our centre pixel position (pc)
+         pc=prgbpos;                 //
+         p2=pc-PreviewWd_stride;     //
+         p1=p2-3; p3=p2+3;           // p1 p2 p3
+         p4=pc-3;p5=pc+3;            // p4 pc p5
+         p7=pc+PreviewWd_stride;     // p6 p7 p8
+         p6=p7-3; p8=p7+3;           //
+
+         p= fabs(lc3*(double)PreviewImg[p1] + lc2 *(double)PreviewImg[p2] + lc3*(double)PreviewImg[p3] \
+               + lc2*(double)PreviewImg[p4] + lc1 *(double)PreviewImg[pc] + lc2*(double)PreviewImg[p5] \
+               + lc3*(double)PreviewImg[p6] + lc2 *(double)PreviewImg[p7] + lc3*(double)PreviewImg[p8]);
+
+         uy1=uchar_from_d(p);
+
+         // If doing a monochrome preview, put the result in the 'green' channel
+         // so we can save the convolved image 'in situ' as we go along.
+         if(colchan==CCHAN_Y){
+             prgbpos++; 
+             PreviewImg[prgbpos]= uy1;
+           }
+
+        // Calculate the autofocus parameter if we are on a non-zero pixel
+         if(uy1>0){
+           // If we are using the mask, only do it if the mask pixel is on.
+           if(PrevStat.mask_status){
+             if(PrevStat.MaskIm[mskpos]){
+                 accum+=p; 
+                 denom++;
+               }
+           // Otherwise just do it anyway.
+            } else {
+              accum+=p; // For the autofocus parameter
+              denom++;
+            }
+           }
+
+      }
+    rgbpos+=3; // Skip the last column
+   }
+
+  if(denom>0.5) accum/=denom; else accum=0.0;
+
+ // Now copy the green channel result to the red channel if we are working on a
+ // monochrome preview
+ if(colchan==CCHAN_Y){
+   rgbpos=Prev_startrow+Prev_startcol+PreviewWd_stride; // Offset by one row 
+   for(prow=1;prow<endrow;prow++){ 
+      if(SSrow[prow]<0){mskpos+=PreviewWd;  rgbpos+=PreviewWd_stride; continue;}
+      rgbpos+=3; // Skip the first column
+      for(pcol=1;pcol<endcol;pcol++,rgbpos+=3){
+         if(SScol[pcol]<0) continue;
+         uy1=PreviewImg[rgbpos+1]; // The 'green' pixel has the Laplace result.
+         PreviewImg[rgbpos]  =uy1; // Copy it to R
+        }
+      rgbpos+=3; // Skip the last column
+     }
+  }
+
+
+ return accum;
+}
+
+static void set_border_pixels(unsigned char bval)
+// Set the pixels all round the border of the preview image to bval.
+// This is only done on the 'green' pixel and is designed to be used after a
+// 3x3 convolution on Y prior to copying the green pixel values into the
+// red and blue channels for display
+{
+ int prow,pcol,endrow,rgbpos,prgbpos;
+ endrow=PreviewHt-1;
+
+ // Now set the boundary (uncalculated) pixels to the midvalue (128)
+ // We only need work on the 'red' channel because this will be copied to the
+ // blue and green channels later in the 'colour_convert' function which is the
+ // caller of this function.
+ // To avoid excessive 'if' checks I assume the very first row and col are safe
+ // to use (i.e. SScol[0] and SSrow[0] are both non-negative). If I get strange
+ // behaviour then that assumption needs to be re-examined.
+
+
+ rgbpos=Prev_startrow;
+ for(pcol=0;pcol<PreviewWd;pcol++){
+       if(SScol[pcol]<0) continue;
+       prgbpos=Prev_startcol+rgbpos;  
+       PreviewImg[prgbpos]=bval;              // Top row
+       PreviewImg[Prev_endrow+prgbpos]=bval;  // Bottom row
+       rgbpos+=3;
+      }
+ // Now the left and right columns
+ rgbpos=Prev_startrow+PreviewWd_stride; // Offset by one row 
+ for(prow=0;prow<endrow;prow++){ 
+    if(SSrow[prow]<0) continue;
+    prgbpos=Prev_startcol+rgbpos;  
+    PreviewImg[prgbpos]=bval;
+    prgbpos=Prev_endcol+rgbpos;   // The centre 'red' pixel position.
+    PreviewImg[prgbpos]=bval;
+    rgbpos+=PreviewWd_stride;
+   }
+
+ return;
+}
+
 static int colour_convert(const unsigned short *p)
 // This function converts the raw data from the frame grabber buffer p
 // (which will be in YUYV format) or from the JPEG frame grabber buffer
@@ -4972,54 +5930,88 @@ static int colour_convert(const unsigned short *p)
 // (e.g. for frame averaging, saving or generating a preview image).
 {
  double r,g,b,fval,mn_r,mn_g,mn_b,dval1,dval2,dval3;
- int ipos,rgbpos,prow,pcol,iposp,fidx,ival,pipos;
+ int ipos,rgbpos,prow,pcol,iposp,fidx,ival,pipos,mskpos;
  unsigned short pixval,y1,y2,cb,cr;
  unsigned char uy1,uy2,uy3,max;
+ unsigned char bval=3; // 3 is used as a placeholder - if it gets changed then
+                       // we know some pre-processing has been done and boundary
+                       // pixel setting must be performed.
  
         
  if(Need_to_preview==PREVIEW_ON){// We need a preview image only, not
-                                 // a full-frame converion.
+                                 // a full-frame conversion.
                                  
     if(Preview_impossible) return 0; // No point continuing but return
                                      // without error because there was
                                      // no problem in this function.
-                                     
+
+     // Let the preview display timeout function know we are making a preview
+     // image so it doesn't try to update it again till this one is ready.
+     // This flag will be reset back to zero at the end of all preview image
+     // modifications (such as adding histogram and focus bar overlays) in the
+     // function 'process_image' (which calls this function).
+     Preparing_preview=1;
+
+     // Some initialisations
+     PrevStat.usat_r=PrevStat.lsat_r=0;
+     PrevStat.usat_g=PrevStat.lsat_g=0;
+     PrevStat.usat_b=PrevStat.lsat_b=0;
+     PrevStat.max_r=PrevStat.max_g=PrevStat.max_b=0;
+     PrevStat.min_r=PrevStat.min_g=PrevStat.min_b=255;
+     PrevStat.intgl_r=PrevStat.intgl_g=PrevStat.intgl_b=0.0;
+     PrevStat.af_laplace_r=0.0;
+     PrevStat.af_laplace_g=0.0;
+     PrevStat.af_laplace_b=0.0;
+
+     memset(PrevStat.hgm_r, 0, 256*sizeof(unsigned int));
+     memset(PrevStat.hgm_g, 0, 256*sizeof(unsigned int));
+     memset(PrevStat.hgm_b, 0, 256*sizeof(unsigned int));
+         
+    // Now make the colour or greyscale preview image from the full-size image                            
     switch(CamFormat){
         case V4L2_PIX_FMT_YUYV:
          switch(col_conv_type){
           case CCOL_TO_Y:    // Just extract the Y component (a fast op)
-             rgbpos=Prev_startrow; 
-              if(PreviewIDX>=Preview_integral) PreviewIDX=0;
-               pipos=0;
+               rgbpos=Prev_startrow+Prev_startcol;
+               if(PreviewIDX>=Preview_integral) PreviewIDX=0;
+ 
                for(prow=0;prow<PreviewHt;prow++){ 
-                  if(SSrow[prow]<0) continue;
-                  for(pcol=0;pcol<PreviewWd;pcol++){
-                     if(SScol[pcol]<0) continue;
-                     ipos=SSrow[prow]+SScol[pcol];
-                     PreviewBuff[PreviewIDX][pipos]=(int)(p[ipos] & 0xff);
-                     for(fidx=0,dval1=(double)Preview_bias;fidx<Preview_integral;fidx++){
-                        dval2=(double)(PreviewBuff[fidx][pipos])-Preview_dark[pipos];
-                        dval2/=Preview_flat[pipos];
-                        dval1+=dval2;
-                       }
-                     uy1=uchar_from_d(dval1);
-                     pipos++;
+                  if(SSrow[prow]<0){rgbpos+=PreviewWd_stride; continue;}
+                     for(pcol=0;pcol<PreviewWd;pcol++,rgbpos+=3){
+                        if(SScol[pcol]<0) continue;
 
-                     PreviewImg[Prev_startcol+rgbpos++]=uy1;
-                     PreviewImg[rgbpos++]=uy1;
-                     PreviewImg[rgbpos++]=uy1;
-                  }
-              }
-              PreviewIDX++;
-              preview_stored = PREVIEW_STORED_MONO;
+                           ipos=SSrow[prow]+SScol[pcol];
+
+                           pipos=rgbpos/3;
+                           PreviewBuff[PreviewIDX][pipos]=(int)(p[ipos] & 0xff);
+                           for(fidx=0,dval1=(double)Preview_bias;fidx<Preview_integral;fidx++){
+                              dval2=(double)(PreviewBuff[fidx][pipos])-Preview_dark[pipos];
+                              dval2/=Preview_flat[pipos];
+                              dval1+=dval2;
+                             }
+
+                           // Invert intensities if that is the user's choice
+                           if(PrevStat.pp_invert) uy1=255-uchar_from_d(dval1);
+                             else uy1=uchar_from_d(dval1);
+   
+                           // Only need to set the red channel for now
+                           PreviewImg[rgbpos]=uy1; 
+
+                     }
+                 }
+
+               PreviewIDX++;
+               preview_stored = PREVIEW_STORED_MONO;
           break;
           case CCOL_TO_RGB:  // Convert to full RGB
           case CCOL_TO_BGR:  // Convert to full RGB (for preview)
-              rgbpos=Prev_startrow; 
+              rgbpos=Prev_startrow+Prev_startcol; 
+
               for(prow=0;prow<PreviewHt;prow++){ 
-                  if(SSrow[prow]<0) continue;
+                  if(SSrow[prow]<0){rgbpos+=PreviewWd_stride; continue;}
                   // The following only applies to making a colour
                   // preview from a YUYV image stream:
+
                   // If the preview is scaling UP the original image
                   // instead of scaling it down to a smaller size
                   // we need to scan a full row of the original and then
@@ -5046,28 +6038,102 @@ static int colour_convert(const unsigned short *p)
                          g = lut_yG[y1] - fval; 
                          b = lut_yB[y1] + lut_cbB[cb];
                          r=r<0.0?0.0:r;g=g<0.0?0.0:g;b=b<0.0?0.0:b;
-                         PreviewRow[pipos++]=(unsigned char)(r>255.0?255:r);
-                         PreviewRow[pipos++]=(unsigned char)(g>255.0?255:g);
-                         PreviewRow[pipos++]=(unsigned char)(b>255.0?255:b);
+                        // Invert intensities if that is the user's choice
+                        if(PrevStat.pp_invert){
+                          uy1=255-(unsigned char)(r>255.0?255:r);
+                          uy2=255-(unsigned char)(g>255.0?255:g);
+                          uy3=255-(unsigned char)(b>255.0?255:b);
+                         } else {
+                          uy1=(unsigned char)(r>255.0?255:r);
+                          uy2=(unsigned char)(g>255.0?255:g);
+                          uy3=(unsigned char)(b>255.0?255:b);
+                         }
+
+                         PreviewRow[pipos++]=uy1;
+                         PreviewRow[pipos++]=uy2;
+                         PreviewRow[pipos++]=uy3;
                          // Get RGB from second pixel via the LUTs
                          r = lut_yR[y2] + lut_crR[cr];
                          g = lut_yG[y2] - fval; 
                          b = lut_yB[y2] + lut_cbB[cb];
                          r=r<0.0?0.0:r;g=g<0.0?0.0:g;b=b<0.0?0.0:b;
-                         PreviewRow[pipos++]=(unsigned char)(r>255.0?255:r);
-                         PreviewRow[pipos++]=(unsigned char)(g>255.0?255:g);
-                         PreviewRow[pipos++]=(unsigned char)(b>255.0?255:b);
+                        // Invert intensities if that is the user's choice
+                        if(PrevStat.pp_invert){
+                          uy1=255-(unsigned char)(r>255.0?255:r);
+                          uy2=255-(unsigned char)(g>255.0?255:g);
+                          uy3=255-(unsigned char)(b>255.0?255:b);
+                         } else {
+                          uy1=(unsigned char)(r>255.0?255:r);
+                          uy2=(unsigned char)(g>255.0?255:g);
+                          uy3=(unsigned char)(b>255.0?255:b);
+                         }
+                         PreviewRow[pipos++]=uy1;
+                         PreviewRow[pipos++]=uy2;
+                         PreviewRow[pipos++]=uy3;
                         }
-                      for(pcol=0,ipos=0;pcol<PreviewWd;pcol++){
+                     for(pcol=0,ipos=0;pcol<PreviewWd;pcol++,rgbpos+=3){
                          if(SScol[pcol]<0) continue;
                          ipos=SScol[pcol]; ipos*=3;
-                         PreviewImg[Prev_startcol+rgbpos++]= PreviewRow[ipos++];
-                         PreviewImg[rgbpos++]= PreviewRow[ipos++]; // G
-                         PreviewImg[rgbpos++]= PreviewRow[ipos];   // B
+                         uy1=PreviewRow[ipos++];
+                         uy2=PreviewRow[ipos++];
+                         uy3=  PreviewRow[ipos];
+
+                         PreviewImg[rgbpos]   = uy1; // R
+                         PreviewImg[rgbpos+1] = uy2; // G
+                         PreviewImg[rgbpos+2] = uy3; // B
+
+                     // Gather stats (only under mask, if used)
+
+                     if(PrevStat.mask_status){
+                       mskpos=rgbpos/3;
+                       if(PrevStat.MaskIm[mskpos]) {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                        }
+                       } else {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                       }
                       }
                     } else {
 
-                  for(pcol=0;pcol<PreviewWd;pcol+=2){
+                     for(pcol=0;pcol<PreviewWd;pcol+=2,rgbpos+=6){
 
                      if(SScol[pcol]<0) continue;
                      ipos=SSrow[prow]+SScol[pcol];
@@ -5101,9 +6167,68 @@ static int colour_convert(const unsigned short *p)
                      // Clamp the values between 0 and 255 inclusive,
                      // convert to unsigned char and output to preview: 
                      r=r<0.0?0.0:r;g=g<0.0?0.0:g;b=b<0.0?0.0:b;
-                     PreviewImg[Prev_startcol+rgbpos++]=(unsigned char)(r>255.0?255:r);
-                     PreviewImg[rgbpos++]=(unsigned char)(g>255.0?255:g); 
-                     PreviewImg[rgbpos++]=(unsigned char)(b>255.0?255:b);
+                     // Invert the values if the user wants that
+                     if(PrevStat.pp_invert){
+                          uy1=255-(unsigned char)(r>255.0?255:r);
+                          uy2=255-(unsigned char)(g>255.0?255:g);
+                          uy3=255-(unsigned char)(b>255.0?255:b);
+                       } else {
+                          uy1=(unsigned char)(r>255.0?255:r);
+                          uy2=(unsigned char)(g>255.0?255:g);
+                          uy3=(unsigned char)(b>255.0?255:b);
+                       }
+
+                     PreviewImg[rgbpos] =uy1;
+                     PreviewImg[rgbpos+1] =uy2; 
+                     PreviewImg[rgbpos+2] =uy3;
+
+                     // Gather stats for the first pixel (under mask, if used)
+                     if(PrevStat.mask_status){
+                       mskpos=rgbpos/3;
+                       if(PrevStat.MaskIm[mskpos]) {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                        }
+                       } else {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                       }
 
                      // Only calculate the second pixel if we are not
                      // oversampling the main image (otherwise it would
@@ -5118,12 +6243,71 @@ static int colour_convert(const unsigned short *p)
                      // Clamp the values between 0 and 255 inclusive,
                      // convert to unsigned char and output to preview: 
                      r=r<0.0?0.0:r;g=g<0.0?0.0:g;b=b<0.0?0.0:b;
-                     PreviewImg[rgbpos++]=(unsigned char)(r>255.0?255:r);
-                     PreviewImg[rgbpos++]=(unsigned char)(g>255.0?255:g); 
-                     PreviewImg[rgbpos++]=(unsigned char)(b>255.0?255:b);
+                     // Invert the values if the user wants that
+                     if(PrevStat.pp_invert){
+                          uy1=255-(unsigned char)(r>255.0?255:r);
+                          uy2=255-(unsigned char)(g>255.0?255:g);
+                          uy3=255-(unsigned char)(b>255.0?255:b);
+                       } else {
+                          uy1=(unsigned char)(r>255.0?255:r);
+                          uy2=(unsigned char)(g>255.0?255:g);
+                          uy3=(unsigned char)(b>255.0?255:b);
+                       }
+                     PreviewImg[rgbpos+3]=uy1;
+                     PreviewImg[rgbpos+4]=uy2; 
+                     PreviewImg[rgbpos+5]=uy3;
+
+                     // Gather stats for the second pixel (under mask, if used)
+                     if(PrevStat.mask_status){
+                       mskpos++;
+                       if(PrevStat.MaskIm[mskpos]) {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                        }
+                       } else {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                       }
             
                   }
-                }
+
+                    }
 
              }
              preview_stored = PREVIEW_STORED_RGB;
@@ -5132,52 +6316,118 @@ static int colour_convert(const unsigned short *p)
           }
         break;
         case V4L2_PIX_FMT_MJPEG:
+
          switch(col_conv_type){
           case CCOL_TO_Y:    // Calculate the Y component from RGB
-             rgbpos=Prev_startrow; 
-              if(PreviewIDX>=Preview_integral) PreviewIDX=0;
-               pipos=0;
-               for(prow=0;prow<PreviewHt;prow++){ 
-                  if(SSrow[prow]<0) continue;
-                  for(pcol=0;pcol<PreviewWd;pcol++){
-                     if(SScol[pcol]<0) continue;
-                     ipos=SSrow[prow]+SScol[pcol];
-            
-                     uy1= RGBimg[ipos++]; // R
-                     uy2= RGBimg[ipos++]; // G
-                     uy3= RGBimg[ipos];   // B
+              rgbpos=Prev_startrow+Prev_startcol;
 
-                     max=(uy2>uy1)?uy2:uy1;
-                     if(uy3>=max) max=uy3;
-                     PreviewBuff[PreviewIDX][pipos]=(int)max;
-                     for(fidx=0,dval1=(double)Preview_bias;fidx<Preview_integral;fidx++){
-                        dval2=(double)(PreviewBuff[fidx][pipos])-Preview_dark[pipos];
-                        dval2/=Preview_flat[pipos];
-                        dval1+=dval2;
-                       }
-                     uy1=uchar_from_d(dval1);
-                     pipos++;
+              if(PreviewIDX>=Preview_integral) PreviewIDX=0;        
 
-                     PreviewImg[Prev_startcol+rgbpos++]=uy1;
-                     PreviewImg[rgbpos++]=uy1;
-                     PreviewImg[rgbpos++]=uy1;
-                  }
-              }
+              for(prow=0;prow<PreviewHt;prow++){ 
+                 if(SSrow[prow]<0){rgbpos+=PreviewWd_stride; continue;}
+                    for(pcol=0;pcol<PreviewWd;pcol++,rgbpos+=3){
+                        if(SScol[pcol]<0) continue;
+
+                        ipos=SSrow[prow]+SScol[pcol];
+                        uy1= RGBimg[ipos++]; // R
+                        uy2= RGBimg[ipos++]; // G
+                        uy3= RGBimg[ipos];   // B
+
+                        max=(uy2>uy1)?uy2:uy1;
+                        if(uy3>=max) max=uy3;
+
+                        pipos=rgbpos/3;
+                        PreviewBuff[PreviewIDX][pipos]=(int)max;
+                        for(fidx=0,dval1=(double)Preview_bias;fidx<Preview_integral;fidx++){
+                           dval2=(double)(PreviewBuff[fidx][pipos])-Preview_dark[pipos];
+                           dval2/=Preview_flat[pipos];
+                           dval1+=dval2;
+                          }
+
+                        // Invert intensities if that is the user's choice
+                        if(PrevStat.pp_invert) uy1=255-uchar_from_d(dval1);
+                             else uy1=uchar_from_d(dval1);
+
+                        // Only need to set the red channel for now
+                        PreviewImg[rgbpos]=uy1; 
+
+                     }
+                }
+
               PreviewIDX++;
               preview_stored = PREVIEW_STORED_MONO;
           break;
           case CCOL_TO_RGB:  // Convert to full RGB
           case CCOL_TO_BGR:  // Convert to full RGB (for preview)
-              rgbpos=Prev_startrow; 
+              rgbpos=Prev_startrow+Prev_startcol; 
+
               for(prow=0;prow<PreviewHt;prow++){ 
-                  if(SSrow[prow]<0) continue;
-                  for(pcol=0;pcol<PreviewWd;pcol++){
+                  if(SSrow[prow]<0){rgbpos+=PreviewWd_stride; continue;}
+                  for(pcol=0;pcol<PreviewWd;pcol++,rgbpos+=3){
                      if(SScol[pcol]<0) continue;
                      ipos=SSrow[prow]+SScol[pcol];
+                     uy1 = RGBimg[ipos++];
+                     uy2 = RGBimg[ipos++];
+                     uy3 = RGBimg[ipos];
+                     // Invert intensities if that is the user's choice
+                     if(PrevStat.pp_invert){
+                       PreviewImg[rgbpos]   = 255-uy1; // R
+                       PreviewImg[rgbpos+1] = 255-uy2; // G
+                       PreviewImg[rgbpos+2] = 255-uy3; // B
+                      } else {
+                       PreviewImg[rgbpos]   = uy1; // R
+                       PreviewImg[rgbpos+1] = uy2; // G
+                       PreviewImg[rgbpos+2] = uy3; // B
+                      }
 
-                     PreviewImg[Prev_startcol+rgbpos++]= RGBimg[ipos++];
-                     PreviewImg[rgbpos++]= RGBimg[ipos++]; // G
-                     PreviewImg[rgbpos++]= RGBimg[ipos];   // B
+                     // Gather stats (only under mask, if used)
+
+                     if(PrevStat.mask_status){
+                       mskpos=rgbpos/3;
+                       if(PrevStat.MaskIm[mskpos]) {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                       }
+                      } else {
+                         if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                         if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                         if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                         if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                         PrevStat.hgm_r[uy1]++;
+                         PrevStat.intgl_r+=(double)uy1;
+
+                         if(uy2<=PrevStat.llim_g) PrevStat.lsat_g++;
+                         if(uy2>=PrevStat.ulim_g) PrevStat.usat_g++;
+                         if(uy2>PrevStat.max_g) PrevStat.max_g=uy2;
+                         if(uy2<PrevStat.min_g) PrevStat.min_g=uy2;
+                         PrevStat.hgm_g[uy2]++;
+                         PrevStat.intgl_g+=(double)uy2;
+
+                         if(uy3<=PrevStat.llim_b) PrevStat.lsat_b++;
+                         if(uy3>=PrevStat.ulim_b) PrevStat.usat_b++;
+                         if(uy3>PrevStat.max_b) PrevStat.max_b=uy3;
+                         if(uy3<PrevStat.min_b) PrevStat.min_b=uy3;
+                         PrevStat.hgm_b[uy3]++;
+                         PrevStat.intgl_b+=(double)uy3;
+                      }
                   }
               }
              preview_stored = PREVIEW_STORED_RGB;
@@ -5185,7 +6435,126 @@ static int colour_convert(const unsigned short *p)
             default: break;
            }
         }
-      
+
+    // Do any requested pre- and post-processes     
+    switch(col_conv_type){
+       case CCOL_TO_Y:
+
+          // Perform any user-requested pre-processing: 
+          // Make a Laplacian image if that is requested
+          if(PrevStat.pp_laplace){ PrevStat.af_laplace_r=Prev_Laplace(CCHAN_Y); bval=0;}
+          // Otherwise just calculate the mean absolute Laplacian if chosen
+          else if(PrevStat.focuser_param_varabslap || PrevStat.focuser_param_abslap){
+               PrevStat.af_laplace_r=Prev_Laplace(CCHAN_R);
+            }
+          // If a convolution was done, set the border pixels to the required
+          // value:
+          if(bval!=3) set_border_pixels(bval);
+          // Gather stats and distribute the red channel to G and B according to
+          // the current LUT
+          rgbpos=Prev_startcol+Prev_startrow; mskpos=rgbpos/3;
+
+          for(prow=0;prow<PreviewHt;prow++){ 
+           if(SSrow[prow]<0){mskpos+=PreviewWd; rgbpos+=PreviewWd_stride; continue;}
+             for(pcol=0;pcol<PreviewWd;pcol++,mskpos++,rgbpos+=3){
+                if(SScol[pcol]<0) continue;
+                uy1=PreviewImg[rgbpos]; // Red channel value
+                // Gather the stats (masked or not)
+                if(PrevStat.mask_status){
+                  if(PrevStat.MaskIm[mskpos]) {
+                    if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                    if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                    if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                    if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                    PrevStat.hgm_r[uy1]++;
+                    PrevStat.intgl_r+=(double)uy1;
+                   }
+                 } else {
+                  if(uy1<=PrevStat.llim_r) PrevStat.lsat_r++;
+                  if(uy1>=PrevStat.ulim_r) PrevStat.usat_r++;
+                  if(uy1>PrevStat.max_r) PrevStat.max_r=uy1;
+                  if(uy1<PrevStat.min_r) PrevStat.min_r=uy1;
+                  PrevStat.hgm_r[uy1]++;
+                  PrevStat.intgl_r+=(double)uy1;
+                 }
+                // Implement the display LUT
+                PreviewImg[rgbpos]  =PrevStat.rlut[uy1];
+                PreviewImg[rgbpos+1]=PrevStat.glut[uy1];
+                PreviewImg[rgbpos+2]=PrevStat.blut[uy1];
+                // Display mask if required
+                if(PrevStat.mask_show){
+                  if(!PrevStat.MaskIm[mskpos]) PreviewImg[rgbpos+1]=128;
+                  }
+               }
+             }
+       break;
+       case CCOL_TO_RGB:
+       case CCOL_TO_BGR:
+          if(PrevStat.focuser_param_varabslap || PrevStat.focuser_param_abslap){
+            switch(Prev_overlay_focus){
+              case CCHAN_R:
+                 PrevStat.af_laplace_r=Prev_Laplace(CCHAN_R);
+              break;
+              case CCHAN_G:
+                PrevStat.af_laplace_g=Prev_Laplace(CCHAN_G);
+              break;
+              case CCHAN_B:
+                PrevStat.af_laplace_b=Prev_Laplace(CCHAN_B);
+              break;
+              case CCHAN_Y: // 'Y' means all channels in this setting
+                 PrevStat.af_laplace_r=Prev_Laplace(CCHAN_R);
+                 PrevStat.af_laplace_g=Prev_Laplace(CCHAN_G);
+                 PrevStat.af_laplace_b=Prev_Laplace(CCHAN_B);
+              break;
+              default: // Focusser bar overlay not requested
+              break;
+            }
+           }
+
+          // Now implement the current preview display LUT and mask as required
+          rgbpos=Prev_startrow+Prev_startcol; 
+          if(Preview_LUT){
+            if(PrevStat.mask_show){ 
+
+              for(prow=0;prow<PreviewHt;prow++){ 
+                  if(SSrow[prow]<0){rgbpos+=PreviewWd_stride; continue;}
+                  for(pcol=0;pcol<PreviewWd;pcol++,rgbpos+=3){
+                     if(SScol[pcol]<0) continue;
+                     mskpos=rgbpos/3;
+                     PreviewImg[rgbpos]= PrevStat.rlut[PreviewImg[rgbpos]]; // R
+                     ipos=rgbpos+1;
+                     PreviewImg[ipos]= (PrevStat.MaskIm[mskpos])?PrevStat.glut[PreviewImg[ipos]]:128; // G
+                     ipos++;
+                     PreviewImg[ipos]= PrevStat.blut[PreviewImg[ipos]]; // B
+                }   }
+
+              } else {
+
+             for(prow=0;prow<PreviewHt;prow++){ 
+                  if(SSrow[prow]<0){rgbpos+=PreviewWd_stride; continue;}
+                  for(pcol=0;pcol<PreviewWd;pcol++,rgbpos+=3){
+                     if(SScol[pcol]<0) continue;
+                     mskpos=rgbpos/3;
+                     PreviewImg[rgbpos]= PrevStat.rlut[PreviewImg[rgbpos]]; // R
+                     ipos=rgbpos+1;
+                     PreviewImg[ipos]= PrevStat.glut[PreviewImg[ipos]]; // G
+                     ipos++;
+                     PreviewImg[ipos]= PrevStat.blut[PreviewImg[ipos]]; // B
+                }  }
+
+              }
+           } else if(PrevStat.mask_show){
+            // Display mask if required (without LUT)
+             for(ipos=1,mskpos=0;ipos<PreviewImg_rgb_size;ipos+=3,mskpos++){
+                     if(!PrevStat.MaskIm[mskpos])PreviewImg[ipos]=128;
+                }
+          }
+
+
+       break;
+       default: break;
+     }
+
       return 0; // Preview image created, so return.
    }
 
@@ -5577,6 +6946,525 @@ static int xioctl(int fh, int request, void *arg)
     } while (-1 == r && EINTR == errno);
 
  return r;
+}
+
+static void update_prevstat_channel(int colchan)
+// Update the preview stats display by colour channel
+{
+ char imsg[128];
+ gchar *markup;
+ double mu,diff,sosqdiff,level,limintegral,var,sample_sz,currfocus;
+ double focus_range,focus_num;
+ int idx,row,col,currpos,rowstart_focus;
+ int focus_pos;
+
+ sample_sz=1.0; // If, for any reason, PrevStat.npixels is less than 1, this
+                // safeguard will prevent a divide-by-zero for the focusser bar.
+
+ switch(colchan){
+    case CCHAN_R:
+     // Saturation stats
+     sprintf(imsg,"%-6u : %-6u (%-3u:%-3u)",PrevStat.lsat_r,PrevStat.usat_r,PrevStat.llim_r,PrevStat.ulim_r);
+     markup = g_markup_printf_escaped (format_rn, imsg);
+     gtk_label_set_markup (GTK_LABEL(PrevSt_sat_r), markup);
+     g_free (markup);
+     // Summary stats
+     sosqdiff=0.0;
+     PrevStat.hgm_max_r=0.0;
+     // Calculations for variance and mean
+     if(PrevStat.var_within_limits){
+       limintegral=0.0;sample_sz=0.0;
+       for(idx=0;idx<256;idx++){
+         level=(double)PrevStat.hgm_r[idx];
+         if(idx>PrevStat.llim_r && idx<PrevStat.ulim_r){
+            sample_sz+=level;
+            limintegral += level * (double)idx;
+            if(level>PrevStat.hgm_max_r) PrevStat.hgm_max_r=level; // This is for histogramming
+          }
+        }
+       if(sample_sz>=2.0){
+         mu=limintegral/sample_sz;
+         for(idx=0;idx<256;idx++){
+           level=(double)PrevStat.hgm_r[idx];
+           if(level>0.5){
+             if(idx>PrevStat.llim_r && idx<PrevStat.ulim_r){
+               diff=(double)idx - mu;
+               sosqdiff += level * (diff * diff);
+              }
+            }
+          }
+         var = sosqdiff/(sample_sz-1.0);
+        } else var = -1.0;
+      } else {
+       sample_sz=PrevStat.npixels;
+       if(sample_sz>=2.0){
+         mu=PrevStat.intgl_r/sample_sz;
+         for(idx=0;idx<256;idx++){
+           level=(double)PrevStat.hgm_r[idx];
+           if(level>0.5){
+              diff=(double)idx - mu;
+              sosqdiff += level * (diff * diff);
+              if(level>PrevStat.hgm_max_r) PrevStat.hgm_max_r=level; // This is for histogramming
+            }
+          }
+         var = sosqdiff/(sample_sz-1.0);
+       }
+     }
+
+
+     // Set mean, variance and focusser parameters according to user's choices:
+
+     // The default focusser parameter is the plain intensity variance. This
+     // will change if any of the options below over-ride it.
+     PrevStat.focus_cur_r = var;
+
+     // Substitute the intentisty mean for the mean absolute Laplacian if the
+     // user wants to use that for focussing: 
+     if(PrevStat.focuser_param_abslap){
+       mu=PrevStat.af_laplace_r;  // Lets the stats displays show the number.
+       PrevStat.focus_cur_r = mu; // This lets the focus bar use it.
+      }
+     // Use the variance times the mean absolute Laplacian times the intensity
+     // variance for focussing if that is the user's wish:
+     if(PrevStat.focuser_param_varabslap){
+       var*=PrevStat.af_laplace_r;// Lets the stats displays show the number.
+       PrevStat.focus_cur_r = var;// This lets the focus bar use it.
+      } 
+
+     // Now update the real-time stats numerical displays
+     sprintf(imsg,"  |  %-3u : %-3u (%-3u)  |  %6.2f  |  %9.3f  ",PrevStat.min_r,PrevStat.max_r,PrevStat.max_r-PrevStat.min_r,mu,var);
+     markup = g_markup_printf_escaped (format_rn, imsg);
+     gtk_label_set_markup (GTK_LABEL(PrevSt_sum_r), markup);
+     g_free (markup);
+
+     // Overlay the focus bar if user wants it and red or Y channel are used
+     // ('CCHAN_R' is used for both red or Y in this case. CCHAN_Y is used as
+     //  an 'all channel' flag for when a colour preview is used).
+     if(Prev_overlay_focus==CCHAN_R || Prev_overlay_focus==CCHAN_Y){
+       if(PrevStat.focus_cur_r>PrevStat.focus_max_r) PrevStat.focus_max_r=PrevStat.focus_cur_r;
+       if(PrevStat.focus_cur_r<PrevStat.focus_min_r) PrevStat.focus_min_r=PrevStat.focus_cur_r;
+       focus_range=PrevStat.focus_max_r-PrevStat.focus_min_r;
+       focus_num=PrevStat.focus_cur_r-PrevStat.focus_min_r;
+       rowstart_focus=PrevStat.focus_origin_y;
+       if(focus_range>1.0e-11){ // Avoid divide-by-zero
+          currfocus=focus_num/focus_range;
+          focus_pos=64+(int)(currfocus*512.0);
+          for(row=0;row<10;row++,rowstart_focus+=PreviewWd_stride){
+             currpos=rowstart_focus;
+            for(col=64;col<576;col++){
+                if(col<focus_pos){
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]=128;
+                    PreviewImg[currpos++]>>=1;
+                  } else {
+                    PreviewImg[currpos++]=96;
+                    PreviewImg[currpos++]>>=1;
+                    PreviewImg[currpos++]>>=1;
+                  } 
+              }
+           }
+         } else { // Indicate divide-by-zero with a yellow bar
+          for(row=0;row<10;row++,rowstart_focus+=PreviewWd_stride){
+             currpos=rowstart_focus;
+            for(col=64;col<576;col++){
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]>>=1;
+              }
+           }
+         }
+
+       }
+
+    break;
+    case CCHAN_G:
+     // Saturation stats
+     sprintf(imsg,"%-6u : %-6u (%-3u:%-3u)",PrevStat.lsat_g,PrevStat.usat_g,PrevStat.llim_g,PrevStat.ulim_g);
+     markup = g_markup_printf_escaped (format_gn, imsg);
+     gtk_label_set_markup (GTK_LABEL(PrevSt_sat_g), markup);
+     g_free (markup);
+     // Summary stats
+     sosqdiff=0.0;
+     PrevStat.hgm_max_g=0.0;
+     // Calculations for variance and mean
+     if(PrevStat.var_within_limits){
+       limintegral=0.0;sample_sz=0;
+       for(idx=0;idx<256;idx++){
+         level=(double)PrevStat.hgm_g[idx];
+         if(idx>PrevStat.llim_g && idx<PrevStat.ulim_g){
+            sample_sz+=level;
+            limintegral += level * (double)idx;
+            if(level>PrevStat.hgm_max_g) PrevStat.hgm_max_g=level; // This is for histogramming
+          }
+        }
+       if(sample_sz>=2.0){
+         mu=limintegral/sample_sz;
+         for(idx=0;idx<256;idx++){
+           level=(double)PrevStat.hgm_g[idx];
+           if(level>0.5){
+             if(idx>PrevStat.llim_g && idx<PrevStat.ulim_g){
+                diff=(double)idx - mu;
+                sosqdiff += level * (diff * diff);
+               }
+            }
+          }
+         var = sosqdiff/(sample_sz-1.0);
+        } else var = -1.0;
+      } else {
+       sample_sz=PrevStat.npixels;
+       if(sample_sz>=2.0){
+         mu=PrevStat.intgl_g/sample_sz;
+         for(idx=0;idx<256;idx++){
+           level=(double)PrevStat.hgm_g[idx];
+           if(level>0.5){
+              diff=(double)idx - mu;
+              sosqdiff += level * (diff * diff);
+              if(level>PrevStat.hgm_max_g) PrevStat.hgm_max_g=level; // This is for histogramming
+            }
+          }
+         var = sosqdiff/(sample_sz-1.0);
+       }
+     }
+
+
+     // Set mean, variance and focusser parameters according to user's choices:
+
+     // The default focusser parameter is the plain intensity variance. This
+     // will change if any of the options below over-ride it.
+     PrevStat.focus_cur_g = var;
+
+     // Substitute the intentisty mean for the mean absolute Laplacian if the
+     // user wants to use that for focussing: 
+     if(PrevStat.focuser_param_abslap){
+       mu=PrevStat.af_laplace_g;  // Lets the stats displays show the number.
+       PrevStat.focus_cur_g = mu; // This lets the focus bar use it.
+      }
+     // Use the variance times the mean absolute Laplacian times the intensity
+     // variance for focussing if that is the user's wish:
+     if(PrevStat.focuser_param_varabslap){
+       var*=PrevStat.af_laplace_g;// Lets the stats displays show the number.
+       PrevStat.focus_cur_g = var;// This lets the focus bar use it.
+      } 
+
+     // Now update the real-time stats numerical displays
+     sprintf(imsg,"  |  %-3u : %-3u (%-3u)  |  %6.2f  |  %9.3f  ",PrevStat.min_g,PrevStat.max_g,PrevStat.max_g-PrevStat.min_g,mu,var);
+     markup = g_markup_printf_escaped (format_gn, imsg);
+     gtk_label_set_markup (GTK_LABEL(PrevSt_sum_g), markup);
+     g_free (markup);
+
+     // Overlay the focus bar if user wants it and green channel is used
+     if(Prev_overlay_focus==CCHAN_G || Prev_overlay_focus==CCHAN_Y){
+       if(PrevStat.focus_cur_g>PrevStat.focus_max_g) PrevStat.focus_max_g=PrevStat.focus_cur_g;
+       if(PrevStat.focus_cur_g<PrevStat.focus_min_g) PrevStat.focus_min_g=PrevStat.focus_cur_g;
+       focus_range=PrevStat.focus_max_g-PrevStat.focus_min_g;
+       focus_num=PrevStat.focus_cur_g-PrevStat.focus_min_g;
+       rowstart_focus=PrevStat.focus_origin_y + PreviewWd_stride*10;
+       if(focus_range>1.0e-11){ // Avoid divide-by-zero
+          currfocus=focus_num/focus_range;
+          focus_pos=64+(int)(currfocus*512.0);
+          for(row=0;row<10;row++,rowstart_focus+=PreviewWd_stride){
+             currpos=rowstart_focus;
+            for(col=64;col<576;col++){
+                if(col<focus_pos){
+                    PreviewImg[currpos++]>>=1;
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]=128;
+                  } else {
+                    PreviewImg[currpos++]>>=1;
+                    PreviewImg[currpos++]=96;
+                    PreviewImg[currpos++]>>=1;
+                  } 
+              }
+           }
+         } else { // Indicate divide-by-zero with a yellow bar
+          for(row=0;row<10;row++,rowstart_focus+=PreviewWd_stride){
+             currpos=rowstart_focus;
+            for(col=64;col<576;col++){
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]>>=1;
+              }
+           }
+         }
+
+       }
+
+
+    break;
+    case CCHAN_B:
+     // Saturation stats
+     sprintf(imsg,"%-6u : %-6u (%-3u:%-3u)",PrevStat.lsat_b,PrevStat.usat_b,PrevStat.llim_b,PrevStat.ulim_b);
+     markup = g_markup_printf_escaped (format_bn, imsg);
+     gtk_label_set_markup (GTK_LABEL(PrevSt_sat_b), markup);
+     g_free (markup);
+     // Summary stats
+     sosqdiff=0.0;
+     PrevStat.hgm_max_b=0.0;
+     // Calculations for variance and mean
+     if(PrevStat.var_within_limits){
+       limintegral=0.0;sample_sz=0;
+       for(idx=0;idx<256;idx++){
+         level=(double)PrevStat.hgm_b[idx];
+         if(idx>PrevStat.llim_b && idx<PrevStat.ulim_b){
+            sample_sz+=level;
+            limintegral += level * (double)idx;
+            if(level>PrevStat.hgm_max_b) PrevStat.hgm_max_b=level; // This is for histogramming
+          }
+        }
+       if(sample_sz>=2.0){
+         mu=limintegral/sample_sz;
+         for(idx=0;idx<256;idx++){
+           level=(double)PrevStat.hgm_b[idx];
+           if(level>0.5){
+             if(idx>PrevStat.llim_b && idx<PrevStat.ulim_b){
+                diff=(double)idx - mu;
+                sosqdiff += level * (diff * diff);
+              }
+            }
+          }
+         var = sosqdiff/(sample_sz-1.0);
+        } else var = -1.0;
+      } else {
+       sample_sz=PrevStat.npixels;
+       if(sample_sz>=2.0){
+         mu=PrevStat.intgl_b/sample_sz;
+         for(idx=0;idx<256;idx++){
+           level=(double)PrevStat.hgm_b[idx];
+           if(level>0.5){
+              diff=(double)idx - mu;
+              sosqdiff += level * (diff * diff);
+              if(level>PrevStat.hgm_max_b) PrevStat.hgm_max_b=level; // This is for histogramming
+            }
+          }
+         var = sosqdiff/(sample_sz-1.0);
+       }
+     }
+
+     // Set mean, variance and focusser parameters according to user's choices:
+
+     // The default focusser parameter is the plain intensity variance. This
+     // will change if any of the options below over-ride it.
+     PrevStat.focus_cur_b = var;
+
+     // Substitute the intentisty mean for the mean absolute Laplacian if the
+     // user wants to use that for focussing: 
+     if(PrevStat.focuser_param_abslap){
+       mu=PrevStat.af_laplace_b;  // Lets the stats displays show the number.
+       PrevStat.focus_cur_b = mu; // This lets the focus bar use it.
+      }
+     // Use the variance times the mean absolute Laplacian times the intensity
+     // variance for focussing if that is the user's wish:
+     if(PrevStat.focuser_param_varabslap){
+       var*=PrevStat.af_laplace_b;// Lets the stats displays show the number.
+       PrevStat.focus_cur_b = var;// This lets the focus bar use it.
+      } 
+
+     // Now update the real-time stats numerical displays
+     sprintf(imsg,"  |  %-3u : %-3u (%-3u)  |  %6.2f  |  %9.3f  ",PrevStat.min_b,PrevStat.max_b,PrevStat.max_b-PrevStat.min_b,mu,var);
+     markup = g_markup_printf_escaped (format_bn, imsg);
+     gtk_label_set_markup (GTK_LABEL(PrevSt_sum_b), markup);
+     g_free (markup);
+
+     // Overlay the focus bar if user wants it and blue channel is used
+     if(Prev_overlay_focus==CCHAN_B || Prev_overlay_focus==CCHAN_Y){
+       if(PrevStat.focus_cur_b>PrevStat.focus_max_b) PrevStat.focus_max_b=PrevStat.focus_cur_b;
+       if(PrevStat.focus_cur_b<PrevStat.focus_min_b) PrevStat.focus_min_b=PrevStat.focus_cur_b;
+       focus_range=PrevStat.focus_max_b-PrevStat.focus_min_b;
+       focus_num=PrevStat.focus_cur_b-PrevStat.focus_min_b;
+       rowstart_focus=PrevStat.focus_origin_y + PreviewWd_stride*20;
+       if(focus_range>1.0e-11){ // Avoid divide-by-zero
+          currfocus=focus_num/focus_range;
+          focus_pos=64+(int)(currfocus*512.0);
+          for(row=0;row<10;row++,rowstart_focus+=PreviewWd_stride){
+             currpos=rowstart_focus;
+            for(col=64;col<576;col++){
+                if(col<focus_pos){
+                    PreviewImg[currpos++]>>=1;
+                    PreviewImg[currpos++]=128;
+                    PreviewImg[currpos++]=255;
+                  } else {
+                    PreviewImg[currpos++]>>=1;
+                    PreviewImg[currpos++]=64;
+                    PreviewImg[currpos++]=128;
+                  } 
+              }
+           }
+         } else { // Indicate divide-by-zero with a yellow bar
+          for(row=0;row<10;row++,rowstart_focus+=PreviewWd_stride){
+             currpos=rowstart_focus;
+            for(col=64;col<576;col++){
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]=255;
+                    PreviewImg[currpos++]>>=1;
+              }
+           }
+         }
+
+       }
+    break;
+    default: break;
+  }
+
+
+
+ return;
+}
+
+static void overlay_histogram(void)
+// Overlay the histogram(s) and saturation limit lines on the preview
+{
+ int idx,row,col,rowstart,rowend,colstart,currpos;
+ int col_llim_r,col_ulim_r,do_col_r=0;
+ int col_llim_g,col_ulim_g,do_col_g=0;
+ int col_llim_b,col_ulim_b,do_col_b=0;
+ int hgm_level_r,hgm_level_g,hgm_level_b;
+
+
+// Prepare some positional constants
+ colstart = 3*PrevStat.hgm_origin_x;
+ rowstart=PreviewWd_stride*(PrevStat.hgm_origin_y);
+ rowend=rowstart+256*PreviewWd_stride;
+
+// Prepare the background
+ for(idx=0,row=rowstart;idx<256;idx++,row+=PreviewWd_stride){
+    for(col=0,currpos=row+colstart;col<256;col++){
+        PreviewImg[currpos++]>>=1;
+        PreviewImg[currpos++]>>=1;
+        PreviewImg[currpos++]>>=1;
+       }
+   }
+
+
+ if (preview_stored == PREVIEW_STORED_MONO){
+
+       // Make the histogram cumulative if that is what the user wants
+       if(PrevStat.hgm_cum_r){
+         for(idx=1;idx<256;idx++) PrevStat.hgm_r[idx]+=PrevStat.hgm_r[idx-1];
+         PrevStat.hgm_max_r=(double)PrevStat.hgm_r[255];
+        }    
+
+       // Only plot if the histogram is not empty
+       if(PrevStat.hgm_max_r>0.5){
+        // Height scale factor:
+        if(PrevStat.hgm_no_autoscale) PrevStat.hgm_max_r=PrevStat.hgm_scale_r/1.0; 
+          else PrevStat.hgm_max_r=PrevStat.hgm_scale_r/PrevStat.hgm_max_r; 
+        for(idx=0,col=colstart;idx<256;idx++,col+=3){
+           hgm_level_r = (int)((double)PrevStat.hgm_r[idx]*PrevStat.hgm_max_r);
+           for(row=0,currpos=rowend+col;row<256;row++,currpos-=PreviewWd_stride){
+               if(row<=hgm_level_r) PreviewImg[currpos]=255;
+              }
+          }
+         } 
+
+      // Now add the limit lines
+      if(PrevStat.hgm_scale_r>1.0e-20){ // If user has not suppressed it ...    
+        col_llim_r = rowend + colstart + 3*PrevStat.llim_r;
+        col_ulim_r = rowend + colstart + 3*PrevStat.ulim_r;
+        for(row=0;row<256;row++,col_ulim_r-=PreviewWd_stride,col_llim_r-=PreviewWd_stride){
+            PreviewImg[col_ulim_r]=255;
+            PreviewImg[col_llim_r]=255;
+            PreviewImg[col_ulim_r+1]=128;
+            PreviewImg[col_llim_r+1]=128;
+            PreviewImg[col_ulim_r+2]=128;
+            PreviewImg[col_llim_r+2]=128;
+           }
+      }
+       
+  } else {
+       // Make the histogram cumulative if that is what the user wants
+       if(PrevStat.hgm_cum_r){
+         for(idx=1;idx<256;idx++) PrevStat.hgm_r[idx]+=PrevStat.hgm_r[idx-1];
+         PrevStat.hgm_max_r=(double)PrevStat.hgm_r[255];
+        }    
+       if(PrevStat.hgm_cum_g){
+         for(idx=1;idx<256;idx++) PrevStat.hgm_g[idx]+=PrevStat.hgm_g[idx-1];
+         PrevStat.hgm_max_g=(double)PrevStat.hgm_g[255];
+        }    
+       if(PrevStat.hgm_cum_b){
+         for(idx=1;idx<256;idx++) PrevStat.hgm_b[idx]+=PrevStat.hgm_b[idx-1];
+         PrevStat.hgm_max_b=(double)PrevStat.hgm_b[255];
+        }    
+
+      // Set flags - only plot channel data if the histogram for that channel
+      // is not empty and the user has not suppressed it:
+      if(PrevStat.hgm_scale_r>1.0e-20 && PrevStat.hgm_max_r>0.5) do_col_r=1;
+      if(PrevStat.hgm_scale_g>1.0e-20 && PrevStat.hgm_max_g>0.5) do_col_g=1;
+      if(PrevStat.hgm_scale_b>1.0e-20 && PrevStat.hgm_max_b>0.5) do_col_b=1;
+
+       // Calculate the histogram height scale factors
+       if(do_col_r){
+          if(PrevStat.hgm_no_autoscale) PrevStat.hgm_max_r=PrevStat.hgm_scale_r/1.0; 
+          else PrevStat.hgm_max_r=PrevStat.hgm_scale_r/PrevStat.hgm_max_r; 
+         } 
+       if(do_col_g){
+          if(PrevStat.hgm_no_autoscale) PrevStat.hgm_max_g=PrevStat.hgm_scale_g/1.0; 
+          else PrevStat.hgm_max_g=PrevStat.hgm_scale_g/PrevStat.hgm_max_g; 
+         } 
+       if(do_col_b){
+          if(PrevStat.hgm_no_autoscale) PrevStat.hgm_max_b=PrevStat.hgm_scale_b/1.0; 
+          else PrevStat.hgm_max_b=PrevStat.hgm_scale_b/PrevStat.hgm_max_b; 
+         } 
+
+        // Plot the histograms
+        for(idx=0,col=colstart;idx<256;idx++,col+=3){
+           if(do_col_r) hgm_level_r = (int)((double)PrevStat.hgm_r[idx]*PrevStat.hgm_max_r);
+           if(do_col_g) hgm_level_g = (int)((double)PrevStat.hgm_g[idx]*PrevStat.hgm_max_g);
+           if(do_col_b) hgm_level_b = (int)((double)PrevStat.hgm_b[idx]*PrevStat.hgm_max_b);
+           for(row=0,currpos=rowend+col;row<256;row++,currpos-=PreviewWd_stride){
+               if(do_col_r) if(row<=hgm_level_r) PreviewImg[currpos]=255;
+               if(do_col_g) if(row<=hgm_level_g) PreviewImg[currpos+1]=255;
+               if(do_col_b) if(row<=hgm_level_b) PreviewImg[currpos+2]=255;
+              }
+          }
+
+      // Now add the limit lines
+      if(do_col_r){  
+        col_llim_r = rowend + colstart + 3*PrevStat.llim_r;
+        col_ulim_r = rowend + colstart + 3*PrevStat.ulim_r;
+       }
+      if(do_col_g){  
+        col_llim_g = rowend + colstart + 3*PrevStat.llim_g;
+        col_ulim_g = rowend + colstart + 3*PrevStat.ulim_g;
+       }
+      if(do_col_b){  
+        col_llim_b = rowend + colstart + 3*PrevStat.llim_b;
+        col_ulim_b = rowend + colstart + 3*PrevStat.ulim_b;
+       }
+      for(row=0;row<256;row++){
+         if(do_col_r){
+            PreviewImg[col_ulim_r]=255;
+            PreviewImg[col_llim_r]=255;
+            PreviewImg[col_ulim_r+1]=128;
+            PreviewImg[col_llim_r+1]=128;
+            PreviewImg[col_ulim_r+2]=128;
+            PreviewImg[col_llim_r+2]=128;
+            col_ulim_r-=PreviewWd_stride;
+            col_llim_r-=PreviewWd_stride;
+          }
+         if(do_col_g){
+            PreviewImg[col_ulim_g]=128;
+            PreviewImg[col_llim_g]=128;
+            PreviewImg[col_ulim_g+1]=255;
+            PreviewImg[col_llim_g+1]=255;
+            PreviewImg[col_ulim_g+2]=128;
+            PreviewImg[col_llim_g+2]=128;
+            col_ulim_g-=PreviewWd_stride;
+            col_llim_g-=PreviewWd_stride;
+          }
+         if(do_col_b){
+            PreviewImg[col_ulim_b]=128;
+            PreviewImg[col_llim_b]=128;
+            PreviewImg[col_ulim_b+1]=128;
+            PreviewImg[col_llim_b+1]=128;
+            PreviewImg[col_ulim_b+2]=255;
+            PreviewImg[col_llim_b+2]=255;
+            col_ulim_b-=PreviewWd_stride;
+            col_llim_b-=PreviewWd_stride;
+         }
+      }
+  }
+
+ return;
 }
 
 static void process_image(const void *p, int size)
@@ -6064,7 +7952,38 @@ skip_write:
         }
      }
   // Update the preview window with the latest preview image (if one was successfully generated).
-  if(Need_to_preview && preview_stored) gtk_image_set_from_pixbuf (GTK_IMAGE(Img_preview),gdkpb_preview);
+  if(Need_to_preview && preview_stored){
+     // First update the preview stats display 
+     update_prevstat_channel(CCHAN_R);
+     if(preview_stored == PREVIEW_STORED_MONO){
+        gchar *markup;
+        if(Prev_blank_gb){
+          PrevStat.min_g=PrevStat.max_g=0;
+          PrevStat.min_b=PrevStat.max_b=0;
+          markup = g_markup_printf_escaped (format_gy,"  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+          gtk_label_set_markup (GTK_LABEL(PrevSt_sum_g), markup);
+          gtk_label_set_markup (GTK_LABEL(PrevSt_sum_b), markup);
+          g_free (markup);
+          markup = g_markup_printf_escaped (format_gy,"000000 : 000000 (000:000)");
+          gtk_label_set_markup (GTK_LABEL(PrevSt_sat_g), markup);
+          gtk_label_set_markup (GTK_LABEL(PrevSt_sat_b), markup);
+          g_free (markup);
+          Prev_blank_gb=0;
+        }
+       } else {
+       update_prevstat_channel(CCHAN_G);
+       update_prevstat_channel(CCHAN_B);
+       Prev_blank_gb=1;
+      }
+     // Now overlay the histogram and limit lines if the user wants it
+     if(Prev_overlay_hgm) overlay_histogram();
+     // Now paint the preview image in its window area
+     gtk_image_set_from_pixbuf (GTK_IMAGE(Img_preview),gdkpb_preview);
+     // Preview image updates are complete so the display timeout can have
+     // another go at updating and displaying it.
+     Preparing_preview=0;
+
+    }
  }
 
  return;
@@ -6784,6 +8703,7 @@ static int open_device(void)
   }
   
   change_cam_status(CS_OPENED,1);
+
   return 0;
 }
 
@@ -6841,6 +8761,10 @@ void tidy_up(void)
    show_message("> Freeing mask image file name.","",MT_INFO,0);
    free(MaskFile);
   }
+ if(PrevStat.MaskFile!=NULL){
+   show_message("> Freeing preview mask image file name.","",MT_INFO,0);
+   free(PrevStat.MaskFile);
+  }
  if(dev_name!=NULL){
    show_message("> Freeing device name.","",MT_INFO,0);
    free(dev_name);
@@ -6856,6 +8780,10 @@ void tidy_up(void)
  if(PreviewImg!=NULL){
    show_message("> Freeing preview image.","",MT_INFO,0);
    free(PreviewImg);
+  }
+ if(PrevStat.MaskIm!=NULL){
+   show_message("> Freeing preview mask.","",MT_INFO,0);
+   free(PrevStat.MaskIm);
   }
  if(Preview_dark!=NULL){
    show_message("> Freeing preview master dark.","",MT_INFO,0);
@@ -7070,6 +8998,92 @@ static void toggled_cam_preview(GtkWidget *toggle_button,gpointer user_data)
   }
 }
 
+static void Prev_btn_hgm_click(GtkWidget *widget, gpointer data)
+{
+ gchar *btn_markup;
+ GtkWidget *btnlabel;
+ const char *onformat = "<span foreground=\"magenta\" weight=\"bold\">\%s</span>";
+ const char *offformat = "<span foreground=\"black\" weight=\"normal\">\%s</span>";
+
+ if(Prev_overlay_hgm){
+   btn_markup = g_markup_printf_escaped (offformat, "Histogram");
+   btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+   gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+   g_free (btn_markup);
+   Prev_overlay_hgm=0;
+  } else {
+   btn_markup = g_markup_printf_escaped (onformat, "Histogram");
+   btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+   gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+   g_free (btn_markup);
+   Prev_overlay_hgm=1;
+  }
+}
+
+static void Prev_btn_focus_click(GtkWidget *widget, gpointer data)
+{
+ gchar *btn_markup;
+ GtkWidget *btnlabel;
+ const char *onformat_r = "<span foreground=\"red\" weight=\"bold\">\%s</span>";
+ const char *onformat_g = "<span foreground=\"green\" weight=\"bold\">\%s</span>";
+ const char *onformat_b = "<span foreground=\"blue\" weight=\"bold\">\%s</span>";
+ const char *onformat_y = "<span foreground=\"magenta\" weight=\"bold\">\%s</span>";
+ const char *offformat = "<span foreground=\"black\" weight=\"normal\">\%s</span>";
+
+ // Reset the maximum focus values
+ PrevStat.focus_max_r=1.0e-12;
+ PrevStat.focus_max_g=1.0e-12;
+ PrevStat.focus_max_b=1.0e-12;
+ PrevStat.focus_min_r=1.0e+12;
+ PrevStat.focus_min_g=1.0e+12;
+ PrevStat.focus_min_b=1.0e+12;
+
+ if(preview_stored == PREVIEW_STORED_MONO){
+ // Cycle between on and off (for monochrome previewing)
+   if(Prev_overlay_focus==0){
+       btn_markup = g_markup_printf_escaped (onformat_r, "Focus");
+       Prev_overlay_focus=CCHAN_R;
+     } else {
+       btn_markup = g_markup_printf_escaped (offformat, "Focus");
+       Prev_overlay_focus=0;
+    }
+  } else {
+ // Cycle between the colour channels and off (for colour previewing)
+   switch(Prev_overlay_focus){
+     case 0: // This means 'off' here - cycle to the RED/Grey channel
+       btn_markup = g_markup_printf_escaped (onformat_r, "Focus");
+       Prev_overlay_focus=CCHAN_R;
+     break;
+     case CCHAN_R: // On R - Cycle to the Green channel
+       btn_markup = g_markup_printf_escaped (onformat_g, "Focus");
+       Prev_overlay_focus=CCHAN_G;
+     break;
+     case CCHAN_G: // On G - Cycle to the Blue channel
+       btn_markup = g_markup_printf_escaped (onformat_b, "Focus");
+       Prev_overlay_focus=CCHAN_B;
+     break;
+     case CCHAN_B: // On B - Cycle to all channels
+       btn_markup = g_markup_printf_escaped (onformat_y, "Focus");
+       Prev_overlay_focus=CCHAN_Y;
+     break;
+     case CCHAN_Y: // Focus bar is on all channels - Cycle to off
+     default:
+       btn_markup = g_markup_printf_escaped (offformat, "Focus");
+       Prev_overlay_focus=0;
+     break;
+    }
+  }
+  btnlabel = gtk_bin_get_child(GTK_BIN(widget));
+  gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+  g_free (btn_markup);
+
+  // If we are not using a 4:3 iamge format, refresh the preview image
+  if(!Prev_aspect_4_by_3)
+     memset(PreviewImg, 127, PreviewImg_rgb_size*sizeof(unsigned char));
+              
+ return;
+}
+
 static void btn_cam_stream_click(GtkWidget *widget, gpointer data)
 {
  if(Ser_active>0) return; // Don't allow changes during a series capture
@@ -7162,6 +9176,7 @@ int grab_n_save(void)
 
  // Disable changing control values while grabbing images to save:
  gtk_widget_set_sensitive (btn_cs_apply,FALSE);
+ gtk_widget_set_sensitive (btn_cs_apply_nc,FALSE);
  gtk_widget_set_sensitive (ISlider,FALSE);
  
  // Initialise return value to all OK:
@@ -7335,6 +9350,7 @@ int grab_n_save(void)
 
  // Re-enable changing control values:
  gtk_widget_set_sensitive (btn_cs_apply,TRUE);
+ gtk_widget_set_sensitive (btn_cs_apply_nc,TRUE);
  gtk_widget_set_sensitive (ISlider,TRUE);
 
 
@@ -7450,6 +9466,7 @@ static void btn_cam_save_click(GtkWidget *widget, gpointer data)
     Delayed_start_in_progress=1;     
    // Disable changing control values while grabbing images to save:
    gtk_widget_set_sensitive (btn_cs_apply,FALSE);
+   gtk_widget_set_sensitive (btn_cs_apply_nc,FALSE);
    gtk_widget_set_sensitive (ISlider,FALSE);
    gtk_widget_set_sensitive (btn_cam_stream,FALSE);
    gtk_widget_set_sensitive (btn_cam_settings,FALSE);
@@ -7471,6 +9488,7 @@ static void btn_cam_save_click(GtkWidget *widget, gpointer data)
    abort_countdown:
    // Re-sensitise the 'Apply All Settings' button and slider
    gtk_widget_set_sensitive (btn_cs_apply,TRUE);
+   gtk_widget_set_sensitive (btn_cs_apply_nc,TRUE);
    gtk_widget_set_sensitive (ISlider,TRUE);
    gtk_widget_set_sensitive (btn_cam_stream,TRUE);
    gtk_widget_set_sensitive (btn_cam_settings,TRUE);
@@ -7531,8 +9549,8 @@ static void btn_help_about_click(GtkWidget *widget, gpointer data)
   About_dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG(About_dialog),"PARD Capture (Stand Alone)");
   if(PardIcon_ready) gtk_about_dialog_set_logo (GTK_ABOUT_DIALOG(About_dialog),PardIcon_pixbuf);
-  gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(About_dialog),"v. 1.0.0");
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG(About_dialog),"Copyright © 2000-2022 Dr Paul J. Tadrous");
+  gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(About_dialog),"v. 1.1.0");
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG(About_dialog),"Copyright © 2000-2023 Dr Paul J. Tadrous");
   gtk_about_dialog_set_comments (GTK_ABOUT_DIALOG(About_dialog),"Image capture for scientific applications. This version is optimised for OptArc cameras. This is an offshoot of the PARDUS robotic microscopy project.");
   gtk_window_set_title (GTK_WINDOW (About_dialog), "About PARD Capture");  
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG(About_dialog),"https://github.com/TadPath/PARDUS");  
@@ -7553,12 +9571,24 @@ static gboolean img_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
  // Do nothing if not in preview tile select mode or if not previewing.
  if(Need_to_preview==PREVIEW_OFF) return TRUE;
  if(!Preview_fullsize) return TRUE; 
+
+ // Disable preview to apply the changes
+ Preparing_preview=1;
+ Need_to_preview=PREVIEW_OFF;
+
+ // Reset the focus range values
+ PrevStat.focus_max_r=1.0e-12;
+ PrevStat.focus_max_g=1.0e-12;
+ PrevStat.focus_max_b=1.0e-12;
+ PrevStat.focus_min_r=1.0e+12;
+ PrevStat.focus_min_g=1.0e+12;
+ PrevStat.focus_min_b=1.0e+12;
+
  if(Preview_tile_selection_made){
  // If we get here it means we are in full-size tile preview mode and
  // the user had already selected a tile then clicked again on the
  // preview window to re-set the preview to full-frame mode and allow
  // them to select another tile:
-   Need_to_preview=PREVIEW_OFF; // Disable preview to apply the changes
     Preview_tile_selection_made=0;
     // Blank the current preview image because when we shrink down to
     // full frame view there may be unused areas (for wide format 16:9
@@ -7567,8 +9597,7 @@ static gboolean img_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
     memset(PreviewImg, 127, PreviewImg_rgb_size*sizeof(unsigned char));
     gtk_widget_show(Ebox_lab_preview);
     calculate_preview_params(); // Select the tile into the preview image
-   Need_to_preview=PREVIEW_ON;  // Re-enable preview.
-   return TRUE;
+   goto endof;
   }
 
  // If we get here it means the user is selecting a tile position, so
@@ -7590,11 +9619,15 @@ static gboolean img_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
  sprintf(imsg,"Preview tile selected at top left x,y = %d,%d", Img_startcol, Img_startrow); 
  show_message(imsg,"FYI: ",MT_INFO,0);
 
-Need_to_preview=PREVIEW_OFF; // Disable preview to apply the changes
  Preview_tile_selection_made=1;
  gtk_widget_hide(Ebox_lab_preview);
  calculate_preview_params(); // Select the tile into the preview image
-Need_to_preview=PREVIEW_ON;  // Re-enable preview.
+
+endof:
+
+ // Re-enable preview.
+ Need_to_preview=PREVIEW_ON;
+ Preparing_preview=0;
 
  return TRUE;
 }
@@ -7613,13 +9646,24 @@ static gboolean elp_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
  if(Need_to_preview==PREVIEW_OFF) return TRUE;
  if(!Preview_fullsize) return TRUE;
 
+ // Disable preview to apply the changes
+ Preparing_preview=1;
+ Need_to_preview=PREVIEW_OFF;
+
+ // Reset the focus range values
+ PrevStat.focus_max_r=1.0e-12;
+ PrevStat.focus_max_g=1.0e-12;
+ PrevStat.focus_max_b=1.0e-12;
+ PrevStat.focus_min_r=1.0e+12;
+ PrevStat.focus_min_g=1.0e+12;
+ PrevStat.focus_min_b=1.0e+12;
   
  if(Preview_tile_selection_made){
  // If we get here it means we are in full-size tile preview mode and
  // the user had already selected a tile then clicked again on the
  // preview window to re-set the preview to full-frame mode and allow
  // them to select another tile:
-   Need_to_preview=PREVIEW_OFF; // Disable preview to apply the changes
+
     Preview_tile_selection_made=0;
     // Blank the current preview image because when we shrink down to
     // full frame view there may be unused areas (for wide format 16:9
@@ -7628,8 +9672,8 @@ static gboolean elp_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
     memset(PreviewImg, 127, PreviewImg_rgb_size*sizeof(unsigned char));
     gtk_widget_show(Ebox_lab_preview);
     calculate_preview_params(); // Select the tile into the preview image
-   Need_to_preview=PREVIEW_ON;  // Re-enable preview.
-   return TRUE;
+
+   goto endof;
   }
 
  // If we get here it means the user is selecting a tile position, so
@@ -7652,11 +9696,16 @@ static gboolean elp_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
  sprintf(imsg,"Preview tile selected at top left x,y = %d,%d", Img_startcol, Img_startrow); 
  show_message(imsg,"FYI: ",MT_INFO,0);
 
-Need_to_preview=PREVIEW_OFF; // Disable preview to apply the changes
  Preview_tile_selection_made=1;
  gtk_widget_hide(Ebox_lab_preview);
  calculate_preview_params(); // Select the tile into the preview image
-Need_to_preview=PREVIEW_ON;  // Re-enable preview.
+
+
+endof:
+
+ // Re-enable preview.
+ Need_to_preview=PREVIEW_ON;
+ Preparing_preview=0;
 
  return TRUE;
 }
@@ -7664,13 +9713,17 @@ Need_to_preview=PREVIEW_ON;  // Re-enable preview.
 static gboolean update_cam_preview(void)
 // Timeout function to update the preview window image
 {
-    if(Need_to_save) return TRUE; // The save function will update the preview if needed so don't duplicate
-    if(change_preview_fps){
+  // The save function will update the preview if needed so don't duplicate
+  if(Need_to_save) return TRUE;
+  // Wait till a new preview image is ready before trying to display it or you
+  // will over-tax the GUI by trying to display images as they are being made. 
+  if(Preparing_preview) return TRUE; 
+  if(change_preview_fps){
      change_preview_fps=0;
      g_timeout_add(preview_fps, G_SOURCE_FUNC(update_cam_preview),NULL);
      return FALSE;
     }
-    if(Need_to_preview==PREVIEW_ON && camera_status.cs_streaming){
+  if(Need_to_preview==PREVIEW_ON && camera_status.cs_streaming){
          from_preview_timeout=1;
          grab_image(); // No need to check error - if it works, great. If not, carry on.
      }
@@ -7754,7 +9807,7 @@ static void btn_io_prev_corrfield_click(GtkWidget *widget, gpointer data)
     // Set up the 'file load' dialogue with the dark field image 
     // choosing settings:
     prevmaster_file_filter  = gtk_file_filter_new();
-    gtk_file_filter_set_name (prevmaster_file_filter,"Preview Dark Field Images");
+    gtk_file_filter_set_name (prevmaster_file_filter,".dou images");
     gtk_file_filter_add_pattern (prevmaster_file_filter, "*.dou");
     load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Dark Field Image",
                                       GTK_WINDOW(Win_main),
@@ -7786,7 +9839,7 @@ static void btn_io_prev_corrfield_click(GtkWidget *widget, gpointer data)
     // Set up the 'file load' dialogue with the flat field image 
     // choosing settings:
     prevmaster_file_filter  = gtk_file_filter_new();
-    gtk_file_filter_set_name (prevmaster_file_filter,"Preview Flat Field Images");
+    gtk_file_filter_set_name (prevmaster_file_filter,".dou images");
     gtk_file_filter_add_pattern (prevmaster_file_filter, "*.dou");
     load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Flat Field Image",
                                       GTK_WINDOW(Win_main),
@@ -7898,7 +9951,7 @@ static void btn_cs_load_darkfield_click(GtkWidget *widget, gpointer data)
 // when the user clicks the [Select] button in the camera settings
 // window. 
  dfimg_load_filter  = gtk_file_filter_new();
- gtk_file_filter_set_name (dfimg_load_filter,"Dark Field Images");                                
+ gtk_file_filter_set_name (dfimg_load_filter,".dou images");                                
  gtk_file_filter_add_pattern (dfimg_load_filter, "*.dou"); 
 
  load_file_dialog = gtk_file_chooser_dialog_new ("Load a Dark Field Image",
@@ -8085,7 +10138,10 @@ static void btn_cs_load_flatfield_click(GtkWidget *widget, gpointer data)
  gint res;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
  GtkFileChooser *ffimg_load_chooser;
- GtkFileFilter  *ffimg_load_filter;
+ GtkFileFilter  *ffimg_pgm_filter;
+ GtkFileFilter  *ffimg_ppm_filter;
+ GtkFileFilter  *ffimg_bmp_filter;
+ GtkFileFilter  *ffimg_dou_filter;
  
  ff_pending=0;
  
@@ -8095,12 +10151,21 @@ static void btn_cs_load_flatfield_click(GtkWidget *widget, gpointer data)
  // filter to be used with the file chooser dialog - we only show this
  // when the user clicks the [Select] button in the camera settings
  // window. 
- ffimg_load_filter  = gtk_file_filter_new();
- gtk_file_filter_set_name (ffimg_load_filter,"Flat Field Images");
- gtk_file_filter_add_pattern (ffimg_load_filter, "*.pgm");                                     
- gtk_file_filter_add_pattern (ffimg_load_filter, "*.ppm");                                     
- gtk_file_filter_add_pattern (ffimg_load_filter, "*.bmp");                                     
- gtk_file_filter_add_pattern (ffimg_load_filter, "*.dou");                                     
+ ffimg_pgm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (ffimg_pgm_filter,"pgm images");
+ gtk_file_filter_add_pattern (ffimg_pgm_filter, "*.pgm");
+                                     
+ ffimg_ppm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (ffimg_ppm_filter,"ppm images");
+ gtk_file_filter_add_pattern (ffimg_ppm_filter, "*.ppm");
+                                     
+ ffimg_bmp_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (ffimg_bmp_filter,"bmp images");
+ gtk_file_filter_add_pattern (ffimg_bmp_filter, "*.bmp");
+                                     
+ ffimg_dou_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (ffimg_dou_filter,"dou images");
+ gtk_file_filter_add_pattern (ffimg_dou_filter, "*.dou");                                     
 
  load_file_dialog = gtk_file_chooser_dialog_new ("Load a Flat Field Image",
                                       GTK_WINDOW(Win_main),
@@ -8113,8 +10178,11 @@ static void btn_cs_load_flatfield_click(GtkWidget *widget, gpointer data)
 
  ffimg_load_chooser = GTK_FILE_CHOOSER (load_file_dialog);
 
- gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_load_filter);
- gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_load_filter);
+ gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_pgm_filter);
+ gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_ppm_filter);
+ gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_bmp_filter);
+ gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_dou_filter);
+ gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (ffimg_load_chooser),ffimg_bmp_filter);
  // gtk_file_chooser_set_current_folder (ffimg_load_chooser,FFFile);
  
  // Run the 'file load' dialogue
@@ -8128,7 +10196,10 @@ static void btn_cs_load_flatfield_click(GtkWidget *widget, gpointer data)
   }
 
  // Remove the filter from the file load dialogue and close it
- gtk_file_chooser_remove_filter(ffimg_load_chooser,ffimg_load_filter);
+ gtk_file_chooser_remove_filter(ffimg_load_chooser,ffimg_pgm_filter);
+ gtk_file_chooser_remove_filter(ffimg_load_chooser,ffimg_ppm_filter);
+ gtk_file_chooser_remove_filter(ffimg_load_chooser,ffimg_bmp_filter);
+ gtk_file_chooser_remove_filter(ffimg_load_chooser,ffimg_dou_filter);
  gtk_widget_destroy(load_file_dialog);
  
  return;
@@ -8467,10 +10538,362 @@ if(rawdou==0){
  return 0;
 }
 
+int test_selected_pmsk_filename(char *filename)
+// Attempt to read the file header and see if it is suitable for use as a
+// preview mask. If successful, copy the file name into the PrevStat
+// Selected_Mask_filename variable and set the PrevStat.mask_pending flag to 1
+// and sets the GUI widgets to sensitive (it sets them insensitive otherwise) 
+// Return 0 on success and sets PrevStat.mask_pending to 1.
+// It returns 1 on failure.
+{
+ char msgtxt[256];
+ int lht,lwd,imfmt;
+ int16_t bitcount;
+ 
+ // No useable mask selected
+ if(!strcmp(filename,"[None]") || !strcmp(filename,"[Full]") || !strcmp(filename,"[UNDF]") || !strcmp(filename,"None.bmp")){
+   PrevStat.mask_pending=0;
+   if(!strcmp(filename,"None.bmp")) sprintf(PrevStat.Selected_Mask_filename,"[None]");
+   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepmsk),FALSE);
+   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_dsppmsk),FALSE);
+   gtk_widget_set_sensitive (chk_usepmsk,FALSE);
+   gtk_widget_set_sensitive (chk_dsppmsk,FALSE);
+   gtk_widget_set_sensitive (CamsetWidget[windex_upm],FALSE);
+   gtk_widget_set_sensitive (CamsetWidget[windex_upm2],FALSE);
+   gtk_widget_set_sensitive (CamsetWidget[windex_dpm],FALSE);
+   gtk_widget_set_sensitive (CamsetWidget[windex_dpm2],FALSE);
+   return 1;
+ }
+
+
+ // Read the mask image file header to get dimensions and file type
+ imfmt=SAF_YUYV; // I use SAF_YUYV just as a reference value to see if
+                 // it changes (if it doesn't then no acceptable format
+                 // was found).
+ if(!get_pgm_header(filename, &lht,&lwd))     imfmt=SAF_YP5;  // PGM greyscale 
+ else if(!get_ppm_header(filename, &lht,&lwd))imfmt=SAF_RGB;  // PPM colour
+ else if(!get_bmp_header(filename, &lht,&lwd,&bitcount)){     // BMP
+    switch(bitcount){
+        case 8: imfmt=SAF_BM8; break;     // greyscale bmp
+        case 24:imfmt=SAF_BMP; break;     // colour    bmp  
+        default:
+             show_message("Selected preview mask bmp image is not 8 or 24 bit (other bit depths are not supported). Cannot proceed.","FAILED: ",MT_ERR,1);
+             return 1;
+      }   
+ } 
+ if(imfmt==SAF_YUYV) { // It is not one of the allowed unsigned char formats
+         show_message("Selected preview mask image is not of an acceptable format. No custom masking can be done. Try selecting another file.","FAILED: ",MT_ERR,1);
+         return 1;
+        }                 
+
+    sprintf(PrevStat.Selected_Mask_filename,"%s",filename);
+    PrevStat.mask_pending=1;
+    gtk_widget_set_sensitive (chk_usepmsk,TRUE);
+    gtk_widget_set_sensitive (chk_dsppmsk,TRUE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_upm],TRUE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_upm2],TRUE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_dpm],TRUE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_dpm2],TRUE);
+
+    sprintf(msgtxt,"You selected preview mask image: %s\nWill attempt to load and process it when you click 'Apply',",name_from_path(PrevStat.Selected_Mask_filename));
+    show_message(msgtxt,"FYI: ",MT_INFO,1);
+   return 0;
+}
+
+static void btn_cs_load_pmask_click(GtkWidget *widget, gpointer data) 
+// This just gets the file name and checks the format - it doesn't load
+// the image. Acceptable input images can only be of 8 bpp or 24 bpp BMP, binary
+// pgm or ppm formats. The actual mask used in the program will be binary 8 bpp
+// so if a colour image is supplied this will later be processed down to 24 bpp
+// binary by thresholding the intensity value derived from the RGB components
+// about a value of 127.
+{
+ gint res;
+ GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooser *mask_load_chooser;  // Mask image
+ GtkFileFilter  *mask_pgm_filter;
+ GtkFileFilter  *mask_ppm_filter;
+ GtkFileFilter  *mask_bmp_filter;
+ 
+ PrevStat.mask_pending=0;
+ 
+ // Set up the 'mask load' dialogue with the mask image choosing
+ // settings:
+ // Set up the corrections mask reference image file selection
+ // filter to be used with the file chooser dialog - we only show this
+ // when the user clicks the [Select] button in the camera settings
+ // window. 
+ mask_pgm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (mask_pgm_filter,"pgm images");
+ gtk_file_filter_add_pattern (mask_pgm_filter, "*.pgm");
+                                     
+ mask_ppm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (mask_ppm_filter,"ppm images");
+ gtk_file_filter_add_pattern (mask_ppm_filter, "*.ppm");
+                                     
+ mask_bmp_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (mask_bmp_filter,"bmp images");
+ gtk_file_filter_add_pattern (mask_bmp_filter, "*.bmp");
+
+ load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Mask Image",
+                                      GTK_WINDOW(Win_main),
+                                      fca_open,
+                                      "_Cancel",
+                                      GTK_RESPONSE_CANCEL,
+                                      "_Open",
+                                      GTK_RESPONSE_ACCEPT,
+                                      NULL);
+
+ mask_load_chooser = GTK_FILE_CHOOSER (load_file_dialog);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_pgm_filter);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_ppm_filter);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_bmp_filter);
+ gtk_file_chooser_set_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_bmp_filter);
+ // gtk_file_chooser_set_current_folder (mask_load_chooser,MaskFile);
+ 
+ // Run the 'file load' dialogue
+ res = gtk_dialog_run (GTK_DIALOG (load_file_dialog));
+ if (res == GTK_RESPONSE_ACCEPT)
+  {
+   gchar *filename;
+   filename = gtk_file_chooser_get_filename (mask_load_chooser);
+   test_selected_pmsk_filename((char *)filename);
+   g_free(filename);
+  }
+
+ // Remove the mask filters from the file load dialogue and close it.
+ gtk_file_chooser_remove_filter(mask_load_chooser,mask_pgm_filter);
+ gtk_file_chooser_remove_filter(mask_load_chooser,mask_ppm_filter);
+ gtk_file_chooser_remove_filter(mask_load_chooser,mask_bmp_filter);
+ gtk_widget_destroy(load_file_dialog);
+ 
+ return;
+}
+
+void set_pmask_full_support(void)
+// Set the preview mask to a full support (non-custom) mask
+{
+ memset(PrevStat.MaskIm, 255, PreviewImg_size*sizeof(unsigned char));
+ PrevStat.Mask_supp_size=(double)PreviewImg_size;
+ sprintf(PrevStat.MaskFile,"[Full]");
+ PrevStat.mskfile_loaded = MASK_FULL;
+ PrevStat.mask_status = 0;
+  return;
+}
+
+void nullify_pmask(void)
+// Nullify the preview mask (set it to full support and make GUI changes
+{
+ // Re-initialise the preview mask to be all 255 across the whole field 
+ set_pmask_full_support();
+
+ // GUI stuff - don't do this if the camera settings window is not
+ // visible because the dynamically allocated GUI controls will not be
+ // addressable and GTK errors will result. This situation may arise
+ // during the running of a script if the camera settings window was
+ // closed prior to running it.
+ if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepmsk),FALSE);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_dsppmsk),FALSE);
+    gtk_widget_set_sensitive (chk_usepmsk,FALSE);
+    gtk_widget_set_sensitive (chk_dsppmsk,FALSE);
+    gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_upm]),"No");
+    gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_dpm]),"No");
+    gtk_widget_set_sensitive (CamsetWidget[windex_upm],FALSE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_upm2],FALSE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_dpm],FALSE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_dpm2],FALSE);
+    // Set label to show nullified ('[Full]') filename
+    gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_pmski]), PrevStat.MaskFile);  
+   }
+ if(PrevStat.mask_pending) show_message("Any pre-existing Preview mask image has been nullified. Custom masking is disabled till a new mask image is loaded.","FYI: ",MT_INFO,1);
+ return;
+}
+
+void set_pmask_pending(void)
+{
+ if(!strcmp(PrevStat.Selected_Mask_filename,"[None]") || !strcmp(PrevStat.Selected_Mask_filename,"[Full]") || !strcmp(PrevStat.Selected_Mask_filename,"[UNDF]")){
+   PrevStat.mask_pending=0;
+ } else PrevStat.mask_pending=1;
+}
+
+static int init_pmask_image(void)
+// Load any user-specified preview mask file and get it ready for use. Check the
+// format and support, etc.
+// Return 0 on success and the loaded mask is present in PrevStat.MaskIm.
+// Return 1 on failure and PrevStat.MaskIm is set to full support.
+{
+ int lht,lwd,imfmt,idx,rgbpos;
+ unsigned char *tmploc;
+ double d1,d2,d3;
+ int msupp;
+ int tmpimsz;
+ char msgtxt[320];
+ unsigned char cref[1024];    
+ int16_t bitcount;
+
+ if(!strcmp(PrevStat.Selected_Mask_filename,"[None]") || !strcmp(PrevStat.Selected_Mask_filename,"[Full]") || !strcmp(PrevStat.Selected_Mask_filename,"[UNDF]")){
+   PrevStat.mask_pending=0;
+   if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepmsk),FALSE);
+     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_dsppmsk),FALSE);
+     gtk_widget_set_sensitive (chk_usepmsk,FALSE);
+     gtk_widget_set_sensitive (chk_dsppmsk,FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upm],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upm2],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_dpm],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_dpm2],FALSE);
+    }
+   return 0;
+ }
+
+ // Read the mask image file header to get dimensions and file type.
+ // The errors shouldn't occur because we checked previously but I keep the
+ // checks for them in because when this is part of the full PARDUS server the
+ // file names will be supplied over the network from the client script and not
+ // via popup file chooser boxes (as they are here in this standalone version
+ // and where the previous checks were done).
+ if(!get_pgm_header(PrevStat.Selected_Mask_filename, &lht,&lwd))     imfmt=SAF_YP5;  // PGM greyscale 
+ else if(!get_ppm_header(PrevStat.Selected_Mask_filename, &lht,&lwd))imfmt=SAF_RGB;  // PPM colour
+ else if(!get_bmp_header(PrevStat.Selected_Mask_filename, &lht,&lwd,&bitcount)){     // BMP
+    switch(bitcount){
+        case 8: imfmt=SAF_BM8; break;     // greyscale bmp
+        case 24:imfmt=SAF_BMP; break;     // colour    bmp  
+        default:
+             show_message("Selected preview mask bmp image is not 8 or 24 bit (other bit depths are not supported). Cannot proceed.","FAILED: ",MT_ERR,1);
+             nullify_pmask(); return 1;
+      }   
+ } else { // It is not one of the allowed unsigned char formats
+         show_message("Selected preview mask image is not of an acceptable format. No custom masking can be done. Try selecting another file.","FAILED: ",MT_ERR,1);
+         nullify_pmask(); return 1;
+        }
+
+  switch(imfmt){
+    case SAF_YP5:
+    case SAF_BM8:
+     tmpimsz=PreviewImg_size;
+    break;
+    case SAF_RGB:
+    case SAF_BMP:
+     tmpimsz=PreviewImg_rgb_size;
+    break;
+    default: // This should not happen
+        show_message("Unrecognised image format for preview mask image.","Program Error: ",MT_ERR,1);
+        nullify_pmask();
+        return 1;
+    }
+
+ // Check dimensions are identical to current main image
+ if(lht!=PreviewHt){
+    show_message("Selected preview mask image is not the same height as the preview image. Cannot proceed.","FAILED: ",MT_ERR,1);
+    nullify_pmask(); return 1;
+   }     
+ if(lwd!=PreviewWd){
+    show_message("Selected preview mask image is not the same width as the preview image. Cannot proceed.","FAILED: ",MT_ERR,1);
+    nullify_pmask(); return 1;
+   }     
+
+ // We got memory for the mask. Now get memory for a temporary array to
+ // load the mask image and try reading the image into it
+ tmploc=(unsigned char *)calloc(tmpimsz,sizeof(unsigned char));
+ if(tmploc==NULL){
+     show_message("Failed to allocate memory to store the preview mask image. Cannot proceed to load it.","FAILED: ",MT_ERR,1);
+     nullify_pmask(); return 1;
+    }
+
+ // We got memory, so now try reading the image into it
+ sprintf(msgtxt,"There was a problem reading the chosen preview mask file. Cannot proceed.");
+ switch(imfmt){
+        case SAF_YP5: 
+            if(get_pgm(PrevStat.Selected_Mask_filename, &tmploc, &lht,&lwd)){
+              show_message(msgtxt,"FAILED: ",MT_ERR,1);
+              nullify_pmask(); free(tmploc); return 1;
+            }
+        break;
+        case SAF_BM8: 
+            if(get_bmp(PrevStat.Selected_Mask_filename, &tmploc, &lht, &lwd, cref)){
+              show_message(msgtxt,"FAILED: ",MT_ERR,1);
+              nullify_pmask(); free(tmploc); return 1;
+            }
+        break;
+        case SAF_RGB:
+            if(get_ppm(PrevStat.Selected_Mask_filename, &tmploc)){
+              show_message(msgtxt,"FAILED: ",MT_ERR,1);
+              nullify_pmask(); free(tmploc); return 1;
+            }
+        break;
+        case SAF_BMP:
+            if(get_bmp(PrevStat.Selected_Mask_filename, &tmploc, &lht, &lwd, cref)){
+              show_message(msgtxt,"FAILED: ",MT_ERR,1);
+              nullify_pmask(); free(tmploc); return 1;
+            }
+        break;
+        default: // This should not happen
+         show_message("Unrecognised image format for the preview mask image.","Program Error: ",MT_ERR,1);
+         nullify_pmask(); free(tmploc); return 1;
+    }
+
+ // Now convert the mask image into a binary unsigned char array
+ // whatever the original file format was by thresholding at a pixel
+ // value of 127.
+ msupp=0;
+ switch(imfmt){
+    case SAF_YP5:
+    case SAF_BM8:
+      for(idx=0;idx<PreviewImg_size;idx++){
+         if(tmploc[idx]>127){ PrevStat.MaskIm[idx]=255; msupp++;}
+         else PrevStat.MaskIm[idx]=0;
+       }
+    break;
+    case SAF_RGB:
+    case SAF_BMP:
+     for(idx=0,rgbpos=0;idx<PreviewImg_size;idx++){
+         d1=(double)tmploc[rgbpos++];
+         d2=(double)tmploc[rgbpos++];
+         d3=(double)tmploc[rgbpos++];
+         d1=(d1+d2+d3)/3.0; // Intensity from RGB        
+         if(d1>127.0){ PrevStat.MaskIm[idx]=255; msupp++;}
+         else PrevStat.MaskIm[idx]=0;
+       }
+    break;
+    default: // This can't happen - we checked above
+    break;
+  }
+
+ // we're done with the temporary array now do free it
+ free(tmploc);
+
+ // Check that the mask has at least 1 pixel that is non-zero:
+ if(msupp==0){
+   show_message("Chosen preview mask has no support so cannot be used.","FAILED: ",MT_ERR,1);
+   nullify_pmask(); return 1;
+  }
+
+ // Now we set the PrevStat structure variable values and GUI:
+ PrevStat.Mask_supp_size=(double)msupp;
+ sprintf(PrevStat.MaskFile,"%s",PrevStat.Selected_Mask_filename);
+ sprintf(msgtxt,"Preview mask image loaded: %s",PrevStat.MaskFile);
+ show_message(msgtxt,"FYI: ",MT_INFO,0);
+ PrevStat.mskfile_loaded=MASK_YRGB;
+ 
+ if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+     //set label to show filename
+     gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_pmski]), name_from_path(PrevStat.MaskFile));  
+     gtk_widget_set_sensitive (chk_usepmsk,TRUE);
+     gtk_widget_set_sensitive (chk_dsppmsk,TRUE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upm],TRUE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upm2],TRUE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_dpm],TRUE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_dpm2],TRUE);
+  }
+ 
+ return 0;
+}
+
 int test_selected_msk_filename(char *filename)
 // Attempt to read the file header and see if it is suitable for use as
-// a corrections maek. If successful, copy the file name into the global
-// Selected_Mask_filename variable and set the msk_pending flag and GUI
+// a corrections mask. If successful, copy the file name into the global
+// Selected_Mask_filename variable and set the mask_pending flag and GUI
 // widgets accordingly. 
 // Return 0 on success, 1 on failure.
 {
@@ -8480,7 +10903,7 @@ int test_selected_msk_filename(char *filename)
  
  // No useable mask selected
  if(!strcmp(filename,"[None]") || !strcmp(filename,"[Full]") || !strcmp(filename,"[UNDF]") || !strcmp(filename,"None.bmp")){
-   msk_pending=0;
+   mask_pending=0;
    if(!strcmp(filename,"None.bmp")) sprintf(Selected_Mask_filename,"[None]");
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usemskcor),FALSE);
    gtk_widget_set_sensitive (chk_usemskcor,FALSE);
@@ -8489,8 +10912,7 @@ int test_selected_msk_filename(char *filename)
    return 1;
  }
 
-    
- // Read the image file header to get dimensions and file type
+
  // Read the mask image file header to get dimensions and file type
  imfmt=SAF_YUYV; // I use SAF_YUYV just as a reference value to see if
                  // it changes (if it doesn't then no acceptable format
@@ -8512,7 +10934,7 @@ int test_selected_msk_filename(char *filename)
         }                 
 
     sprintf(Selected_Mask_filename,"%s",filename);
-    msk_pending=1;
+    mask_pending=1;
     gtk_widget_set_sensitive (chk_usemskcor,TRUE);
     gtk_widget_set_sensitive (CamsetWidget[windex_um],TRUE);
     gtk_widget_set_sensitive (CamsetWidget[windex_um2],TRUE);
@@ -8524,14 +10946,20 @@ int test_selected_msk_filename(char *filename)
 
 static void btn_cs_load_mask_click(GtkWidget *widget, gpointer data) 
 // This just gets the file name and checks the format - it doesn't load
-// the image. Masks can only be of 8bpp BMP format.
+// the image. Acceptable input images can only be of 8 bpp or 24 bpp BMP, binary
+// pgm or ppm formats. The actual mask used in the program will be binary 8 bpp
+// so if a colour image is supplied this will later be processed down to 24 bpp
+// binary by thresholding the intensity value derived from the RGB components
+// about a value of 127.
 {
  gint res;
  GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
  GtkFileChooser *mask_load_chooser;  // Mask image
- GtkFileFilter  *mask_load_filter;
+ GtkFileFilter  *mask_pgm_filter;
+ GtkFileFilter  *mask_ppm_filter;
+ GtkFileFilter  *mask_bmp_filter;
  
- msk_pending=0;
+ mask_pending=0;
  
  // Set up the 'mask load' dialogue with the mask image choosing
  // settings:
@@ -8539,11 +10967,17 @@ static void btn_cs_load_mask_click(GtkWidget *widget, gpointer data)
  // filter to be used with the file chooser dialog - we only show this
  // when the user clicks the [Select] button in the camera settings
  // window. 
- mask_load_filter  = gtk_file_filter_new();
- gtk_file_filter_set_name (mask_load_filter,"Mask Images");                                   
- gtk_file_filter_add_pattern (mask_load_filter, "*.pgm");                                     
- gtk_file_filter_add_pattern (mask_load_filter, "*.ppm");                                     
- gtk_file_filter_add_pattern (mask_load_filter, "*.bmp");                                     
+ mask_pgm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (mask_pgm_filter,"pgm images");
+ gtk_file_filter_add_pattern (mask_pgm_filter, "*.pgm");
+                                     
+ mask_ppm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (mask_ppm_filter,"ppm images");
+ gtk_file_filter_add_pattern (mask_ppm_filter, "*.ppm");
+                                     
+ mask_bmp_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (mask_bmp_filter,"bmp images");
+ gtk_file_filter_add_pattern (mask_bmp_filter, "*.bmp");
 
  load_file_dialog = gtk_file_chooser_dialog_new ("Load a Mask Image",
                                       GTK_WINDOW(Win_main),
@@ -8555,8 +10989,10 @@ static void btn_cs_load_mask_click(GtkWidget *widget, gpointer data)
                                       NULL);
 
  mask_load_chooser = GTK_FILE_CHOOSER (load_file_dialog);
- gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_load_filter);
- gtk_file_chooser_set_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_load_filter);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_pgm_filter);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_ppm_filter);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_bmp_filter);
+ gtk_file_chooser_set_filter(GTK_FILE_CHOOSER (mask_load_chooser),mask_bmp_filter);
  // gtk_file_chooser_set_current_folder (mask_load_chooser,MaskFile);
  
  // Run the 'file load' dialogue
@@ -8569,8 +11005,10 @@ static void btn_cs_load_mask_click(GtkWidget *widget, gpointer data)
    g_free(filename);
   }
 
- // Remove the mask filter from the file load dialogue and close it.
- gtk_file_chooser_remove_filter(mask_load_chooser,mask_load_filter);
+ // Remove the mask filters from the file load dialogue and close it.
+ gtk_file_chooser_remove_filter(mask_load_chooser,mask_pgm_filter);
+ gtk_file_chooser_remove_filter(mask_load_chooser,mask_ppm_filter);
+ gtk_file_chooser_remove_filter(mask_load_chooser,mask_bmp_filter);
  gtk_widget_destroy(load_file_dialog);
  
  return;
@@ -8603,9 +11041,7 @@ void set_mask_full_support(int ht, int wd)
 }
 
 void nullify_mask(void)
-// Test if already nullified so return without doing anything. This is
-// not just for efficiency but also to prevent un-necessary pop-ups and
-// error messages when loading settings from a saved settings file.
+// Nullify the custom corrections mask and set it to full support.
 {
  // Re-initialise the mask to be all 255 across the whole field using
  // Selected_Ht and Selected_Wd as dimensions:
@@ -8625,15 +11061,15 @@ void nullify_mask(void)
       // Set label to show nullified filename
       gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_rmski]), MaskFile);  
     }
-  if(msk_pending) show_message("Any pre-existing mask image has been nullified. Custom masking is disabled till a new mask image is loaded.","FYI: ",MT_INFO,1);
+  if(mask_pending) show_message("Any pre-existing mask image has been nullified. Custom masking is disabled till a new mask image is loaded.","FYI: ",MT_INFO,1);
   return;
 }
 
 void set_mask_pending(void)
 {
  if(!strcmp(Selected_Mask_filename,"[None]") || !strcmp(Selected_Mask_filename,"[Full]") || !strcmp(Selected_Mask_filename,"[UNDF]")){
-   msk_pending=0;
- } else msk_pending=1;
+   mask_pending=0;
+ } else mask_pending=1;
 }
 
 static int init_mask_image(void)
@@ -8652,7 +11088,7 @@ static int init_mask_image(void)
  int16_t bitcount;
 
  if(!strcmp(Selected_Mask_filename,"[None]") || !strcmp(Selected_Mask_filename,"[Full]") || !strcmp(Selected_Mask_filename,"[UNDF]")){
-   msk_pending=0;
+   mask_pending=0;
    if(gtk_widget_is_visible(win_cam_settings)==TRUE){
      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usemskcor),FALSE);
      gtk_widget_set_sensitive (chk_usemskcor,FALSE);
@@ -8824,7 +11260,7 @@ static void btn_cs_load_cset_click(GtkWidget *widget, gpointer data)
  // Set up the settings file selection filter to be used with the file
  // chooser dialog.
  csf_file_filter  = gtk_file_filter_new();
- gtk_file_filter_set_name (csf_file_filter,"Settings Files");                                   
+ gtk_file_filter_set_name (csf_file_filter,".txt files");                                   
  gtk_file_filter_add_pattern (csf_file_filter, "*.txt");                                     
 
  load_file_dialog = gtk_file_chooser_dialog_new ("Load a Settings File",
@@ -8950,7 +11386,7 @@ static void btn_cs_save_cset_click(GtkWidget *widget, gpointer data)
  // Set up the settings file selection filter to be used with the file
  // chooser dialog.
  csf_file_filter  = gtk_file_filter_new();
- gtk_file_filter_set_name (csf_file_filter,"Settings Files");                                   
+ gtk_file_filter_set_name (csf_file_filter,".txt files");                                   
  gtk_file_filter_add_pattern (csf_file_filter, "*.txt");                                     
 
  save_file_dialog = gtk_file_chooser_dialog_new ("Save Current Settings",
@@ -9082,7 +11518,7 @@ int update_framerate_resolutions(void)
 // Query the imaging device to get a list of supported frame resolutions
 // and maximum frame rates and put that info into the size combo box.
 // If there is an entry that corresponds to Selected_Wd x Selected_Ht
-// it sets the combo box cuurently active index to that position.
+// it sets the combo box currently active index to that position.
 // If that selected resolution is not found it sets the current position
 // of the combo box to VGA resolution.
 // If even VGA resolution is not supported it returns 1 and outputs a
@@ -9094,27 +11530,23 @@ int update_framerate_resolutions(void)
  struct v4l2_frmsizeenum frmsizeenum;
  struct v4l2_frmivalenum frmivalenum;
  
- // Query the camera to list the device's frame sizes for the YUYV format
- // into the frame size drop-down list
-  for(fdx=0;fdx<MAX_RESOLUTIONS;fdx++) maxframerate[fdx]=0;
+ // Query the camera to list the device's frame sizes for the current image
+ // stream format into the frame size drop-down list
+ for(fdx=0;fdx<MAX_RESOLUTIONS;fdx++) maxframerate[fdx]=0;
 
-   memset(&frmsizeenum, 0, sizeof(frmsizeenum));
-   frmsizeenum.pixel_format=CamFormat; 
-   fdx=0; frmsizeenum.index=fdx;
-   show_message("Attempting to enumerate the supported frame sizes (W x H):","FYI: ",MT_INFO,0);
+ memset(&frmsizeenum, 0, sizeof(frmsizeenum));
+ frmsizeenum.pixel_format=CamFormat; 
+ fdx=0; frmsizeenum.index=fdx;
+ show_message("Attempting to enumerate the supported frame sizes (W x H):","FYI: ",MT_INFO,0);
    
-   // Clear the current entries from the size combo:
-   gtk_combo_box_text_remove_all ( (GtkComboBoxText *) combo_sz);
+ // Clear the current entries from the size combo:
+ gtk_combo_box_text_remove_all ( (GtkComboBoxText *) combo_sz);
 
-   // Append the values to the size combo list and set the default item
-   // as the current ImHeight and ImWidth (or 0 if none of the listed
-   // formats match the current values).
-   CurrDims_idx = VGA_idx = -1; comboidx=0;
-   while(0 == ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsizeenum)){
-
-         // PARD Capture does not yet support these frame heights:
-         if(frmsizeenum.discrete.height==288) goto Next_resolution;
-         if(frmsizeenum.discrete.height==144) goto Next_resolution;
+ // Append the values to the size combo list and set the default item
+ // as the current ImHeight and ImWidth (or 0 if none of the listed
+ // formats match the current values).
+ CurrDims_idx = VGA_idx = -1; comboidx=0;
+ while(0 == ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsizeenum)){
 
          sprintf(ctrl_name,"%u x %u",frmsizeenum.discrete.width,frmsizeenum.discrete.height);
          sprintf(msgtxt,"\t[%d]-> %s",fdx,ctrl_name);
@@ -9144,28 +11576,29 @@ int update_framerate_resolutions(void)
          sprintf(msgtxt,"%s%s",ctrl_name,ctrl_name2);
          gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT (combo_sz),NULL,msgtxt);
          comboidx++;
-         Next_resolution:
+
          fdx++; // index of next frame size to query  
          frmsizeenum.index=fdx;
-        }
-   // Update the number of resolutions in the drop down list:
-   Nresolutions=comboidx;
-
-   // This just prints a newline character (for non-GUI notices):
-   show_message("","",MT_INFO,0); 
-   // Show error message:
-   if(errno != EINVAL) {
-       show_message("Error when retrieving frame sizes.","Error: ",MT_ERR,1);
      }
-   gtk_combo_box_set_active(GTK_COMBO_BOX (combo_sz), 1);
 
-   if(CurrDims_idx>=0) gtk_combo_box_set_active(GTK_COMBO_BOX (combo_sz), CurrDims_idx);
-   else if(VGA_idx>=0) gtk_combo_box_set_active(GTK_COMBO_BOX (combo_sz), VGA_idx);
-   else {
+ // Update the number of resolutions in the drop down list:
+ Nresolutions=comboidx;
+
+ // This just prints a newline character (for non-GUI notices):
+ show_message("","",MT_INFO,0); 
+ // Show error message:
+ if(errno != EINVAL) {
+     show_message("Error when retrieving frame sizes.","Error: ",MT_ERR,1);
+   }
+ gtk_combo_box_set_active(GTK_COMBO_BOX (combo_sz), 1);
+
+ if(CurrDims_idx>=0) gtk_combo_box_set_active(GTK_COMBO_BOX (combo_sz), CurrDims_idx);
+ else if(VGA_idx>=0) gtk_combo_box_set_active(GTK_COMBO_BOX (combo_sz), VGA_idx);
+ else {
        show_message("Could not get even a VGA frame size.\nYou should save your work now before clicking 'OK' - this may not end well.","Error: ",MT_ERR,1);
        return 1;
-   }
-   
+      }
+
  return 0;
 }
 
@@ -9177,6 +11610,18 @@ int fps_index(int tdx)
  int i;
   for(i=0;i<fpx_max;i++){
     if(!(atoi(fps_options[i])-tdx)) return i;
+  }
+ return 0;
+}
+
+int plut_index(int tdx)
+// Gets the preview image LUT index in the preview LUT list of strings given
+// the desired numerical entry (as tdx). Defaults to the first index in the list
+// if idx is not one of the entries. 
+{
+ int i;
+  for(i=0;i<Nplut;i++){
+    if(!(atoi(Preview_LUT_options[i])-tdx)) return i;
   }
  return 0;
 }
@@ -9204,13 +11649,19 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
 // processing behaviours
 {
  int ctrlindex,idx,tdx,tmp_preview,tmp_avd,szidx,esdx;
- int cfchanged,requestedfmt;
- char msgtxt[320],cname[64];
+ int cfchanged,requestedfmt,pmask_status_changed;
+ char msgtxt[320],cname[64],statmn[32],statvar[32];
  gchar *numstr,*markup;
  int MFidx,retval,manualfocus; // For correct manual focus warning
  const char *format = "<span foreground=\"red\">\%s</span>";
+ char *format_als = "<span foreground=\"black\" font=\"monospace\" weight=\"bold\">\%s</span><span foreground=\"magenta\" font=\"monospace\" weight=\"bold\">\%s</span><span foreground=\"black\" font=\"monospace\" weight=\"bold\">\%s</span>";
+ char *format_alvar = "<span foreground=\"black\" font=\"monospace\" weight=\"bold\">\%s</span><span foreground=\"black\" font=\"monospace\" weight=\"bold\">\%s</span><span foreground=\"magenta\" font=\"monospace\" weight=\"bold\">\%s</span>";
+ char *format_blk = "<span font=\"monospace\" weight=\"bold\">\%s</span><span font=\"monospace\" weight=\"bold\">\%s</span><span font=\"monospace\" weight=\"bold\">\%s</span>";
+ char *format_focus;
  int currval,MFval,cidx;       // Camera control values
  int AutoWB,AutoExp,AutoFocus; // Camera control flags
+ double dtmp;
+ unsigned char uctmp;
 
  if(Ser_active>0) return; // Don't allow changes during a series capture
  if(Av_limit>1) return; // Don't allow changes during an average capture
@@ -9226,11 +11677,17 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
  // - else the preview timout could call the preview function in the
  // middle of settings changes and cause a crash (e.g. due to mixed
  // dimensions, old and new)
+ Prev_blank_gb=1;                  // This is just housekeeping to ensure the
+ PrevStat.min_g=PrevStat.max_g=0;  // preview stats displays don't become
+ PrevStat.min_b=PrevStat.max_b=0;  // visually messed up during a time-out.
+                                   // No need to reset min/max for the red
+                                   // channel because that always gets updated.
  if(Need_to_preview){
     tmp_preview=Need_to_preview; 
     Need_to_preview=PREVIEW_OFF;
    } else tmp_preview=0;
  
+
  cfchanged=0; // To record if the format has changed since last update.
               // Either the image dimensions and/or the camera output
               // stream format.
@@ -9241,6 +11698,17 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
                    // changed, hence the need for this flag in addition
                    // to cfchanged.
 
+ // Reset the focus range values
+ PrevStat.focus_max_r=1.0e-12;
+ PrevStat.focus_max_g=1.0e-12;
+ PrevStat.focus_max_b=1.0e-12;
+ PrevStat.focus_min_r=1.0e+12;
+ PrevStat.focus_min_g=1.0e+12;
+ PrevStat.focus_min_b=1.0e+12;
+
+
+ if(Set_camera){ // Only allow if camera changes are requested ...
+
   // Get the height and width selections for full size image capture 
   numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_sz));
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_sz]),numstr); 
@@ -9248,6 +11716,16 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   sprintf(msgtxt,"You chose: W = %d,  H = %d",Selected_Wd,Selected_Ht);
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
+
+ } else {
+  // We're not allowing re-sizing so set the selected dimensions to the
+  // current dimensions.
+
+  Selected_Ht=ImHeight;
+  Selected_Wd=ImWidth;
+
+ } // End of Set_camera block
+
 
   // Get the 'Use crop from full-size image as preview?' selection 
   if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_preview_central))==TRUE){
@@ -9257,6 +11735,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
      if(selected_Preview_fullsize) Preview_changed=1;
      selected_Preview_fullsize=0;
    }
+
   if(selected_Preview_fullsize) numstr = g_strdup_printf("Yes"); else numstr = g_strdup_printf("No");
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_pc]),numstr);
   sprintf(msgtxt,"You chose: Use crop from full-size image as preview? - %s",numstr);
@@ -9274,6 +11753,17 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        gtk_widget_show(preview_integration_sbutton);
        gtk_widget_show(preview_bias_sbutton);
        gtk_widget_show(preview_corr_button);
+       // Need to ensure the G and B preview stats labels are set to zero
+       // because these are not updated during monochrome previewing.
+       PrevStat.usat_g=PrevStat.lsat_g=0;
+       PrevStat.usat_b=PrevStat.lsat_b=0;
+       update_prevstat_channel(CCHAN_G);
+       update_prevstat_channel(CCHAN_B);
+       // Hide the focus-assist overlay if it is on and not Red-only
+       if(Prev_overlay_focus && Prev_overlay_focus!=CCHAN_R){
+          Prev_overlay_focus=CCHAN_Y;
+          Prev_btn_focus_click(Prev_btn_focus,data);
+         }
    } else {
        col_conv_type=CCOL_TO_RGB ;
        numstr = g_strdup_printf("No");
@@ -9288,31 +11778,33 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
 
-  // Get the camera stream format selection. If it has changed, update
-  // the list of resolutions and maximum frame rates accordingly.
-  // Also, set the updated resolutions combo box to the currently
-  // selected HxW if that is included in the updated resolutions list or
-  // set it to 640x480 as a fallback default with error warning if the
-  // user's choice is not supported for the new camera stream format.
-  numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_camfmt));
-  requestedfmt=camfmt_from_string(numstr);
-  if(FormatForbidden==requestedfmt){
-    show_message("The camera stream format you requested is not supported by your camera.","FYI: ",MT_INFO,1);
-    // Reset the camera format combo box.
-    switch(CamFormat){
-      case V4L2_PIX_FMT_YUYV:
-        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_camfmt), 0);
-        numstr = g_strdup_printf("Raw YUYV");
-      break;
-      case V4L2_PIX_FMT_MJPEG:
-        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_camfmt), 1);
-        numstr = g_strdup_printf("MJPEG");
-      break;
-      default: // Should never get here. Set YUYV by default if you do.
-         show_message("Unrecognised camera format.","Program Error: ",MT_ERR,1);
-      break;
-    }
-   } else {
+ if(Set_camera){ // Only allow if camera changes are requested ...
+
+   // Get the camera stream format selection. If it has changed, update
+   // the list of resolutions and maximum frame rates accordingly.
+   // Also, set the updated resolutions combo box to the currently
+   // selected HxW if that is included in the updated resolutions list or
+   // set it to 640x480 as a fallback default with error warning if the
+   // user's choice is not supported for the new camera stream format.
+   numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_camfmt));
+   requestedfmt=camfmt_from_string(numstr);
+   if(FormatForbidden==requestedfmt){
+     show_message("The camera stream format you requested is not supported by your camera.","FYI: ",MT_INFO,1);
+     // Reset the camera format combo box.
+     switch(CamFormat){
+        case V4L2_PIX_FMT_YUYV:
+          gtk_combo_box_set_active (GTK_COMBO_BOX (combo_camfmt), 0);
+          numstr = g_strdup_printf("Raw YUYV");
+        break;
+        case V4L2_PIX_FMT_MJPEG:
+          gtk_combo_box_set_active (GTK_COMBO_BOX (combo_camfmt), 1);
+          numstr = g_strdup_printf("MJPEG");
+        break;
+        default: // Should never get here.
+          show_message("Unrecognised camera format.","Program Error: ",MT_ERR,1);
+        break;
+      }
+    } else {
     switch(requestedfmt){
       case CAF_YUYV:
        if(CamFormat != V4L2_PIX_FMT_YUYV){
@@ -9328,58 +11820,44 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
       break;
       default: // Should never get here. Set YUYV by default if you do.
          show_message("Unrecognised camera format. Using YUYV","Program Error: ",MT_ERR,1);
-       if(CamFormat != V4L2_PIX_FMT_YUYV){
-          cfchanged=1;
-          CamFormat = V4L2_PIX_FMT_YUYV;
-         }
+         if(CamFormat != V4L2_PIX_FMT_YUYV){
+           cfchanged=1;
+           CamFormat = V4L2_PIX_FMT_YUYV;
+          }
       break;
     }
   }
-    gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_camfmt]),numstr);
-    sprintf(msgtxt,"You chose: camera stream format = %s",numstr);
-    show_message(msgtxt,"FYI: ",MT_INFO,0);
-    g_free(numstr);
+
+   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_camfmt]),numstr);
+   sprintf(msgtxt,"You chose: camera stream format = %s",numstr);
+   show_message(msgtxt,"FYI: ",MT_INFO,0);
+   g_free(numstr);
  
-  // If the camera stream format has changed since last update, 
-  // update the resolutions and max framerate for this format
-  if(cfchanged){
-    Preview_changed = 1; // We must update the preview settins later.                  
-    if(update_framerate_resolutions()){
+   // If the camera stream format has changed since last update, 
+   // update the resolutions and max framerate for this format
+   if(cfchanged){
+     Preview_changed = 1; // We must update the preview settins later.                  
+     if(update_framerate_resolutions()){
          sprintf(msgtxt,"Failed to get a valid frame resolution for the new camera stream format");
          show_message(msgtxt,"Warning: ",MT_ERR,0);
         } 
-    // Re-initialising will set the new camera stream format:
-    if(re_init_device()){ 
-      sprintf(msgtxt,"Failed to set the new camera stream format");
-      show_message(msgtxt,"Warning: ",MT_ERR,0);
-      //esdx++;
-    }
+     // Re-initialising will set the new camera stream format:
+     if(re_init_device()){ 
+       sprintf(msgtxt,"Failed to set the new camera stream format");
+       show_message(msgtxt,"Warning: ",MT_ERR,0);
+       //esdx++;
+     }
+
+    // Get the maximum image stream frame rate for the selected format and image
+    // dimensions. We will change this later if the selected dimensions are not
+    // implementable:
+    szidx=gtk_combo_box_get_active (GTK_COMBO_BOX(combo_sz)); 
+    CurrMax_FPS=maxframerate[szidx];
    }
 
-  // Get the preview fps selection 
-  numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_fps));
-  // Get the selected image dimensions index
-  szidx=gtk_combo_box_get_active (GTK_COMBO_BOX(combo_sz)); 
-  sscanf(numstr,"%d",&tdx); // Get the selected frame rate.
-  // If the user-selected frame rate (tdx) is greater than the maximum
-  // frame rate supported for the chosen resolution, advise the user and
-  // don't select it. Use the maximum framerate instead.
-  if(tdx>maxframerate[szidx]){  
-   sprintf(msgtxt,"Your selected frame rate (%d) is greater than the maximum your camera can support at the chosen resolution (%u).\n"
-                  "The frame rate will be set to %d fps for now until you change it.",tdx,maxframerate[szidx],maxframerate[szidx]);
-   show_message(msgtxt,"Warning: ",MT_INFO,1);
-   tdx=maxframerate[szidx];
-   g_free(numstr);
-   numstr = g_strdup_printf("%d",tdx);
-   gtk_combo_box_set_active (GTK_COMBO_BOX (combo_fps), fps_index(tdx));
-  }  
-  preview_fps = 1000/tdx;
-  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_fps]),numstr); 
-  sprintf(msgtxt,"You chose: frame rate %s fps (delay = %d)",numstr,preview_fps);
-  show_message(msgtxt,"FYI: ",MT_INFO,0);
-  g_free(numstr);
-  // Notify the timeout that it needs to update its interval parameter
-  change_preview_fps=1; 
+ } // End of Set_camera block
+
+
 
   // Get the save-to-disk format selection 
   numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_safmt));
@@ -9428,9 +11906,140 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
 
+  // Get the 'Use cumulative histogram (Red/Grey)?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usehcr))==TRUE){
+       PrevStat.hgm_cum_r=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.hgm_cum_r=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_hcr]),numstr);
+  sprintf(msgtxt,"You chose: Use cumulative histogram (Red/Grey)? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
 
- // If the user elects to use a custom mask, update the mask.
- if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usemskcor))==TRUE){
+  // Get the 'Use cumulative histogram (Gren)?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usehcg))==TRUE){
+       PrevStat.hgm_cum_g=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.hgm_cum_g=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_hcg]),numstr);
+  sprintf(msgtxt,"You chose: Use cumulative histogram (Green)? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Use cumulative histogram (Blue)?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usehcb))==TRUE){
+       PrevStat.hgm_cum_b=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.hgm_cum_b=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_hcb]),numstr);
+  sprintf(msgtxt,"You chose: Use cumulative histogram (Blue)? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Don't auto-fit histograms?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_hgm_manual))==TRUE){
+       PrevStat.hgm_no_autoscale=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.hgm_no_autoscale=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_hmn]),numstr);
+  sprintf(msgtxt,"You chose: Don't auto-fit histograms? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Variance and mean restricted to sat limits?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_var_inlimits))==TRUE){
+       PrevStat.var_within_limits=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.var_within_limits=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_vil]),numstr);
+  sprintf(msgtxt,"You chose: Variance and mean restricted to sat limits? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Display Laplacian? [Monochrome only]' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useppl))==TRUE){
+       PrevStat.pp_laplace=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.pp_laplace=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_ppl]),numstr);
+  sprintf(msgtxt,"You chose: Preview pre-process - Display Laplacian? [Monochrome only] - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Invert intensities?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useppi))==TRUE){
+       PrevStat.pp_invert=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.pp_invert=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_ppi]),numstr);
+  sprintf(msgtxt,"You chose: Preview pre-process - Invert intensities? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Use mean abs. Laplacian?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usefls))==TRUE){
+       PrevStat.focuser_param_abslap=1;
+       numstr = g_strdup_printf("Yes");
+       sprintf(statmn,"|Mn.Abs.Lap|");
+       format_focus = format_als;
+   } else {
+       PrevStat.focuser_param_abslap=0 ;
+       numstr = g_strdup_printf("No");
+       sprintf(statmn,"|   Mean   |");
+       format_focus = format_blk;
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_fls]),numstr);
+  sprintf(msgtxt,"You chose: Preview focusser - Use mean abs. Laplacian? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Use variance x mean abs. Laplacian?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useflv))==TRUE){
+       PrevStat.focuser_param_varabslap=1;
+       numstr = g_strdup_printf("Yes");
+       sprintf(statvar,"Var*MnAbsLap ");
+       format_focus = format_alvar;
+   } else {
+       PrevStat.focuser_param_varabslap=0 ;
+       numstr = g_strdup_printf("No");
+       sprintf(statvar,"  Variance   ");
+       if(PrevStat.focuser_param_abslap==0) format_focus = format_blk;
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_flv]),numstr);
+  sprintf(msgtxt,"You chose: Preview focusser - Use variance x mean abs. Laplacian? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+
+  // Set the stats headers for mean and variance according to the former choices
+  markup = g_markup_printf_escaped (format_focus, "  |  Min : Max (Rng)  ",statmn,statvar);
+  gtk_label_set_markup(GTK_LABEL(lab_stats_title2), markup);
+  g_free (markup);
+
+
+  // If the user wants to use a custom mask for the main image, update the mask.
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usemskcor))==TRUE){
   // Update the mask - we need this before initialising any dark or flat
   // field image because the dark and flat field image pre-processing
   // must only be done in the region of support of the mask (the
@@ -9439,7 +12048,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   // when the actual flat field divisional correction is restricted to
   // limited masked-off support):
    set_mask_pending();
-   if(msk_pending) msk_pending=init_mask_image();
+   if(mask_pending) mask_pending=init_mask_image();
    else { // If there is no user-specified mask pending we need some
           // kind of mask alloced, even if that is a full support mask.
           // 'mask_pending' may be 0 because we successfully loaded a
@@ -9447,7 +12056,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
           // we are applying settings since the program started and we
           // have not yet alloced any mask. So check this.
           // Perhaps a mask is alloced but to the wrong size for the
-          // currently selected dimensions. So msk_pending is 0 and 
+          // currently selected dimensions. So mask_pending is 0 and 
           // mask_alloced is MASK_YES but we can no longer use the 'old'
           // loaded mask - so check this and reset the mask accordingly.
          if(mask_alloced==MASK_NO || MKht!=Selected_Ht || MKwd!=Selected_Wd)
@@ -9455,7 +12064,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
         }
   // If the user did not elect to use a custom mask, generate a full 
   // support mask.
-  } else set_mask_full_support(Selected_Ht,Selected_Wd);
+   } else set_mask_full_support(Selected_Ht,Selected_Wd);
 
   // If the user selected a new dark field image, load and assess it - 
   // but only if the user selected to use it - why bother them with
@@ -9486,6 +12095,8 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   // numerical camera settings values and try to set them to the user's
   // chosen value.
   
+
+
   // Initialise flags and variables for detecting exceptions to errors
   // in control settings
   AutoWB=-1;
@@ -9503,10 +12114,11 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
    for(ctrlindex=idx=tdx=0;ctrlindex<windex;ctrlindex++){
        // If this not an entry box, skip to the next control
        if(cswt_id[ctrlindex]!=CS_WTYPE_ENTRY) continue; 
-       // If it is a camera control retrieved by ioctl from the camera,
-       // attempt to set the control value to the user's choice using
-       // ioctl (using the function 'set_camera_control')
+       // If it is a camera control retrieved by ioctl from the camera (using
+       // the function 'set_camera_control'
        if(ctrl_id[ctrlindex]){ 
+        if(Set_camera){ // Only continue if the user wants to set camera 
+                        //firmware settings
           sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
           currval=atoi(msgtxt);
           // Check if the wanted value is in the range for the setting
@@ -9589,7 +12201,9 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
              Setting_success:
              idx++; // The number of values successfully changed.
            }
-           
+
+          } // End of Set_camera block
+
          } else {
         // It is an entry box but not for a value that comes from the
         // camera's firmware settings list (retrieved by ioctl) so it is
@@ -9677,7 +12291,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
                      // at a delay interval of 1 second between images).
                      if(cs_int_range_check(0, 604801,"Series (number of images)", tmp_avd,1)){
                       sprintf(msgtxt,"%-7d",Ser_Number);
-                     } else {//  Set the new number of retries
+                     } else {//  Set the new value
                       Ser_Number = tmp_avd;
                       idx++;
                      }
@@ -9690,7 +12304,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
                      // 86400 seconds is 24 hours).
                      if(cs_int_range_check(-1, 86401,"Min. interval for series (s)", tmp_avd,1)){
                       sprintf(msgtxt,"%-7d",Ser_Delay);
-                     } else {//  Set the new number of retries
+                     } else {//  Set the new value
                       Ser_Delay = tmp_avd;
                       idx++;
                      }
@@ -9702,22 +12316,153 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
                      // hard coded here as 1 to 100.
                      if(cs_int_range_check(0, 101,"JPEG save quality", tmp_avd,1)){
                       sprintf(msgtxt,"%-7d",JPG_Quality);
-                     } else {//  Set the new number of retries
+                     } else {//  Set the new value
                       JPG_Quality = tmp_avd;
                       idx++;
                      }
                      gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
-             } else { // This should not happen unless the programmer has made a mistake
+             } else if(ctrlindex == windex_lsr){ // Lower saturation limit (Red/grey)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     tmp_avd=atoi(msgtxt);
+                     // Check this value is within acceptable limits
+                     // hard coded here as 0 to 255.
+                     if(cs_int_range_check(-1, 256,"Lower saturation limit (Red/grey)", tmp_avd,1)){
+                      sprintf(msgtxt,"%-7d",(int)PrevStat.llim_r);
+                     } else {//  Set the new value
+                      PrevStat.llim_r = (unsigned char)tmp_avd;
+                      idx++;
+                     }
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+             } else if(ctrlindex == windex_lsg){ // Lower saturation limit (Green)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     tmp_avd=atoi(msgtxt);
+                     // Check this value is within acceptable limits
+                     // hard coded here as 0 to 255.
+                     if(cs_int_range_check(-1, 256,"Lower saturation limit (Green)", tmp_avd,1)){
+                      sprintf(msgtxt,"%-7d",(int)PrevStat.llim_g);
+                     } else {//  Set the new value
+                      PrevStat.llim_g = (unsigned char)tmp_avd;
+                      idx++;
+                     }
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+             } else if(ctrlindex == windex_lsb){ // Lower saturation limit (Blue)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     tmp_avd=atoi(msgtxt);
+                     // Check this value is within acceptable limits
+                     // hard coded here as 0 to 255.
+                     if(cs_int_range_check(-1, 256,"Lower saturation limit (Blue)", tmp_avd,1)){
+                      sprintf(msgtxt,"%-7d",(int)PrevStat.llim_b);
+                     } else {//  Set the new value
+                      PrevStat.llim_b = (unsigned char)tmp_avd;
+                      idx++;
+                     }
+             } else if(ctrlindex == windex_usr){ // Upper saturation limit (Red/grey)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     tmp_avd=atoi(msgtxt);
+                     // Check this value is within acceptable limits
+                     // hard coded here as 0 to 255.
+                     if(cs_int_range_check(-1, 256,"Upper saturation limit (Red/grey)", tmp_avd,1)){
+                      sprintf(msgtxt,"%-7d",(int)PrevStat.ulim_r);
+                     } else {//  Test if this is > the lower limit
+                      uctmp = (unsigned char)tmp_avd;
+                      if(uctmp<=PrevStat.llim_r){
+                         show_message("Upper saturation limit (Red/grey) must be greater than the lower limit","FYI: ",MT_INFO,1);
+                         sprintf(msgtxt,"%-7d",(int)PrevStat.ulim_r);  
+                        } else {//  Set the new value
+                                PrevStat.ulim_r = (unsigned char)tmp_avd;
+                                idx++;
+                        }
+                     } 
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+             } else if(ctrlindex == windex_usg){ // Upper saturation limit (Green)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     tmp_avd=atoi(msgtxt);
+                     // Check this value is within acceptable limits
+                     // hard coded here as 0 to 255.
+                     if(cs_int_range_check(-1, 256,"Upper saturation limit (Green)", tmp_avd,1)){
+                      sprintf(msgtxt,"%-7d",(int)PrevStat.ulim_g);
+                     } else {//  Test if this is > the lower limit
+                      uctmp = (unsigned char)tmp_avd;
+                      if(uctmp<=PrevStat.llim_g){
+                         show_message("Upper saturation limit (Green) must be greater than the lower limit","FYI: ",MT_INFO,1);
+                         sprintf(msgtxt,"%-7d",(int)PrevStat.ulim_g);  
+                        } else {//  Set the new value
+                                PrevStat.ulim_g = (unsigned char)tmp_avd;
+                                idx++;
+                        }
+                     } 
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+             } else if(ctrlindex == windex_usb){ // Upper saturation limit (Blue)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     tmp_avd=atoi(msgtxt);
+                     // Check this value is within acceptable limits
+                     // hard coded here as 0 to 255.
+                     if(cs_int_range_check(-1, 256,"Upper saturation limit (Blue)", tmp_avd,1)){
+                      sprintf(msgtxt,"%-7d",(int)PrevStat.ulim_b);
+                     } else {//  Test if this is > the lower limit
+                      uctmp = (unsigned char)tmp_avd;
+                      if(uctmp<=PrevStat.llim_b){
+                         show_message("Upper saturation limit (Blue) must be greater than the lower limit","FYI: ",MT_INFO,1);
+                         sprintf(msgtxt,"%-7d",(int)PrevStat.ulim_b);  
+                        } else {//  Set the new value
+                                PrevStat.ulim_b = (unsigned char)tmp_avd;
+                                idx++;
+                        }
+                     } 
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+             } else if(ctrlindex == windex_hsr){ // Histogram scale (Red/Grey)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     dtmp = atof(msgtxt);
+                     // Ensure it is non-negative:
+                     if(dtmp<0.0){
+                      show_message("Histogram scale (Red/Grey) cannot be negative","FYI: ",MT_INFO,1);
+                      sprintf(msgtxt,"%-7f",PrevStat.hgm_scale_r);
+                     } else {//  Set the new value
+                      PrevStat.hgm_scale_r = dtmp;
+                      idx++;
+                     }
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+                     idx++;
+             } else if(ctrlindex == windex_hsg){ // Histogram scale (Green)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     dtmp = atof(msgtxt);
+                     // Ensure it is non-negative:
+                     if(dtmp<0.0){
+                      show_message("Histogram scale (Green) cannot be negative","FYI: ",MT_INFO,1);
+                      sprintf(msgtxt,"%-7f",PrevStat.hgm_scale_g);
+                     } else {//  Set the new value
+                      PrevStat.hgm_scale_g = dtmp;
+                      idx++;
+                     }
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+                     idx++;
+             } else if(ctrlindex == windex_hsb){ // Histogram scale (Blue)
+                     sprintf(msgtxt,"%-7s",gtk_entry_get_text(GTK_ENTRY(CamsetWidget[ctrlindex])));
+                     dtmp = atof(msgtxt);
+                     // Ensure it is non-negative:
+                     if(dtmp<0.0){
+                      show_message("Histogram scale (Blue) cannot be negative","FYI: ",MT_INFO,1);
+                      sprintf(msgtxt,"%-7f",PrevStat.hgm_scale_b);
+                     } else {//  Set the new value
+                      PrevStat.hgm_scale_b = dtmp;
+                      idx++;
+                     }
+                     gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex+1]),msgtxt);
+                     idx++;
+             } else { // This should not happen unless the programmer has made
+                      // a mistake
                     show_message("Unidentified custom camera setting edit box!","Program Error: ",MT_ERR,1);
              }
           }
        tdx++; // tdx counts the total number of entry box settings present.
       }
-    // Special case of manual focus setting handling. If there was an
-    // error setting MF it could be because the AF was not disabled in
-    // time (before trying to set the MF value) so, if AF was eventually
-    // disabled, let us try once more to set the MF value:
-    if(manualfocus) // Only bother trying if MF failed the first time:
+    // Special case of manual focus setting handling. If there was an error
+    // setting MF it could be because the AF was not disabled in time (before
+    // trying to set the MF value) so, if AF was eventually disabled, let us try
+    // once more to set the MF value:
+    if(manualfocus && Set_camera) // Only bother trying if MF failed the first
+                                  // time and the user wants to set camera
+                                  // firmware settings:
      {              
       if(AutoFocus==0) { // AF is (now) disabled - so try setting MF:
         retval=set_camera_control(ctrl_id[MFidx],MFval,cname);
@@ -9752,16 +12497,21 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
      } 
    }
  
+ 
+
  // Update the colour conversion LUTs in case Gain_conv or Bias_conv were changed.
  calculate_yuyv_luts(); 
   
  sprintf(msgtxt,"Set %d (out of %d) camera settings",idx,tdx);
  show_message(msgtxt,"FYI: ",MT_INFO,0);    
  
- // If user selected a different image resolution or preview mode,
- // attempt to implement these:
- switch(change_image_dimensions())
-  {
+
+ if(Set_camera){ // Only allow if camera changes are requested ...
+
+   // If user selected a different image resolution or preview mode,
+   // attempt to implement these:
+   switch(change_image_dimensions())
+    {
       case CID_OK: // All OK - nothing more to do. No need to set
                    // Preview_changed because change_image_dimensions()
                    // will do this if it succeeds in setting the new
@@ -9791,8 +12541,114 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
       default: // This should not happen unless the program was edited incorrectly.
        show_message("Unrecognised return value for change_image_dimensions().","Program Error: ",MT_ERR,1);
       break;
-  }
+    }
 
+  // By now, actual (to be used) image resolution is known and the actual 
+  // maximum image stream frame rate is known. So get this frame rate and update
+  // the global variable that holds it so we can assess the user's choice of
+  // live preview frame rate later:
+  // Get the selected image dimensions index
+  szidx=gtk_combo_box_get_active (GTK_COMBO_BOX(combo_sz)); 
+  CurrMax_FPS=maxframerate[szidx];
+
+ } // End of Set_camera block
+
+
+  // Get the preview fps selection and test it against the current maximum
+  // frame rate of the chosen video stream 
+  numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_fps));
+  sscanf(numstr,"%d",&tdx); // Get the selected preview frame rate.
+  // If the user-selected frame rate (tdx) is greater than the maximum
+  // frame rate supported for the chosen resolution, advise the user and
+  // don't select it. Use the maximum framerate instead.
+  if(tdx>CurrMax_FPS){  
+   sprintf(msgtxt,"Your selected frame rate (%d) is greater than the maximum your camera can support at the chosen resolution (%u).\n"
+                  "The frame rate will be set to %d fps for now until you change it.",tdx,CurrMax_FPS,CurrMax_FPS);
+   show_message(msgtxt,"Warning: ",MT_INFO,1);
+   tdx=CurrMax_FPS;
+   g_free(numstr);
+   numstr = g_strdup_printf("%d",tdx);
+   gtk_combo_box_set_active (GTK_COMBO_BOX (combo_fps), fps_index(tdx));
+  }  
+  preview_fps = 1000/tdx;
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_fps]),numstr); 
+  sprintf(msgtxt,"You chose: frame rate %s fps (delay = %d)",numstr,preview_fps);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+  // Notify the timeout that it needs to update its interval parameter
+  change_preview_fps=1; 
+
+  // Get the preview LUT selection and apply it
+  numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_plut));
+  Preview_LUT = preview_lut_from_string(numstr);
+  set_curr_lut(Preview_LUT);
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_plut]),numstr); 
+  sprintf(msgtxt,"You chose: Preview LUT = %s ",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+
+  // If the user elects to use or display a custom mask for the preview, update
+  // the mask. Test to see if the status changes so we can update the sample
+  // size for mean and variance calcs later:
+  pmask_status_changed=PrevStat.mask_status;
+  idx=0; // Use this to indicate if a new mask has been loaded
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usepmsk))==TRUE || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_dsppmsk))==TRUE){
+    // Update the preview mask
+    // This checks if  the current file name is [None] or similar and returns
+    // 0 if so. This is needed to enact any file name read from a settings file
+    // instead of the GUI file chooser:
+    set_pmask_pending();
+    // If an acceptable file name is provided try loading it:
+    if(PrevStat.mask_pending){
+       PrevStat.mask_pending=init_pmask_image();
+       //If the image loaded successfully PrevStat.mask_pending will now be 0
+       // Either way, an attempt has been made to change the stats mask so we
+       // should increment idx (our change indicator flag):
+       idx++;
+      }
+   }
+
+  // If the user elects to use a custom mask for the preview stats, set flags
+  // accordingly
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usepmsk))==TRUE){
+       if(PrevStat.mask_pending==0){
+          PrevStat.mask_status=MASK_YES;
+          numstr = g_strdup_printf("Yes");
+         } else { // Something went wring loading the image so nullify the mask
+          PrevStat.mask_status=MASK_NO;
+          numstr = g_strdup_printf("Loading Error");
+          gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepmsk),FALSE);
+          set_pmask_full_support();
+         }
+    // If the user did not elect to use a custom preview mask, generate a full 
+    // support mask.
+   } else {
+       PrevStat.mask_status=MASK_NO;
+       numstr = g_strdup_printf("No");
+   }
+
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_upm]),numstr);
+  sprintf(msgtxt,"You chose: Use the preview mask for stats? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+ 
+  // Get the 'Display the preview mask?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_dsppmsk))==TRUE && PrevStat.mskfile_loaded==MASK_YRGB){
+       PrevStat.mask_show=MASK_YES;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       PrevStat.mask_show=MASK_NO;
+       numstr = g_strdup_printf("No or NA");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_dpm]),numstr);
+  sprintf(msgtxt,"You chose: Display the preview mask? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+ // Has the preview mask or mask status changed?
+ pmask_status_changed=(pmask_status_changed!=PrevStat.mask_status)?1:0;
+ if(pmask_status_changed==0 && idx) pmask_status_changed=1;
 
  // If, after any dimension change etc., a mask image is loaded
  // and ready for use, check if the user wants to apply it and check if
@@ -9926,7 +12782,21 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
           gtk_widget_hide(Ebox_lab_preview);
         }
       }
-    }
+    } else if(pmask_status_changed) calc_preview_base_stats();
+    // If the preview was changed then calc_preview_base_stats() would have
+    // called (via calculate_preview_params() called from within 
+    // update_preview_settings) and the support size of the preview
+    // will have been calculated using the custom preview mask if
+    // PrevStat.mask_status==MASK_YES. However if the preview was not changed
+    // the above code will not be called so we need to manually re-calculate
+    // the sample size using the preview mask if the user wants to apply the 
+    // preview mask to the stats, so this is what we do here (as above).
+
+
+
+// Tell the user we are done with settings now
+  sprintf(msgtxt,"    --++##  Settings Update Complete  ##++--\n");
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
 
 
  // If we suspended previewing, restore the preview status
@@ -9936,8 +12806,30 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
  return;
 }
 
+static void btn_cs_apply_nc_click(GtkWidget *widget, gpointer data)
+// Apply the user's chosen settings that do not require calls to the camera
+// hardware. This allows the user to change things like the file names to save
+// to, the number of frames to take for averaging, whether to use full-frame
+// tiled previewing, etc. but does not make any calls to alter the actual
+// camera settings via set_camera_control().
+{
+ if(Ser_active>0) return; // Don't allow changes during a series capture
+ if(Av_limit>1) return; // Don't allow changes during an average capture
+
+ // If none of the supported formats are provided by the camera, you
+ // cannot allow settings to be set:
+ if(FormatForbidden==CAF_ALLBAD){
+   show_message("You cannot apply settings because your camera does not support YUYV or MJPEG streaming. Restart the program with another camera.","FYI: ",MT_INFO,1);
+   return;  
+  }
+
+ Set_camera = 0;
+ btn_cs_apply_click(widget,data);
+ Set_camera = 1;
+}
+
 static void is_change_click(GtkWidget *widget, gpointer data)
-// This is called when a the camera settings slider changes its value
+// This is called when the camera settings slider changes its value
 {
  char valstr[32],cname[128];
  double dval;
@@ -10035,12 +12927,25 @@ static int add_settings_line_to_gui(const gchar *ctrl_value, const gchar *ctrl_n
   // a title / heading and does not need an entry box
   if(purpose==GTK_INPUT_PURPOSE_EMAIL){ 
     gchar *markup;
-    const char *format = "<span style=\"italic\" weight=\"bold\">\%s</span>";
+    const char *format0 = "<span style=\"italic\" weight=\"bold\">\%s</span>";
+    const char *format1 = "<span style=\"normal\" weight=\"normal\">\%s</span>";
+    const char *format2 = "<span style=\"italic\" weight=\"normal\">\%s</span>";
     CamsetWidget[windex]=gtk_label_new (ctrl_name);  cswt_id[windex]= CS_WTYPE_LABEL;
     gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
     gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 0, rowdex, 1, 1);
     gtk_widget_show(CamsetWidget[windex]);
-    markup = g_markup_printf_escaped (format, ctrl_name);
+    switch(Settings_heading_level){
+       case 0: // Bold main heading
+         markup = g_markup_printf_escaped (format0, ctrl_name);
+       break;
+       case 2: // Italic, indented, sub-sub heading
+         markup = g_markup_printf_escaped (format2, ctrl_name);
+       break;
+       case 1: // Normal font, subheading
+       default:
+         markup = g_markup_printf_escaped (format1, ctrl_name);
+       break;
+     }
     gtk_label_set_markup (GTK_LABEL(CamsetWidget[windex]), markup);
     g_free (markup);
     if(next_windex()) return 1;
@@ -10144,16 +13049,19 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
 {
  char ctrl_name[64],ctrl_value[10];
  char fname[PATH_MAX];
- int fdx;
+ int fdx,szidx;
  gchar *numstr;
  GtkInputPurpose ipurpose;
 
  
  
  windex = windex_gn = windex_bs = windex_camfmt = windex_safmt = 0;
- windex_fps = windex_imroot = 0;
+ windex_fps = windex_plut = windex_imroot = 0;
  windex_fno = windex_sz = windex_avd = windex_to = windex_rt = 0;
  windex_srn = windex_srd = windex_jpg = windex_del = 0;
+ windex_lsr = windex_lsg = windex_lsb = 0;
+ windex_usr = windex_usg = windex_usb = 0;
+ windex_hsr = windex_hsg = windex_hsb = 0;
  
  // Read the device's controls and their current values from CSlist
    
@@ -10168,6 +13076,7 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
     // don't try making edit boxes and reading / writing values to it.
     if(CSlist[fdx].minimum == 0 && CSlist[fdx].maximum ==0 && CSlist[fdx].step == 0){
        ipurpose = GTK_INPUT_PURPOSE_EMAIL;
+       Settings_heading_level=0; // Make it a bold main heading
        sprintf(ctrl_name,"\n%s",CSlist[fdx].name);
       } else {
        ipurpose = GTK_INPUT_PURPOSE_NUMBER;
@@ -10182,14 +13091,16 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
     rowdex++;   
    }
    
- // If all went well, show the 'Apply' button  
+ // If all went well, show the 'Apply' buttons  
  gtk_widget_show(btn_cs_apply); 
+ gtk_widget_show(btn_cs_apply_nc); 
 
  // Remaining controls are not to be adjusted with the GUI slider
  IScompatible=0;
 
  // Add the Custom Controls heading
- if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nCustom Controls",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+ Settings_heading_level=1;
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nCamera stream settings",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
 
  rowdex++;
 
@@ -10208,7 +13119,13 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
  // or to the VGA entry or 'Pending' if neither of those could be found.
  numstr=gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_sz));
  if(numstr==NULL)  CamsetWidget[windex]=gtk_label_new ("Pending");
-   else  CamsetWidget[windex]=gtk_label_new (numstr);
+   else {
+         CamsetWidget[windex]=gtk_label_new (numstr);
+         // Get the maximum frame rate possible with the current chosen
+         // resolution and put this into CurrMax_FPS
+         szidx=gtk_combo_box_get_active (GTK_COMBO_BOX(combo_sz)); 
+         CurrMax_FPS=maxframerate[szidx];
+        }
  cswt_id[windex]= CS_WTYPE_LABEL;
  gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
  gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 1, rowdex, 1, 1);
@@ -10234,27 +13151,6 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
 
    if(next_windex()) return TRUE;
    CamsetWidget[windex]=gtk_label_new ("Image size and FPS for full frame capture");  cswt_id[windex]= CS_WTYPE_LABEL;
-   gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
-   gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 2, rowdex, 1, 1);
-   gtk_widget_show(CamsetWidget[windex]);
-   if(next_windex()) return TRUE;
-
-   rowdex++;
-
- // Add the Preview fps selection combo and make it visible and create
- // its current value and description labels
-   gtk_grid_attach (GTK_GRID (grid_camset), combo_fps, 0, rowdex, 1, 1);
-   gtk_widget_show(combo_fps);
-   if(next_windex()) return TRUE;
-   windex_fps = windex; // Make a note that this index is for the fps combo value label
-   numstr = g_strdup_printf("%d",(int)(1000/preview_fps));
-   CamsetWidget[windex_fps]=gtk_label_new (numstr);  cswt_id[windex_fps]= CS_WTYPE_LABEL;
-   g_free(numstr);
-   gtk_widget_set_halign (CamsetWidget[windex_fps], GTK_ALIGN_START);
-   gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex_fps], 1, rowdex, 1, 1);
-   gtk_widget_show(CamsetWidget[windex_fps]);    // Show the current fps value label next to it
-   if(next_windex()) return TRUE;
-   CamsetWidget[windex]=gtk_label_new ("Frames per second for live preview");  cswt_id[windex]= CS_WTYPE_LABEL;
    gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
    gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 2, rowdex, 1, 1);
    gtk_widget_show(CamsetWidget[windex]);
@@ -10294,6 +13190,19 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
 
    rowdex++;
 
+
+ // Add the Custom Controls heading
+ Settings_heading_level=0;
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nCustom Controls",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+ Settings_heading_level=1; // All headings from here on will be sub-headings
+
+ rowdex++;
+
+
+ // Add the Saved image heading
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nSaved image",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+
+ rowdex++;
 
  // Add the 'save as' format selection combo and make it visible and
  // create its current value and description labels
@@ -10339,9 +13248,42 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
    sprintf(ctrl_value,"%-7d",frame_number); windex_fno = windex;
    add_settings_line_to_gui((const gchar *)ctrl_value, "File name frame number start from",GTK_INPUT_PURPOSE_DIGITS); rowdex++; 
 
+// Now add JPEG quality setting
+   sprintf(ctrl_value,"%-7d",JPG_Quality);   windex_jpg = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "JPEG save quality [1-100]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+
+// Now add the 'Save as raw doubles?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_sa_rawdoubles, &windex_sad, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_sa_rawdoubles)))?"Yes":"No",
+   "Save as raw doubles?")) return TRUE;
+       
+// Now add the 'Save as FITS?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_sa_fits, &windex_fit, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_sa_fits)))?"Yes":"No",
+   "Save as FITS?")) return TRUE;
+
+ // Add the Image capture heading
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nImage capture",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+
+ rowdex++;
+
+// Now add local controls over YUYV conversion
+   sprintf(ctrl_value,"%-7f",Gain_conv); windex_gn = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "YUYV conversion gain",GTK_INPUT_PURPOSE_NUMBER); rowdex++; 
+   sprintf(ctrl_value,"%-7f",Bias_conv); windex_bs = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "YUYV conversion bias",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+
 // Now add multiframe averaging setting
    sprintf(ctrl_value,"%-7d",Av_denom);   windex_avd = windex;
    add_settings_line_to_gui((const gchar *)ctrl_value, "Frame averaging (number of frames) [1-4096]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+            
+// Now add the 'Scale mean of each frame to first?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_scale_means, &windex_smf, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_scale_means)))?"Yes":"No",
+   "Scale mean of each frame to first?")) return TRUE;
 
 // Now add grabber timeout setting
    sprintf(ctrl_value,"%-7d",Gb_Timeout);   windex_to = windex;
@@ -10359,48 +13301,9 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
    sprintf(ctrl_value,"%-7d",Ser_Delay);   windex_srd = windex;
    add_settings_line_to_gui((const gchar *)ctrl_value, "Min. interval for series (s) [0-86400]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
 
-// Now add JPEG quality setting
-   sprintf(ctrl_value,"%-7d",JPG_Quality);   windex_jpg = windex;
-   add_settings_line_to_gui((const gchar *)ctrl_value, "JPEG save quality [1-100]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
-
-// Now add local controls over YUYV conversion
-   sprintf(ctrl_value,"%-7f",Gain_conv); windex_gn = windex;
-   add_settings_line_to_gui((const gchar *)ctrl_value, "YUYV conversion gain",GTK_INPUT_PURPOSE_NUMBER); rowdex++; 
-   sprintf(ctrl_value,"%-7f",Bias_conv); windex_bs = windex;
-   add_settings_line_to_gui((const gchar *)ctrl_value, "YUYV conversion bias",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
-
 // Now add the 'Delay first capture by (s)' setting
    sprintf(ctrl_value,"%.0f",Delayed_start_seconds);   windex_del = windex;
    add_settings_line_to_gui((const gchar *)ctrl_value, "Delay first capture by (s) [0-172800]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
-   
-// Now add the 'Use crop from full-size image as preview?' check box,
-// make it visible and create its current value and description labels:
-   if(add_settings_custom_widget(chk_preview_central, &windex_pc, 
-   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_preview_central)))?"Yes":"No",
-   "Use crop from full-size image as preview?")) return TRUE;
-   
-// Now add the 'Preview in monochrome' check box and make it visible and create its current value and description labels
-   if(add_settings_custom_widget(chk_cam_yonly, &windex_yo, 
-   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_cam_yonly)))?"Yes":"No",
-   "Preview in monochrome?")) return TRUE;
-       
-// Now add the 'Save as raw doubles?' check box and make it
-// visible and create its current value and description labels
-   if(add_settings_custom_widget(chk_sa_rawdoubles, &windex_sad, 
-   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_sa_rawdoubles)))?"Yes":"No",
-   "Save as raw doubles?")) return TRUE;
-       
-// Now add the 'Save as FITS?' check box and make it
-// visible and create its current value and description labels
-   if(add_settings_custom_widget(chk_sa_fits, &windex_fit, 
-   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_sa_fits)))?"Yes":"No",
-   "Save as FITS?")) return TRUE;
-       
-// Now add the 'Scale mean of each frame to first?' check box and make it
-// visible and create its current value and description labels
-   if(add_settings_custom_widget(chk_scale_means, &windex_smf, 
-   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_scale_means)))?"Yes":"No",
-   "Scale mean of each frame to first?")) return TRUE;
        
  // Add a separator
    if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"_________________________\n",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
@@ -10480,6 +13383,207 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
     gtk_widget_set_sensitive (CamsetWidget[windex_um2],FALSE);
    }
 
+ // Add a separator
+   if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"_________________________\n",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+   rowdex++; 
+
+
+
+ // Add the Preview heading
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nPreview",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+
+ rowdex++;
+
+ // Add the Preview fps selection combo and make it visible and create
+ // its current value and description labels
+   gtk_grid_attach (GTK_GRID (grid_camset), combo_fps, 0, rowdex, 1, 1);
+   gtk_widget_show(combo_fps);
+   if(next_windex()) return TRUE;
+   windex_fps = windex; // Make a note that this index is for the fps combo value label
+   numstr = g_strdup_printf("%d",(int)(1000/preview_fps));
+   CamsetWidget[windex_fps]=gtk_label_new (numstr);  cswt_id[windex_fps]= CS_WTYPE_LABEL;
+   g_free(numstr);
+   gtk_widget_set_halign (CamsetWidget[windex_fps], GTK_ALIGN_START);
+   gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex_fps], 1, rowdex, 1, 1);
+   gtk_widget_show(CamsetWidget[windex_fps]);    // Show the current fps value label next to it
+   if(next_windex()) return TRUE;
+   CamsetWidget[windex]=gtk_label_new ("Frames per second for live preview");  cswt_id[windex]= CS_WTYPE_LABEL;
+   gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
+   gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 2, rowdex, 1, 1);
+   gtk_widget_show(CamsetWidget[windex]);
+   if(next_windex()) return TRUE;
+
+   rowdex++;
+
+ // Add the Preview LUT selection combo and make it visible and create
+ // its current value and description labels
+   gtk_grid_attach (GTK_GRID (grid_camset), combo_plut, 0, rowdex, 1, 1);
+   gtk_widget_show(combo_plut);
+   if(next_windex()) return TRUE;
+   windex_plut = windex; // Make a note that this index is for the LUT combo value label
+   numstr = g_strdup_printf("%s",Preview_LUT_options[Preview_LUT]);
+   CamsetWidget[windex_plut]=gtk_label_new (numstr);  cswt_id[windex_plut]= CS_WTYPE_LABEL;
+   g_free(numstr);
+   gtk_widget_set_halign (CamsetWidget[windex_plut], GTK_ALIGN_START);
+   gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex_plut], 1, rowdex, 1, 1);
+   gtk_widget_show(CamsetWidget[windex_plut]);    // Show the current LUT value label next to it
+   if(next_windex()) return TRUE;
+   CamsetWidget[windex]=gtk_label_new ("Preview LUT");  cswt_id[windex]= CS_WTYPE_LABEL;
+   gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
+   gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 2, rowdex, 1, 1);
+   gtk_widget_show(CamsetWidget[windex]);
+   if(next_windex()) return TRUE;
+
+   rowdex++;
+
+// Now add the 'Use crop from full-size image as preview?' check box,
+// make it visible and create its current value and description labels:
+   if(add_settings_custom_widget(chk_preview_central, &windex_pc, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_preview_central)))?"Yes":"No",
+   "Use crop from full-size image as preview?")) return TRUE;
+   
+// Now add the 'Preview in monochrome' check box and make it visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_cam_yonly, &windex_yo, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_cam_yonly)))?"Yes":"No",
+   "Preview in monochrome?")) return TRUE;
+
+// Now add the 'Invert intensities?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_useppi, &windex_ppi, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useppi)))?"Yes":"No",
+   "Invert intensities?")) return TRUE;
+
+// Now add the 'Display Laplacian? [Monochrome only]' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_useppl, &windex_ppl, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useppl)))?"Yes":"No",
+   "Display Laplacian? [Monochrome only]")) return TRUE;
+
+
+ // Add the Focusser (Preview sub-)heading
+ Settings_heading_level=2;
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\n     Focusser options",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+
+ rowdex++;
+
+
+// Now add the 'Use mean abs. Laplacian?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_usefls, &windex_fls, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usefls)))?"Yes":"No",
+   "Use mean abs. Laplacian?")) return TRUE;
+
+// Now add the 'Use variance x mean abs. Laplacian?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_useflv, &windex_flv, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useflv)))?"Yes":"No",
+   "Use variance x mean abs. Laplacian?")) return TRUE;
+
+
+
+ // Add the Histogram & Stats (Preview sub-)heading
+ Settings_heading_level=2;
+ if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\n     Histogram and stats",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+
+ rowdex++;
+
+// Now add saturation limit controls
+   sprintf(ctrl_value,"%-7d",PrevStat.llim_r);   windex_lsr = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Lower saturation limit (Red/grey) [0-255]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+   sprintf(ctrl_value,"%-7d",PrevStat.llim_g);   windex_lsg = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Lower saturation limit (Green) [0-255]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+   sprintf(ctrl_value,"%-7d",PrevStat.llim_b);   windex_lsb = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Lower saturation limit (Blue) [0-255]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+   sprintf(ctrl_value,"%-7d",PrevStat.ulim_r);   windex_usr = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Upper saturation limit (Red/grey) [0-255]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+   sprintf(ctrl_value,"%-7d",PrevStat.ulim_g);   windex_usg = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Upper saturation limit (Green) [0-255]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+   sprintf(ctrl_value,"%-7d",PrevStat.ulim_b);   windex_usb = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Upper saturation limit (Blue) [0-255]",GTK_INPUT_PURPOSE_NUMBER);rowdex++; 
+
+// Now add histogram scaling controls
+   sprintf(ctrl_value,"%-7f",PrevStat.hgm_scale_r); windex_hsr = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Histogram scale factor (Red/Grey) [>= 0.0]",GTK_INPUT_PURPOSE_NUMBER); rowdex++; 
+   sprintf(ctrl_value,"%-7f",PrevStat.hgm_scale_g); windex_hsg = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Histogram scale factor (Green) [>= 0.0]",GTK_INPUT_PURPOSE_NUMBER); rowdex++; 
+   sprintf(ctrl_value,"%-7f",PrevStat.hgm_scale_b); windex_hsb = windex;
+   add_settings_line_to_gui((const gchar *)ctrl_value, "Histogram scale factor (Blue) [>= 0.0]",GTK_INPUT_PURPOSE_NUMBER); rowdex++; 
+
+// Now add the 'Use cumulative histogram (Red/Grey)?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_usehcr, &windex_hcr, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usehcr)))?"Yes":"No",
+   "Use cumulative histogram (Red/Grey)?")) return TRUE;
+
+// Now add the 'Use cumulative histogram (Green)?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_usehcg, &windex_hcg, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usehcg)))?"Yes":"No",
+   "Use cumulative histogram (Green)?")) return TRUE;
+
+// Now add the 'Use cumulative histogram (Blue)?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_usehcb, &windex_hcb, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usehcb)))?"Yes":"No",
+   "Use cumulative histogram (Blue)?")) return TRUE;
+
+// Now add the 'Don't auto-fit histograms?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_hgm_manual, &windex_hmn, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_hgm_manual)))?"Yes":"No",
+   "Don't auto-fit histograms?")) return TRUE;
+
+// Now add the 'Variance and mean restricted to sat limits?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_var_inlimits, &windex_vil, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_var_inlimits)))?"Yes":"No",
+   "Variance and mean restricted to sat limits?")) return TRUE;
+
+
+ // Add a separator
+   if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"_________________________\n",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+   rowdex++; 
+       
+// Now add the 'Use the preview mask for stats?' check box and make it
+// visible and create its current value and description labels
+   windex_upm2=0;
+   if(add_settings_custom_widget(chk_usepmsk, &windex_upm, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usepmsk)))?"Yes":"No",
+   "Use the preview mask for stats?")) return TRUE;
+   windex_upm2=windex; // The description text - need this so I can make
+                       // it 'insensitive' or 'sensitive'
+       
+// Now add the 'Display the preview mask?' check box and make it
+// visible and create its current value and description labels
+   windex_dpm2=0;
+   if(add_settings_custom_widget(chk_dsppmsk, &windex_dpm, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_dsppmsk)))?"Yes":"No",
+   "Display the preview mask?")) return TRUE;
+   windex_dpm2=windex; // The description text - need this so I can make
+                       // it 'insensitive' or 'sensitive'
+                      
+// Now add the 'Preview mask image' button and create its
+// current value and description labels
+   if(PrevStat.mskfile_loaded==MASK_NONE) sprintf(fname,"[None]");
+    else sprintf(fname,"%s",name_from_path(PrevStat.MaskFile));
+   if(add_settings_custom_widget(btn_cs_load_pmsk, &windex_pmski, fname,"Preview mask image")) return TRUE;
+   if(PrevStat.mskfile_loaded==MASK_NONE){
+     gtk_widget_set_sensitive (chk_usepmsk,FALSE);
+     gtk_widget_set_sensitive (chk_dsppmsk,FALSE);
+     gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_upm]),"No");
+     gtk_widget_set_sensitive (CamsetWidget[windex_upm],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upm2],FALSE);
+     gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_dpm]),"No");
+     gtk_widget_set_sensitive (CamsetWidget[windex_dpm],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_dpm2],FALSE);
+   }
+
+ // Add a separator
+   if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"_________________________\n",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+   rowdex++; 
+
+
+
 
  // Add the Settings Files heading
    if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"\nSettings Files",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
@@ -10557,11 +13661,14 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
   // Hide the apply button. No need to remove from grid because it
   // always stays in the same cell:
   gtk_widget_hide(btn_cs_apply); 
+  gtk_widget_hide(btn_cs_apply_nc); 
   
  // Hide and remove the size selector combo
   hide_remove_from_container(combo_sz,GTK_CONTAINER(grid_camset));
   // Hide the preview fps selector combo
   hide_remove_from_container(combo_fps,GTK_CONTAINER(grid_camset)); 
+  // Hide the preview LUT selector combo
+  hide_remove_from_container(combo_plut,GTK_CONTAINER(grid_camset)); 
   // Hide the save as format selector combo
   hide_remove_from_container(combo_camfmt,GTK_CONTAINER(grid_camset));
   // Hide the save as format selector combo 
@@ -10576,6 +13683,30 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
   hide_remove_from_container(chk_sa_fits,GTK_CONTAINER(grid_camset)); 
   // Hide the Scale mean of each frame to first? selector check box
   hide_remove_from_container(chk_scale_means,GTK_CONTAINER(grid_camset)); 
+  // Hide the Use cumulative histogram (Red/Grey)? selector check box
+  hide_remove_from_container(chk_usehcr,GTK_CONTAINER(grid_camset)); 
+  // Hide the Use cumulative histogram (Green)? selector check box
+  hide_remove_from_container(chk_usehcg,GTK_CONTAINER(grid_camset)); 
+  // Hide the Use cumulative histogram (Blue)? selector check box
+  hide_remove_from_container(chk_usehcb,GTK_CONTAINER(grid_camset)); 
+  // Hide the Don't auto-fit histograms? selector check box
+  hide_remove_from_container(chk_hgm_manual,GTK_CONTAINER(grid_camset)); 
+  // Hide the Variance and mean restricted to sat limits? selector check box
+  hide_remove_from_container(chk_var_inlimits,GTK_CONTAINER(grid_camset)); 
+  // Hide the Focusser use variance x abs. Laplacian? selector check box
+  hide_remove_from_container(chk_useflv,GTK_CONTAINER(grid_camset)); 
+  // Hide the Display Laplacian? [Monochrome only] selector check box
+  hide_remove_from_container(chk_useppl,GTK_CONTAINER(grid_camset)); 
+  // Hide the Invert? selector check box
+  hide_remove_from_container(chk_useppi,GTK_CONTAINER(grid_camset)); 
+  // Hide the Focusser use absolute Laplacian? selector check box
+  hide_remove_from_container(chk_usefls,GTK_CONTAINER(grid_camset)); 
+  // Hide the use preview mask selector check box 
+  hide_remove_from_container(chk_usepmsk,GTK_CONTAINER(grid_camset)); 
+  // Hide the show preview mask selector check box 
+  hide_remove_from_container(chk_dsppmsk,GTK_CONTAINER(grid_camset)); 
+  // Hide the preview mask file selector button
+  hide_remove_from_container(btn_cs_load_pmsk,GTK_CONTAINER(grid_camset)); 
   // Hide the use dark field correction selector check box
   hide_remove_from_container(chk_usedfcor,GTK_CONTAINER(grid_camset)); 
   // Hide the dark field correction reference file selector button
@@ -10655,7 +13786,7 @@ static gboolean key_press_event_wm (GtkWidget * widget, GdkEvent * event, gpoint
               btn_cam_save_click(btn_cam_save,btn_cam_save);
              }
         return TRUE;
-        case GDK_KEY_a:
+        case GDK_KEY_a: // Audio on/off toggle
             if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON(chk_audio))){
                 gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(chk_audio),FALSE);
                 Use_audio=AU_NO;
@@ -10663,10 +13794,66 @@ static gboolean key_press_event_wm (GtkWidget * widget, GdkEvent * event, gpoint
                 gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(chk_audio),TRUE);
                 Use_audio=AU_YES;
              }
+        case GDK_KEY_c: // Close camera
+             if(camera_status.cs_opened){
+               gint choice;
+               gtk_window_set_title (GTK_WINDOW (dlg_choice), "Close Camera?");
+               gtk_message_dialog_set_markup(GTK_MESSAGE_DIALOG(dlg_choice),"Do you really want to close the camera connection?");
+               choice = gtk_dialog_run(GTK_DIALOG(dlg_choice));
+               if(choice == GTK_RESPONSE_YES)
+                {
+                 show_message("> Closing camera connection.","",MT_INFO,0);
+                 if(gtk_widget_is_visible(win_cam_settings)==TRUE) gtk_window_close(GTK_WINDOW(win_cam_settings));
+                 if(Need_to_preview==PREVIEW_ON){ // Stop any previewing first.
+                     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_cam_preview),FALSE);
+                    }
+                if(camera_status.cs_streaming) stop_streaming();
+                if(camera_status.cs_initialised) uninit_device();
+                close_device();
+                Camera_was_closed=1;
+               }
+             }
+        return TRUE;
+        case GDK_KEY_bracketleft:  // Move the histogram overlay position
+             if(Prev_overlay_hgm){
+               if(PrevStat.hgm_origin_x > 2) PrevStat.hgm_origin_x -= 38;
+               else {
+                  PrevStat.hgm_origin_x = 382;
+                  if(PrevStat.hgm_origin_y > 2) PrevStat.hgm_origin_y-=22;
+                  else PrevStat.hgm_origin_y = 222;
+                 }
+               if(!Prev_aspect_4_by_3 && Need_to_preview)
+                memset(PreviewImg, 127, PreviewImg_rgb_size*sizeof(unsigned char));
+              }
+        return TRUE;
+        case GDK_KEY_bracketright: // Move the histogram overlay position
+             if(Prev_overlay_hgm){
+               PrevStat.hgm_origin_x += 38;
+               if(PrevStat.hgm_origin_x > 382){
+                  PrevStat.hgm_origin_x=2;
+                  PrevStat.hgm_origin_y += 22;
+                  if(PrevStat.hgm_origin_y > 222) PrevStat.hgm_origin_y=2;
+                 }
+               if(!Prev_aspect_4_by_3 && Need_to_preview)
+                memset(PreviewImg, 127, PreviewImg_rgb_size*sizeof(unsigned char));
+              }
+        return TRUE;
+        case GDK_KEY_equal: // Toggle the focusser overlay position
+             if(Prev_overlay_focus){
+               if(PrevStat.focus_origin_y > Focusser_y_up)
+                 PrevStat.focus_origin_y = Focusser_y_up;
+                 else PrevStat.focus_origin_y = Focusser_y_down;
+                
+               if(!Prev_aspect_4_by_3 && Need_to_preview)
+                memset(PreviewImg, 127, PreviewImg_rgb_size*sizeof(unsigned char));
+              }
         return TRUE;
         case GDK_KEY_h:
              show_message("Press the 'g' key to activate the 'Save Image' button","Help: ",MT_INFO,0);
              show_message("Press the 'a' key to toggle GUI audio","Help: ",MT_INFO,0);
+             show_message("Press the 'c' key to close the camera connection","Help: ",MT_INFO,0);
+             show_message("Press the '[' or ']' keys to move the preview overlay","Help: ",MT_INFO,0);
+             show_message("Press the '=' key to toggle the focus bar to top/bottom of the overlay","Help: ",MT_INFO,0);
         return TRUE;
         default:
         break;
@@ -10741,12 +13928,21 @@ static void add_grid(GtkWidget **grd,GtkWidget **ctn)
     gtk_grid_set_column_spacing (GTK_GRID(*grd),2);
 }
 
+static void add_checkbox(GtkWidget **cbox)
+// Create a new check box
+{
+ *cbox = gtk_check_button_new();
+ gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (*cbox), FALSE);
+ gtk_widget_set_halign (*cbox, GTK_ALIGN_CENTER);
+}
+
 int main(int argc,char *argv[])
 {
     GtkWidget *grid_main,*grid_camset_main;
-    GtkWidget *vsep1,*vsep2,*vsep3,*vsep4;
     GtkWidget *btn_help_about;
     GtkWidget *scrolwin_camset,*scrolwin_camset_child;
+    GtkWidget *scrolwin_prevstats,*scrolwin_prevstats_child;
+    GtkWidget *lab_r,*lab_g,*lab_b,*lab_stats_title0,*lab_stats_title1;
     // For a CSS Provider in memory to colour the preview label eventbox
     // background:
     GtkCssProvider *cssmemprovider_lab_prev; 
@@ -10758,6 +13954,8 @@ int main(int argc,char *argv[])
     gchar *btn_markup;
     const char *ca_format = "<span foreground=\"red\" weight=\"bold\">\%s</span>";
     const char *strm_format = "%s <span foreground=\"green\" weight=\"bold\">\%s</span>\n%s";
+    const char *settings_format = "%s <span foreground=\"green\" weight=\"bold\">\%s</span> %s";
+    const char *format_blk = "<span font=\"monospace\" weight=\"bold\">\%s</span>";
     GtkWidget *btnlabel;
     GtkAdjustment *preview_integration_adjustment;
     GtkAdjustment *preview_bias_adjustment;
@@ -10767,7 +13965,8 @@ int main(int argc,char *argv[])
     time_t ts;
 
 
-// Check command like options
+// Check command like options:
+
 // Error, wrong number of command arguments
 if(argc>3){
 args_fail:
@@ -10783,7 +13982,7 @@ if(argc>1){
 // User wants help
 if(!strcmp(argv[1],"-h")){
   // Print intro and licence info
-  printf("\nPARD Capture Stand Alone (%s)\nCopyright (c) 2020-2022 by Dr Paul J. Tadrous\n\n%s\n\n",argv[0],License_note);
+  printf("\nPARD Capture Stand Alone (%s)\nCopyright (c) 2020-2023 by Dr Paul J. Tadrous\n\n%s\n\n",argv[0],License_note);
   // Print command line options
   printf("\nUsage: %s [option] [argument]\n",argv[0]);
   printf("\n[option] can be: -h for help or -l followed by a file name for logging\n");
@@ -10977,6 +14176,58 @@ if(!strcmp(argv[1],"-l")){
          show_message("No RAM available for preview image pixels.","Error: ",MT_ERR,0);
          return 1;
     }
+   PrevStat.MaskIm = (unsigned char *)calloc(PreviewImg_size,sizeof(unsigned char));
+   if(PrevStat.MaskIm==NULL){
+         show_message("No RAM available for preview mask.","Error: ",MT_ERR,0);
+         return 1;
+    }
+   for(idx=0;idx<PreviewImg_size;idx++)PrevStat.MaskIm[idx]=255;
+   PrevStat.mskfile_loaded = MASK_FULL;
+   PrevStat.mask_status = MASK_NO;
+   PrevStat.mask_show = MASK_NO;
+   PrevStat.mask_pending=0;
+   PrevStat.Mask_supp_size=1.0;
+   sprintf(PrevStat.Selected_Mask_filename,"[None]");
+   // Set default preview mask file name string
+   PrevStat.MaskFile = (char *)calloc(FILENAME_MAX,sizeof(char));
+   if(PrevStat.MaskFile==NULL){
+         show_message("No RAM available for preview mask image file name.","Error: ",MT_ERR,0);
+         return 1;
+    }
+   sprintf(PrevStat.MaskFile,"/"); // Initialising to root - will need to change
+                                   // if porting to non-*ix OS
+
+   Preview_LUT=LUT_LIN;
+   set_curr_lut(Preview_LUT);
+   PrevStat.usat_r=PrevStat.usat_g=PrevStat.usat_b=0;
+   PrevStat.lsat_r=PrevStat.lsat_g=PrevStat.lsat_b=0;
+   PrevStat.llim_r=PrevStat.llim_g=PrevStat.llim_b=0;
+   PrevStat.ulim_r=PrevStat.ulim_g=PrevStat.ulim_b=255;
+   PrevStat.intgl_r=PrevStat.intgl_g=PrevStat.intgl_b=0.0;
+   PrevStat.var_r=PrevStat.var_g=PrevStat.var_b=0.0;
+   PrevStat.min_r=PrevStat.min_g=PrevStat.min_b=255;
+   PrevStat.max_r=PrevStat.max_g=PrevStat.max_b=0;
+   PrevStat.hgm_origin_x=2;PrevStat.hgm_origin_y=2;
+   Focusser_y_up = 192+PreviewWd_stride*20;
+   Focusser_y_down = 192+PreviewWd_stride*428;
+   PrevStat.focus_origin_y=Focusser_y_down;
+   PrevStat.hgm_cum_r=PrevStat.hgm_cum_g=PrevStat.hgm_cum_b=0;
+   PrevStat.hgm_scale_r=PrevStat.hgm_scale_g=PrevStat.hgm_scale_b=255.0;
+   PrevStat.hgm_no_autoscale=0;
+   PrevStat.var_within_limits=0;
+   PrevStat.Laplace_coefficient=6.0;
+   PrevStat.focuser_param_varabslap=0;
+   PrevStat.pp_laplace=0;
+   PrevStat.pp_invert=0;
+   PrevStat.focuser_param_abslap=0;
+   PrevStat.af_laplace_r=0.0;
+   PrevStat.af_laplace_g=0.0;
+   PrevStat.af_laplace_b=0.0;
+   PrevStat.focus_max_r=PrevStat.focus_max_g=PrevStat.focus_max_b=1.0e-12;
+   PrevStat.focus_min_r=PrevStat.focus_min_g=PrevStat.focus_min_b=1.0e+12;
+   PrevStat.focus_cur_r=PrevStat.focus_cur_g=PrevStat.focus_cur_b=0.0;
+   PrevStat.npixels=(double)(PreviewWd*PreviewHt);
+   PrevStat.hgm_max_r=PrevStat.hgm_max_g=PrevStat.hgm_max_b=0.0;
 
    Preview_dark = (double *)calloc(PreviewImg_size,sizeof(double));
    if(Preview_dark==NULL){
@@ -11069,6 +14320,81 @@ if(!strcmp(argv[1],"-l")){
         sprintf(msgtxt,"Preview timeout created at %dms interrvals (10 fps).",preview_fps);
         show_message(msgtxt,"FYI: ",MT_INFO,0);
     }
+   CurrMax_FPS=10; // I assume any VGA USB camera stream can do at least 10 FPS
+
+ // Preview stats widgets
+   scrolwin_prevstats_child=gtk_frame_new ("Preview Stats");
+   gtk_widget_set_size_request (scrolwin_prevstats_child, 1, 96);
+   gtk_widget_set_hexpand (scrolwin_prevstats_child, TRUE);
+   gtk_widget_set_vexpand (scrolwin_prevstats_child, TRUE);
+   Grid_prevstats = gtk_grid_new();
+   scrolwin_prevstats = gtk_scrolled_window_new  (NULL,NULL);
+   gtk_container_add (GTK_CONTAINER (scrolwin_prevstats), Grid_prevstats);
+   gtk_container_add (GTK_CONTAINER (scrolwin_prevstats_child), scrolwin_prevstats);
+   gtk_widget_set_valign (prev_int_label, GTK_ALIGN_END);
+
+   btn_markup = g_markup_printf_escaped (format_rn, "000000 : 000000 (000:000)");
+   PrevSt_sat_r=gtk_label_new ("000000 : 000000 (000:000)");
+   gtk_label_set_markup(GTK_LABEL(PrevSt_sat_r), btn_markup);
+   g_free (btn_markup);
+   btn_markup = g_markup_printf_escaped (format_gn, "000000 : 000000 (000:000)");
+   PrevSt_sat_g=gtk_label_new ("000000 : 000000 (000:000)");
+   gtk_label_set_markup(GTK_LABEL(PrevSt_sat_g), btn_markup);
+   g_free (btn_markup);
+   btn_markup = g_markup_printf_escaped (format_bn, "000000 : 000000 (000:000)");
+   PrevSt_sat_b=gtk_label_new ("000000 : 000000 (000:000)");
+   gtk_label_set_markup(GTK_LABEL(PrevSt_sat_b), btn_markup);
+   g_free (btn_markup);
+   btn_markup = g_markup_printf_escaped (format_rn, "[Red/Gy]= ");
+   lab_r=gtk_label_new ("[Red/Gy]= ");
+   gtk_label_set_markup(GTK_LABEL(lab_r), btn_markup);
+   g_free (btn_markup);
+   btn_markup = g_markup_printf_escaped (format_gn, "[Green ]= ");
+   lab_g=gtk_label_new ("[Green ]= ");
+   gtk_label_set_markup(GTK_LABEL(lab_g), btn_markup);
+   g_free (btn_markup);
+   btn_markup = g_markup_printf_escaped (format_bn, "[Blue  ]= ");
+   lab_b=gtk_label_new ("[Blue  ]= ");
+   gtk_label_set_markup(GTK_LABEL(lab_b), btn_markup);
+   g_free (btn_markup);
+
+
+   btn_markup = g_markup_printf_escaped (format_rn, "  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+   PrevSt_sum_r=gtk_label_new ("  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+   gtk_label_set_markup(GTK_LABEL(PrevSt_sum_r), btn_markup);
+   g_free (btn_markup);
+
+   btn_markup = g_markup_printf_escaped (format_gn, "  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+   PrevSt_sum_g=gtk_label_new ("  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+   gtk_label_set_markup(GTK_LABEL(PrevSt_sum_g), btn_markup);
+   g_free (btn_markup);
+
+   btn_markup = g_markup_printf_escaped (format_bn, "  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+   PrevSt_sum_b=gtk_label_new ("  |  000 : 000 (000)  |  000.00  |  00000.000  ");
+   gtk_label_set_markup(GTK_LABEL(PrevSt_sum_b), btn_markup);
+   g_free (btn_markup);
+
+   btn_markup = g_markup_printf_escaped (format_blk,"Saturat.n ");
+   lab_stats_title0=gtk_label_new ("Saturat.n ");
+   gtk_label_set_markup(GTK_LABEL(lab_stats_title0), btn_markup);
+   g_free (btn_markup);
+
+   btn_markup = g_markup_printf_escaped (format_blk," Dark  : Light  (Limits )");
+   lab_stats_title1=gtk_label_new (" Dark  : Light  (Limits )");
+   gtk_label_set_markup(GTK_LABEL(lab_stats_title1), btn_markup);
+   g_free (btn_markup);
+
+   btn_markup = g_markup_printf_escaped (format_blk, "  |  Min : Max (Rng)  |   Mean   |  Variance   ");
+   lab_stats_title2=gtk_label_new ("  |  Min : Max (Rng)  |   Mean   |  Variance   ");
+   gtk_label_set_markup(GTK_LABEL(lab_stats_title2), btn_markup);
+   g_free (btn_markup);
+
+   add_button(&Prev_btn_hgm,"Histogram",GTK_ALIGN_END);
+   g_signal_connect (Prev_btn_hgm, "clicked", G_CALLBACK (Prev_btn_hgm_click), Prev_btn_hgm);
+
+   add_button(&Prev_btn_focus,"Focus",GTK_ALIGN_END);
+   g_signal_connect (Prev_btn_focus, "clicked", G_CALLBACK (Prev_btn_focus_click), Prev_btn_focus);
+
 
 
 //====================================================================//
@@ -11077,22 +14403,10 @@ if(!strcmp(argv[1],"-l")){
 //                                                                    //
 //====================================================================//
 
-// Create vertical line separator widgets:      
-    vsep1 = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
-    gtk_widget_set_hexpand (vsep1, FALSE);
-    gtk_widget_set_halign (vsep1, GTK_ALIGN_CENTER);
-    vsep2 = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
-    gtk_widget_set_hexpand (vsep2, FALSE);
-    gtk_widget_set_halign (vsep2, GTK_ALIGN_CENTER);
-    vsep3 = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
-    gtk_widget_set_hexpand (vsep3, FALSE);
-    gtk_widget_set_halign (vsep3, GTK_ALIGN_CENTER);
-    vsep4 = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
-    gtk_widget_set_hexpand (vsep4, FALSE);
-    gtk_widget_set_halign (vsep4, GTK_ALIGN_CENTER);
 
 // Construct the grid container used to pack (arrange) our widgets in the main window
   add_grid(&grid_main,&Win_main);
+
 
   gridrow=0;
   gtk_grid_attach (GTK_GRID (grid_main), gtk_label_new ("CAMERA TASKS"),   0, gridrow++, 12,1);
@@ -11111,9 +14425,28 @@ if(!strcmp(argv[1],"-l")){
   gtk_grid_attach (GTK_GRID (grid_main), chk_audio,                        0, gridrow+8, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), btn_av_interrupt,                 0, gridrow+9, 2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), btn_cam_save,                     0, gridrow+10, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid_main), scrolwin_prevstats_child,         0, gridrow+11, 13,1);
   // Increment / decrement the last figure below when adding / removing
   // components from the main left control panel.  
   gtk_grid_attach (GTK_GRID (grid_main), Overlay_preview, 6, gridrow, 7, 11);
+
+  // The default preview stats widgets
+  gridrow=0;
+
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), lab_stats_title0, 0, gridrow,   1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), lab_stats_title1, 1, gridrow,   1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), lab_stats_title2, 2, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), Prev_btn_hgm, 3, gridrow++, 1, 2);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), lab_r, 0, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), PrevSt_sat_r, 1, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), PrevSt_sum_r, 2, gridrow++, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), lab_g, 0, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), PrevSt_sat_g, 1, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), PrevSt_sum_g, 2, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), Prev_btn_focus, 3, gridrow++, 1, 2);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), lab_b, 0, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), PrevSt_sat_b, 1, gridrow, 1, 1);
+  gtk_grid_attach (GTK_GRID (Grid_prevstats), PrevSt_sum_b, 2, gridrow++, 1, 1);
 
 // Show the widgets in the main window (and hide exceptions):
     gtk_widget_show_all(Win_main);
@@ -11135,7 +14468,7 @@ if(!strcmp(argv[1],"-l")){
 
 
 // Create camera settings window and connect its callback functions:    
-   add_win(&win_cam_settings,"PARDUS Camera Settings",640, 320,TRUE,FALSE); 
+   add_win(&win_cam_settings,"PARDUS Capture Settings",640, 320,TRUE,FALSE); 
    if(PardIcon_ready) gtk_window_set_icon(GTK_WINDOW(win_cam_settings),PardIcon_pixbuf);
    g_signal_connect (win_cam_settings, "delete-event", G_CALLBACK (on_camset_delete_event), btn_cam_settings);
    g_signal_connect (win_cam_settings, "show", G_CALLBACK (on_camset_show), NULL); 
@@ -11149,9 +14482,18 @@ if(!strcmp(argv[1],"-l")){
 
    // Create the button widgets for camera settings:        
    bt_def_wd=64;
-   add_button(&btn_cs_apply,"Apply All Settings",GTK_ALIGN_END); // Apply settings
+   add_button(&btn_cs_apply,"Apply All Settings",GTK_ALIGN_END); // Apply all settings
    g_signal_connect (btn_cs_apply, "clicked", G_CALLBACK (btn_cs_apply_click), NULL);
+   btn_markup = g_markup_printf_escaped (settings_format, "Apply","ALL","Settings");
+   btnlabel = gtk_bin_get_child(GTK_BIN(btn_cs_apply));
+   gtk_label_set_markup(GTK_LABEL(btnlabel), btn_markup);
+   g_free (btn_markup);
+
    gtk_widget_set_halign (btn_cs_apply, GTK_ALIGN_CENTER);
+
+   add_button(&btn_cs_apply_nc,"Apply Custom Controls",GTK_ALIGN_END); // Apply non-camera settings
+   g_signal_connect (btn_cs_apply_nc, "clicked", G_CALLBACK (btn_cs_apply_nc_click), NULL);
+   gtk_widget_set_halign (btn_cs_apply_nc, GTK_ALIGN_END);
     
    // Select the image to use as dark field correction reference image
    add_button(&btn_cs_load_dfri,"Select",GTK_ALIGN_START);
@@ -11164,6 +14506,10 @@ if(!strcmp(argv[1],"-l")){
    // Select the image to use as corrections mask
    add_button(&btn_cs_load_mskri,"Select",GTK_ALIGN_START);
    g_signal_connect (btn_cs_load_mskri, "clicked", G_CALLBACK (btn_cs_load_mask_click), NULL);
+    
+   // Select the image to use as a preview mask
+   add_button(&btn_cs_load_pmsk,"Select",GTK_ALIGN_START);
+   g_signal_connect (btn_cs_load_pmsk, "clicked", G_CALLBACK (btn_cs_load_pmask_click), NULL);
    
    // Load settings file button
    add_button(&btn_cs_load_cset,"Load...",GTK_ALIGN_START);
@@ -11184,6 +14530,15 @@ if(!strcmp(argv[1],"-l")){
        }
     // Choose the default item index to display from the beginning
     gtk_combo_box_set_active (GTK_COMBO_BOX (combo_fps), 6);
+
+    // Create the preview LUT selection combo
+    // Create the combo box and append your string values to it.
+    combo_plut = gtk_combo_box_text_new ();
+    for(idx = 0; idx < G_N_ELEMENTS (Preview_LUT_options); idx++){
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo_plut), Preview_LUT_options[idx]);
+       }
+    // Choose the default item index to display from the beginning
+    gtk_combo_box_set_active (GTK_COMBO_BOX (combo_plut), 0);
      
     // Create the camera format selection combo
     // Create the combo box and append your string values to it.
@@ -11204,47 +14559,66 @@ if(!strcmp(argv[1],"-l")){
     gtk_combo_box_set_active (GTK_COMBO_BOX (combo_safmt), SAF_BMP);
 
     // Create the 'use central crop as preview' check box
-    chk_preview_central = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_preview_central), FALSE);
-    gtk_widget_set_halign (chk_preview_central, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_preview_central);
 
     // Create the monochrome preview option check box
-    chk_cam_yonly = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_cam_yonly), FALSE);
-    gtk_widget_set_halign (chk_cam_yonly, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_cam_yonly);
 
     // Create the save as raw doubles option check box
-    chk_sa_rawdoubles = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sa_rawdoubles), FALSE);
-    gtk_widget_set_halign (chk_sa_rawdoubles, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_sa_rawdoubles);
 
     // Create the save as FITS option check box
-    chk_sa_fits = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_sa_fits), FALSE);
-    gtk_widget_set_halign (chk_sa_fits, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_sa_fits);
 
     // Create the Scale mean of each frame to first? option check box
-    chk_scale_means = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_scale_means), FALSE);
-    gtk_widget_set_halign (chk_scale_means, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_scale_means);
+
+    // Create the Use cumulative histogram (Red/Grey)? option check box
+    add_checkbox(&chk_usehcr);
+
+    // Create the Use cumulative histogram (Green)? option check box
+    add_checkbox(&chk_usehcg);
+
+    // Create the Use cumulative histogram (Blue)? option check box
+    add_checkbox(&chk_usehcb);
+
+    // Create the Don't auto-fit histograms? option check box
+    add_checkbox(&chk_hgm_manual);
+
+    // Create the Variance and mean restricted to sat limits? option check box
+    add_checkbox(&chk_var_inlimits);
+
+    // Create the Use variance x mean abs. Laplacian? option check box
+    add_checkbox(&chk_useflv);
+
+    // Create the Display Laplacian? [Monochrome only] option check box
+    add_checkbox(&chk_useppl);
+
+    // Create the Invert intensities? option check box
+    add_checkbox(&chk_useppi);
+
+    // Create the Use mean abs. Laplacian? option check box
+    add_checkbox(&chk_usefls);
 
     // Create the dark field correction option check box
-    chk_usedfcor = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usedfcor), FALSE);
-    gtk_widget_set_halign (chk_usedfcor, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_usedfcor);
     gtk_widget_set_sensitive (chk_usedfcor,FALSE);
 
     // Create the flat field correction option check box
-    chk_useffcor = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useffcor), FALSE);
-    gtk_widget_set_halign (chk_useffcor, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_useffcor);
     gtk_widget_set_sensitive (chk_useffcor,FALSE);
  
     // Create the corrections mask option check box
-    chk_usemskcor = gtk_check_button_new();
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usemskcor), FALSE);
-    gtk_widget_set_halign (chk_usemskcor, GTK_ALIGN_CENTER);
+    add_checkbox(&chk_usemskcor);
     gtk_widget_set_sensitive (chk_usemskcor,FALSE);
+ 
+    // Create the use preview mask option check box
+    add_checkbox(&chk_usepmsk);
+    gtk_widget_set_sensitive (chk_usepmsk,FALSE);
+
+    // Create the show preview mask option check box
+    add_checkbox(&chk_dsppmsk);
+    gtk_widget_set_sensitive (chk_dsppmsk,FALSE);
  
 
     grid_camset = gtk_grid_new();
@@ -11252,10 +14626,11 @@ if(!strcmp(argv[1],"-l")){
     gtk_container_add (GTK_CONTAINER (scrolwin_camset), grid_camset);
     gtk_container_add (GTK_CONTAINER (scrolwin_camset_child), scrolwin_camset);
     //  gtk_container_add (GTK_CONTAINER (scrolwin_camset_child), grid_camset);
-    gtk_grid_set_row_spacing (GTK_GRID(grid_camset),2);
+    gtk_grid_set_row_spacing (GTK_GRID(grid_camset),1);
     gtk_grid_set_column_spacing (GTK_GRID(grid_camset),5);
-    // Place the 'Apply' button right at the top 
+    // Place the 'Apply' buttons right at the top 
     gtk_grid_attach (GTK_GRID (grid_camset_main), btn_cs_apply, 0, 0, 1, 1);
+    gtk_grid_attach (GTK_GRID (grid_camset_main), btn_cs_apply_nc, 0, 0, 2, 1);
     // Place the interactive slider under this 
     gtk_grid_attach (GTK_GRID (grid_camset_main), ISLabel, 0, 1, 1, 1);
     gtk_grid_attach (GTK_GRID (grid_camset_main), ISlider, 0, 2, 1, 1);
@@ -11390,7 +14765,7 @@ if(!strcmp(argv[1],"-l")){
    }
   mskfile_loaded = MASK_NONE;
   mask_status = 0;
-  msk_pending=0;
+  mask_pending=0;
   MKht=MKwd=0;
   Mask_supp_size=1.0;
   mask_alloced=MASK_NO;
@@ -11410,6 +14785,12 @@ if(!strcmp(argv[1],"-l")){
   col_conv_type=CCOL_TO_RGB ;
   saveas_fmt = SAF_BMP;
   
+  Prev_aspect_4_by_3 = 1; // This flag lets the preview drawing routines know
+                          // if they need to blank the preview image whenever
+                          // an overlay image (like a histogram) gets moved
+                          // around (non-4:3 images result in blank space in
+                          // the preview window that would not otherwise be
+                          // refreshed from frame to frame to save time).
   Need_to_preview=PREVIEW_OFF; // This is changed by the preview
                                // checkbox and some other functions.
                                // There are different preview modes -
