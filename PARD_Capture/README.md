@@ -88,9 +88,9 @@ The following assumes you have PARD Capture compiled on your system and ready to
 First ensure your camera is connected to the USB port (you can actually connect it after PARD Capture is up and running but might as well do it now).
 Although PARD Capture can be started by ‘double-clicking’ the executable on many systems, it is preferable to start the software from a terminal window by typing ‘pardcap’ (or ‘./pardcap’ if it is not on your PATH) at the command prompt. This is because PARD Capture outputs information to stdout (to the console window) as it runs which gives useful updates and diagnostic data, warnings and error message details. All this information will not be visible to you if you start the program by simply ‘double-clicking’ it. The command line options are:
 
-`./pardcap [option] [argument]`
+`./pardcap [[option] [argument]]`
 
-The possibilities for `[option] [argument]` are currently:
+The possibilities for `[option]`and `[argument]` are currently:
 
 `-v`
 
@@ -123,4 +123,4 @@ PJT
 
 First Written: 12.11.2022
 
-Last Edit: 23.05.2023
+Last Edit: 19.09.2023
