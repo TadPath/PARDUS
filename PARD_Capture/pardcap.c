@@ -67,7 +67,7 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 22.05.23)                      */
+/* P. J. Tadrous 31.01.2020 (last edit 26.03.24)                      */
 /**********************************************************************/
 
 // Linux:
@@ -1022,7 +1022,7 @@ unsigned int    NCSlines=0;   // The number of lines allowed in CSBlob
 
 int enumerate_cs_menu(__u32,unsigned int);
 
-// Return values for loop_new()
+// Return values for cs_new()
 #define CSE_SUCCESS 0 // No error. Camera setting created OK
 #define CSE_MEMFAIL 1 // Failed. Couldn't get memory for the new camera setting.
 #define CSE_MEMNAME 2 // Failed. Couldn't get memory for the name of the new camera setting.
@@ -12639,7 +12639,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        numstr = g_strdup_printf("Yes");
    } else {
        PrevStat.mask_show=MASK_NO;
-       numstr = g_strdup_printf("No or NA");
+       numstr = g_strdup_printf("No");
    }
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_dpm]),numstr);
   sprintf(msgtxt,"You chose: Display the preview mask? - %s",numstr);
