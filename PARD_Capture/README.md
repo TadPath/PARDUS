@@ -113,9 +113,11 @@ DOI: All sales from the [OptArc.co.uk](https://www.optarc.co.uk/) store contribu
 
 Funding
 -------
-This is a self-funded project. I do all the work in my own time.
+This is a self-funded project. I do all the work in my own time. If you like this software and want to support me in developing it, I welcome your donation to my Optarc / PUMA Microscope donation site via PayPal:
 
+[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=NPMYJKJATDLQ4)
 
+Thank you.
 
 
 
@@ -123,4 +125,4 @@ PJT
 
 First Written: 12.11.2022
 
-Last Edit: 19.09.2023
+Last Edit: 26.03.2024
