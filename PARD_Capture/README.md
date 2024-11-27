@@ -1,5 +1,5 @@
 # PARD Capture
-Scientific image acquisition software, FLOSS GPL v3
+Scientific image acquisition software for Linux, FLOSS GPL v3
 
 
 ![PARD Capture Title](Images/Fig1.png)
@@ -11,7 +11,7 @@ Scientific image acquisition software, FLOSS GPL v3
 > :warning: **NOTE**: **The PARDUS project is NOT accepting pull requests at this stage of development. Any pull requests will be either blocked, ignored and/or deleted. I welcome bug reports, feature requests and issues / queries.**
 ----------------------------------------------------------------
 
-:boom: **New** :arrow_right: **v1.1 released 23.05.2023** : Bugs fixed, new features added for live preview mode, limitations on certain image dimensions removed, etc.
+:boom: **New** :arrow_right: **version 1.1.0.27.11.24 released 27.11.2024** : Bugs fixed, new features added, etc. See the [Change log](Change_Log.txt) for details.
 
                        
 Introduction
@@ -104,7 +104,6 @@ The `-v` option prints the program version number and must have no argument afte
 The `-h` option prints a help message and must have no argument after it.
 
 The `-l` option must be followed by a file name (the file name must not contain spaces) which the user has permissions to create for writing and appending. This file will be created (so over-writing any existing file with that name) and all output messages will be recorded in this log file as a plain text file (so you may want to give it a .txt extension but that is not mandatory). If the user does not have access permissions to the chosen file then a pop up error message will alert the user that logging can’t be done but the program will then continue as usual.
-
 
 Full User Manual
 ----------------
