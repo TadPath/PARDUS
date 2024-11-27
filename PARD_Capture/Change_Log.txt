@@ -1,0 +1,25 @@
+27.11.2024:
+/* About box now shows version from the PARDCAP_VERN #define so it is */
+/* always up to date.                                                 */
+/* New key option 'v' which allows the user to select the video       */
+/* device number and the main window now shows the current video      */
+/* device being processed. These changes were made to allow Pardcap   */
+/* to run along side other video devices in current use (by other     */
+/* programs or by other instances of Pardcap) and not be restricted   */
+/* to only using /dev/video0 .                                        */
+/* I added an option to do dark field subtraction for the colour      */
+/* preview (no flat field division options exists for colour preview  */
+/* as yet - only for monochrome preview).                             */
+/* I added options to do vertical and/or horizontal flip on the       */
+/* preview.                                                           */
+/* The settings file format has therefore altered to accommodate      */
+/* these new optins since the last version - older settings files     */
+/* will need to be manually updated to be compatible with (readable   */
+/* by) this version.                                                  */
+/* Bug fix: Now the maximum available frame rates are shown in the    */
+/* settings combo list (not the minimum as previously).               */
+/* Bug fix: Control names were not always printing correctly in the   */
+/* settings dialogue box after a camera was closed and re-opened.     */
+/* This is now fixed.                                                 */
+
+----
