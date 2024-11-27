@@ -7,7 +7,7 @@
 /* to PARDUS'). This 'Stand Alone' verison contains only the basic    */
 /* image capture components of the PARD Server. It lacks the network  */
 /* server the communications protocol for the PARD Daemon and the     */
-/* automtion script interpreter.                                      */
+/* automation script interpreter.                                     */
 /*                                                                    */
 /* Copyright (c) Dr Paul J. Tadrous 2000-2023   All rights reserved.  */
 /*                                                                    */
@@ -29,12 +29,13 @@
 /* <https://www.gnu.org/licenses/>.                                   */
 /*                                                                    */
 /* The linux version of this software uses v4l2 functions to control  */
-/* the video device in /dev/video0                                    */
+/* the video device.                                                  */
 /* This version has been optimised for use with cameras sold via the  */
-/* OptArc.co.uk online store that supports the PUMA open source       */
-/* microscopy project so it may not be fully compatible other video   */
-/* devices but many of the features should still function with other  */
-/* cameras - trial and error will bring the specifics to light.       */
+/* OptArc.co.uk online store (a store that supports the PUMA open     */
+/* source microscopy project) so it may not be fully compatible with  */
+/* other video devices, but many of the features should still         */
+/* function with other cameras - trial and error will bring the       */
+/* specifics to light.                                                */
 /*                                                                    */
 /* INTRODUCTION TO PARDUS                                             */
 /* ======================                                             */
@@ -67,7 +68,9 @@
 /* See the project GitHub page for more details:                      */
 /* https://github.com/TadPath/PARDUS                                  */
 /*                                                                    */
-/* P. J. Tadrous 31.01.2020 (last edit 26.03.24)                      */
+/*                                                                    */
+/* P. J. Tadrous 31.01.2020 (last edit 27.11.24)                      */
+/*                                                                    */
 /**********************************************************************/
 
 // Linux:
@@ -103,7 +106,7 @@
 
 
 // Version number
-#define PARDCAP_VERN "1.1.0.22.05.23"
+#define PARDCAP_VERN "1.1.0.27.11.24"
 
 // This is needed for general programming
 #include <stdio.h>
@@ -467,7 +470,8 @@ struct buffer {
         void   *start;
         size_t  length;
 };
-static char            *dev_name;
+static char            *Dev_Name;
+static int             DevNum = 0;
 static enum io_method   io = IO_METHOD_USERPTR;
 static int              fd = -1;
 struct buffer          *buffers = NULL;
@@ -485,14 +489,14 @@ static int frame_timeout_usec; // up on getting a frame.
 int ImHeight,ImWidth,ImSize,ImWidth_stride,Need_to_save;
 int CurrDims_idx,VGA_idx;
 int CurrMax_FPS;
-int Camera_was_closed=0; // This can indicate a different camera is being used.
 int Delayed_start_on,Delayed_start_in_progress;
 double Delayed_start_seconds;
-char *ImRoot,*FFFile,*DFFile,*CSFile,*MaskFile;
+char *ImRoot,*FFFile,*DFFile,*CSFile,*MaskFile,*PCDFile;
 char Selected_FF_filename[FILENAME_MAX];  // Flat field
 char Selected_DF_filename[FILENAME_MAX];  // Dark field
 char Selected_CS_filename[FILENAME_MAX];  // Camera settings
 char Selected_Mask_filename[FILENAME_MAX];// Mask file
+char Selected_PCD_filename[FILENAME_MAX]; // Preview Colour Dark field
 // YUYV to RGB conversion LUTs:
 double *lut_yR,*lut_yG,*lut_yB,*lut_crR,*lut_crG,*lut_cbG,*lut_cbB;
 // Gain and Bias factors for YUYV to RGB conversion - if these values
@@ -507,6 +511,8 @@ int           RGBsize;  // The size, in bytes, of the RGBimg RAM block.
 int           col_conv_type;// Flag that determines what level of
                             // conversion is required - see colour
                             // conversion #defs YUYV_TO_... MJPEG_TO_...
+int           prev_flip_h;  // Flag whether to flip preview horizontally
+int           prev_flip_v;  // Flag whether to flip preview vertically
 int JPG_Quality=100; // JPEG save as quality (only applies to images 
                      // from a non-MJPEG stream (i.e. YUYV format) or to
                      // multi-frame averages from any camera stream.
@@ -563,9 +569,15 @@ int            Preview_impossible,Need_to_preview;
 int            Preview_integral,Preview_bias,PreviewIDX;
 double        *Preview_dark; // Master dark for live preview
 double        *Preview_flat; // Master flat for live preview
+unsigned char *Preview_ColDark; // Dark field for colour live preview
 int            PrevCorr_BtnStatus = 0; // Preview correction btn state
 int            PrevDark_Loaded = 0; // Whether a preview dark is loaded
 int            PrevFlat_Loaded = 0; // Whether a preview flat is loaded
+int            PrevCD_Loaded = 0;   // Whether a preview colour dark is loaded
+int            PrevCD_Pending = 0;  // Is a prev. colour dark file selected,
+                                    // checked OK and is waiting to be loaded.
+int            PrevCD_Perform = 0;  // Whether or not to apply preview colour
+                                    // dark field correction.
 // PrevCorr_BtnStatus values (determines the action of the preview dark
 // button)
 #define PD_LOADD 0 // Button will load a master dark
@@ -573,6 +585,7 @@ int            PrevFlat_Loaded = 0; // Whether a preview flat is loaded
 #define PD_EJECT 2 // Button will eject a loaded master dark +/ flat
 void nullify_preview_darkfield(void);
 void nullify_preview_flatfield(void);
+void nullify_preview_colourdark(void);
 
 // Values for preview frame rate
 const char *fps_options[] = {"1","2","3","4","5","7","10","15","25","30"};
@@ -696,6 +709,7 @@ int windex_camfmt,windex_safmt; // Camera stream format and save-as fmt.
 int windex_uf,windex_uf2;    // Use FF label and check box
 int windex_ud,windex_ud2;    // Use DF label and check box
 int windex_um,windex_um2;    // Use Mask label and check box
+int windex_upc,windex_upc2;  // Use Preview colour dark label and check box
 int windex_upm,windex_upm2;  // Use Preview mask label and check box
 int windex_dpm,windex_dpm2;  // Display the preview mask label and check box
 int windex_imroot,windex_fno,windex_pc,windex_avd,windex_yo;
@@ -703,6 +717,7 @@ int windex_rffi,windex_rdfi; // Flat field and dark field labels
 int windex_ldcs,windex_sacs; // Load/Save camera settings labels
 int windex_rmski;            // Corrections mask label
 int windex_pmski;            // Preview mask label
+int windex_pcdi;             // Preview colour dark label
 int windex_to,windex_rt;   // Frame grabber timeout and no. of retries. 
 int windex_srn,windex_srd; // Image series controls.
 int windex_sad;            // Save as raw doubles 
@@ -730,6 +745,8 @@ int windex_flv; // Use variance x mean abs. Laplacian?
 int windex_ppl; // Display Laplacian? [Monochrome only]
 int windex_ppi; // Invert intensities?
 int windex_fls; // Median Use mean abs. Laplacian?
+int windex_fph; // Flip preview hotizontal?
+int windex_fpv; // Flip preview vertical?
 
 int Settings_heading_level; // When printing a heading in the settings window
                             // this lets the GUI know what font style to use:
@@ -855,15 +872,17 @@ GtkWidget *chk_preview_central,*chk_cam_yonly,*chk_useffcor;
 GtkWidget *chk_scale_means;
 GtkWidget *chk_usehcr,*chk_usehcg,*chk_usehcb;
 GtkWidget *chk_useppi,*chk_useppl,*chk_usefls,*chk_useflv;
+GtkWidget *chk_usefph,*chk_usefpv;
 GtkWidget *chk_hgm_manual,*chk_var_inlimits;
 GtkWidget *chk_sa_rawdoubles,*chk_sa_fits;
-GtkWidget *chk_usedfcor,*chk_usemskcor,*chk_usepmsk,*chk_dsppmsk;
-GtkWidget *lab_cam_status,*btn_cam_stream,*chk_cam_preview;
+GtkWidget *chk_usedfcor,*chk_usemskcor,*chk_usepmsk,*chk_usepcd,*chk_dsppmsk;
+GtkWidget *lab_cam_status,*btn_cam_stream,*chk_cam_preview,*lab_cam_tasks;
 GtkWidget *chk_audio;
 GtkWidget *Img_preview,*Ebox_preview,*Ebox_lab_preview;
 GtkWidget *win_cam_settings,*grid_camset,*btn_cs_apply,*btn_cs_apply_nc;
 GtkWidget *btn_cs_load_ffri,*btn_cs_load_dfri,*btn_cs_load_mskri;
 GtkWidget *btn_cs_load_pmsk;
+GtkWidget *btn_cs_load_pcd;
 GtkWidget *btn_cs_load_cset,*btn_cs_save_cset;
 GtkWidget *btn_av_interrupt; // To cancel an averaging sequence.
 GtkWidget *CamsetWidget[MAX_CAM_SETTINGS];
@@ -968,6 +987,7 @@ int test_selected_ff_filename(char *);
 int test_selected_df_filename(char *);
 int test_selected_msk_filename(char *);
 int test_selected_pmsk_filename(char *);
+int test_selected_pcd_filename(char *);
 
 static int open_device(void);
 static int init_device(void);
@@ -1221,8 +1241,8 @@ int print_cs_file(const char *fname)
  
  fp=fopen(fname,"wb");
  if(fp==NULL){ show_message("Failed to open file for writing camera settings.","File Save FAILED: ",MT_ERR,1); return 1;}
- // Write a header to identify this file format (current version is 1.1)
- fprintf(fp,"PCamSet 1.1 %u %d\n\n",NCSs,windex);
+ // Write a header to identify this file format (current version is 1.2)
+ fprintf(fp,"PCamSet 1.2 %u %d\n\n",NCSs,windex);
  // Now loop through the camera settings with their current values
  for(sdx=0;sdx<NCSs;sdx++){
    fprintf(fp,"\nidx:  %u\n",sdx);
@@ -1852,9 +1872,9 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                sprintf(errmsg, "Not a valid PARDUS settings file. It does not begin with PCamSet.");
                returnvalue = PCHK_E_FORMAT; break;
               }
-            // The current version is 1.1
-            if (strcmp(argstr2, "1.1")) {
-               sprintf(errmsg, "%s: The chosen settings file version ('%s') is incompatible with the version used by this program (1.1).", argstr1, argstr2);
+            // The current version is 1.2
+            if (strcmp(argstr2, "1.2")) {
+               sprintf(errmsg, "%s: The chosen settings file version ('%s') is incompatible with the version used by this program (1.2).", argstr1, argstr2);
                returnvalue = PCHK_E_FORMAT; break;
               }
             // The number after this is the number of used camera
@@ -2046,9 +2066,9 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                returnvalue = PCHK_E_SYNTAX;
                break; 
               }
-            // Currently only version 1.1 is supported, so check for it.
+            // Currently only version 1.2 is supported, so check for it.
             sscanf(line, "%s %s", argstr1, argstr2);
-            if (strcmp(argstr2, "1.1")) {
+            if (strcmp(argstr2, "1.2")) {
                returnvalue = PCHK_E_SYNTAX; 
                sprintf(errmsg, "%s: Version '%s' is not supported.", argstr1, argstr2);
                break;
@@ -2763,6 +2783,34 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                 break;
                }
           }
+        else if (!strcmp(argstr1, "windex_fph")) {
+            // windex_fph <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
+        else if (!strcmp(argstr1, "windex_fpv")) {
+            // windex_fpv <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
         else if (!strcmp(argstr1, "windex_fls")) {
             // windex_fls <Yes/No>
             if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
@@ -2847,6 +2895,20 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
                 break;
                }
           }
+        else if (!strcmp(argstr1, "windex_upc")) {
+            // windex_upc <Yes/No>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // Must be Yes or No:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if (is_not_yesno(argstr2)) {
+                returnvalue = PCHK_E_SYNTAX;
+                sprintf(errmsg, "%s: '%s' is not 'Yes' or 'No' (case sensitive).", argstr1, argstr2);
+                break;
+               }
+          }
         else if (!strcmp(argstr1, "windex_rdfi")) {
             // windex_rdfi <fname>
             if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
@@ -2891,6 +2953,20 @@ int csetfile_check(FILE *fp, unsigned int *linenum, char *errmsg)
           }              
         else if (!strcmp(argstr1, "windex_pmski")) {
             // windex_pmski <fname>
+            if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
+               returnvalue = PCHK_E_SYNTAX;
+               break; 
+              }
+            // <fname> must not be an empty string:
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(strlen(argstr2)<1){ // Check it is >=1
+               returnvalue = PCHK_E_SYNTAX; 
+               sprintf(errmsg, "%s: An empty file name is not supported.", argstr1);
+               break;
+              }
+          }              
+        else if (!strcmp(argstr1, "windex_pcdi")) {
+            // windex_pcdi <fname>
             if(pcs_argc_check(argcount, 2, 2, 0, argstr1, errmsg)){
                returnvalue = PCHK_E_SYNTAX;
                break; 
@@ -2954,7 +3030,7 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
     char  line[MAX_CMDLEN], argstr1[64], argstr2[64];
     char  argstr3[64], argstr5[256];
     char  imsg[MAX_CMDLEN+32];
-    int   esdx,dfoff,ffoff,mskoff,pmskoff;
+    int   esdx,dfoff,ffoff,mskoff,pmskoff,pcdoff;
 
     mdx=0;     // Menu items = number of lines to skip in this check
     esdx=0;    // To detect non-fatal errors.
@@ -2962,6 +3038,7 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
     ffoff=0;   // 'Use flat field?' must be switched off flag
     mskoff=0;  // 'Use mask?' must be switched off flag
     pmskoff=0; // 'Use preview mask?' must be switched off flag
+    pcdoff=0;  // 'Use preview colour dark field?' must be switched off flag
  
     *linenum = 0;
     returnvalue = PCHK_TERMINUS; // Ensures improper termination flag is
@@ -3279,6 +3356,20 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useppi), TRUE);
              else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_useppi), FALSE);
           }
+        else if (!strcmp(argstr1, "windex_fph")) {
+            // windex_fph <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usefph), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usefph), FALSE);
+          }
+        else if (!strcmp(argstr1, "windex_fpv")) {
+            // windex_fpv <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usefpv), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usefpv), FALSE);
+          }
         else if (!strcmp(argstr1, "windex_fls")) {
             // windex_fls <Yes/No>
             sscanf(line, "%s %s", argstr1,argstr2);
@@ -3321,6 +3412,13 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_dsppmsk), TRUE);
              else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_dsppmsk), FALSE);
           }
+        else if (!strcmp(argstr1, "windex_upc")) {
+            // windex_upc <Yes/No>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(!strcmp(argstr2,"Yes"))
+             gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepcd), TRUE);
+             else gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepcd), FALSE);
+          }
         else if (!strcmp(argstr1, "windex_rdfi")) {
             // windex_rdfi <fname>
             sscanf(line, "%s %s", argstr1,argstr2);
@@ -3357,6 +3455,14 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
              pmskoff++;
             }
           }              
+        else if (!strcmp(argstr1, "windex_pcdi")) {
+            // windex_pcdi <fname>
+            sscanf(line, "%s %s", argstr1,argstr2);
+            if(test_selected_pcd_filename(argstr2)){
+             esdx++;
+             pcdoff++;
+            }
+          }              
         else if (!strcmp(argstr1, "exit")) {
             switch(esdx){
              case 0:
@@ -3388,6 +3494,7 @@ int csetfile_load(FILE *fp, unsigned int *linenum, char *errmsg)
   if(mskoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usemskcor), FALSE);
   if(pmskoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepmsk), FALSE);
   if(pmskoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_dsppmsk), FALSE);
+  if(pcdoff) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chk_usepcd), FALSE);
 
 
     return returnvalue;
@@ -3411,7 +3518,7 @@ int append_cs_file(const char *fname)
  if(fp==NULL){ show_message("Failed to open file for writing camera settings.","File Save FAILED: ",MT_ERR,1); return 1;}
  
  // Write a header to identify this file format and its version
- fprintf(fp,"\n\n\nPCustSet 1.1\n\n");
+ fprintf(fp,"\n\n\nPCustSet 1.2\n\n");
  
  // Now print the custom settings with their current values
  fprintf(fp,"# Image size and FPS for full frame capture\n");
@@ -3528,6 +3635,12 @@ int append_cs_file(const char *fname)
  fprintf(fp,"# Invert intensities?\n");
  fprintf(fp,"windex_ppi %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_ppi])));
 
+ fprintf(fp,"# Flip horizontal?\n");
+ fprintf(fp,"windex_fph %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_fph])));
+
+ fprintf(fp,"# Flip vertical?\n");
+ fprintf(fp,"windex_fpv %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_fpv])));
+
  fprintf(fp,"# Focusser: Use mean abs. Laplacian?\n");
  fprintf(fp,"windex_fls %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_fls])));
 
@@ -3584,6 +3697,22 @@ int append_cs_file(const char *fname)
 
  fprintf(fp,"# Display the preview mask?\n");
  fprintf(fp,"windex_dpm %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_dpm])));
+
+
+ fprintf(fp,"# Preview colour dark field image\n");
+ switch(PrevCD_Loaded){
+   case MASK_NONE:
+    fprintf(fp,"windex_pcdi [None]\n\n");
+   break;
+   case MASK_YRGB:
+    fprintf(fp,"windex_pcdi %s\n\n",PCDFile);
+   break;
+   default: // This should not happen
+    fprintf(fp,"windex_pcdi [UNDF]\n\n");
+   break;
+ }
+ fprintf(fp,"# Use the preview colour dark field image?\n");
+ fprintf(fp,"windex_upc %s\n\n",gtk_label_get_text(GTK_LABEL(CamsetWidget[windex_upc])));
 
  fprintf(fp,"exit\n"); // End of settings
  
@@ -5287,6 +5416,75 @@ unsigned char is_aspect_4_by_3(void)
  return 1;
 }
 
+int set_image_dims_to_VGA(void)
+ // This attempts to set the image dimensions to VGA in preparation for a switch
+ // of imaging device. This will shut down the stream if streaming and will
+ // close and uninitialise the device prior to attempting to switch the
+ // dimensions but, unlike the function change_image_dimensions() it will NOT
+ // attempt to restart the stream or open the device at the end. It will
+ // nullify any darkfield, flatfield and mask image - regardless of whether
+ // they are VGA or not because we are doing this in preparation for loading a
+ // new video device and so such images must be assumed to be invalid in their
+ // pixel content even if not in their dimensions.
+{
+ int tmpht,tmpwd,returnval;
+ 
+  returnval=CID_OK; // We will change this if there is a problem.
+
+   Selected_Ht = 480;
+   Selected_Wd = 640; 
+  
+  show_message("Attempting to reset dimensions to VGA:","FYI: ",MT_INFO,0);
+  // Store the current values in case things go wrong and we need to
+  // revert back:
+  tmpht=ImHeight; tmpwd=ImWidth; 
+  // Check if we are streaming:
+  if(camera_status.cs_opened){
+    if(camera_status.cs_streaming){
+      if(stop_streaming()){
+        show_message("FAILED to stop the stream to reset resolution to VGA.","Error: ",MT_ERR,1);
+        return CID_NOCLOSE;   
+       } 
+     }
+    // Free the current frame buffers (that were sized according to
+    // the previous dimensions):
+    if(camera_status.cs_initialised) uninit_device(); 
+    if(close_device()) return CID_NOCLOSE; 
+   }
+  // Try and resize all dimensions accoriding to the current user
+  // selected values and allocate memory to the frame stores:
+  if(set_dims_as_per_selected()){ 
+  // If we enter this block it means we failed to get memory for the
+  // new image structure so abort gracefully:
+      show_message("Couldn't get enough RAM for new image size.\nAttempting to revert to previous.","Image Resize FAILED: ",MT_ERR,1);
+      Selected_Ht=tmpht; Selected_Wd=tmpwd;
+      if(set_dims_as_per_selected()){ 
+      // We can't even go back to what we had before so something bad
+      // is happening, RAM-wise. Advise user to quit while they're
+      // ahead:
+        show_message("FAILED to revert to the previous image dimensions.\n"
+                     "This is a big problem. PARDUS will try to return control\n"
+                     "to you without crashing but you should save your work\n"
+                     "and exit immediately to avoid a program crash.","Image Resize FAILED: ",MT_ERR,1);
+        return CID_NOREVERT;
+       }
+     // If we've made it to here then we have survived but only by
+     // reverting back to the previous dimensions:
+     returnval = CID_REVERTED;
+    }
+  // If we get here then the new image dims have been set.
+  // Set the update preview flag:
+  Preview_changed=1;
+  // Test the aspect ratio for preview blanking on overlay shift
+  Prev_aspect_4_by_3 = is_aspect_4_by_3();
+  // Now nullify any selected dark field, flat field or mask image:
+  if(dffile_loaded!=DFIMG_NONE) nullify_darkfield();
+  if(fffile_loaded!=FFIMG_NONE) nullify_flatfield();
+  if(mask_alloced!=MASK_NO)     nullify_mask();                
+
+ return returnval;
+}
+
 int change_image_dimensions(void)
 {
  int tmpht,tmpwd,tmpstream,returnval;
@@ -5442,7 +5640,7 @@ static void change_cam_status(int field, char value)
 
 static void calc_preview_base_stats(void)
 // Calculate the sample size for image preview stats taking into consideration
-// the support of teh current mask (full or custom). Also sets the final row and
+// the support of the current mask (full or custom). Also sets the final row and
 // col for image border blanking following convolution (e.g. for the Laplacian).
 // This should be called any time the mask support changes or there is a change
 // in image stream format resulting in a change of aspect ratio for the preview.
@@ -5880,6 +6078,72 @@ double Prev_Laplace(int colchan)
 
 
  return accum;
+}
+
+void Prev_Flip(void) 
+// Perform a horizontal and/or vertical flip on the preview image
+{
+ int row,cpos,opos;
+ int idx,fdx,psize;
+ unsigned char tmpr,tmpg,tmpb;
+
+ if(prev_flip_h && prev_flip_v){ // Flip in both horizontal and vertical
+
+       psize=PreviewImg_rgb_size/2;
+       for(idx=0,fdx=PreviewImg_rgb_size;idx<psize;idx+=3,fdx-=3){
+          tmpr=PreviewImg[idx];
+          tmpg=PreviewImg[idx+1];
+          tmpb=PreviewImg[idx+2];
+          PreviewImg[idx]=PreviewImg[fdx];
+          PreviewImg[fdx]=tmpr;
+          PreviewImg[idx+1]=PreviewImg[fdx+1];
+          PreviewImg[fdx+1]=tmpg;
+          PreviewImg[idx+2]=PreviewImg[fdx+2];
+          PreviewImg[fdx+2]=tmpb;
+        }
+
+  } else { // Flip either horizontally or vertically
+
+
+ if(prev_flip_h){ // Flip horizontal
+       psize=PreviewWd_stride/2;
+       for(row=0;row<PreviewImg_rgb_size;row+=PreviewWd_stride){
+          for(idx=0,fdx=PreviewWd_stride;idx<psize;idx+=3,fdx-=3){
+             cpos=row+idx; opos=row+fdx;
+             tmpr=PreviewImg[cpos];
+             tmpg=PreviewImg[cpos+1];
+             tmpb=PreviewImg[cpos+2];
+             PreviewImg[cpos]=PreviewImg[opos];
+             PreviewImg[opos]=tmpr;
+             PreviewImg[cpos+1]=PreviewImg[opos+1];
+             PreviewImg[opos+1]=tmpg;
+             PreviewImg[cpos+2]=PreviewImg[opos+2];
+             PreviewImg[opos+2]=tmpb;
+           }
+         }
+   }
+
+ if(prev_flip_v){ // Flip vertical
+       psize=PreviewImg_rgb_size/2;
+       for(idx=0;idx<PreviewWd_stride;idx+=3){
+          for(row=0;row<psize;row+=PreviewWd_stride){
+             cpos=row+idx; opos=PreviewImg_rgb_size-row+idx;
+             tmpr=PreviewImg[cpos];
+             tmpg=PreviewImg[cpos+1];
+             tmpb=PreviewImg[cpos+2];
+             PreviewImg[cpos]=PreviewImg[opos];
+             PreviewImg[opos]=tmpr;
+             PreviewImg[cpos+1]=PreviewImg[opos+1];
+             PreviewImg[opos+1]=tmpg;
+             PreviewImg[cpos+2]=PreviewImg[opos+2];
+             PreviewImg[opos+2]=tmpb;
+           }
+         }
+   }
+
+  }
+
+ return;
 }
 
 static void set_border_pixels(unsigned char bval)
@@ -6436,11 +6700,14 @@ static int colour_convert(const unsigned short *p)
            }
         }
 
-    // Do any requested pre- and post-processes     
+    // Do any requested pre- and post-processes  
+
+   
     switch(col_conv_type){
        case CCOL_TO_Y:
 
           // Perform any user-requested pre-processing: 
+ 
           // Make a Laplacian image if that is requested
           if(PrevStat.pp_laplace){ PrevStat.af_laplace_r=Prev_Laplace(CCHAN_Y); bval=0;}
           // Otherwise just calculate the mean absolute Laplacian if chosen
@@ -6490,6 +6757,18 @@ static int colour_convert(const unsigned short *p)
        break;
        case CCOL_TO_RGB:
        case CCOL_TO_BGR:
+
+          // Colour preview dark field subtraction
+          if(PrevCD_Perform==MASK_YES){
+
+             for(ipos=0;ipos<PreviewImg_rgb_size;ipos++){
+                 if(Preview_ColDark[ipos]>PreviewImg[ipos])PreviewImg[ipos]=0;
+                 else PreviewImg[ipos]-=Preview_ColDark[ipos];
+                }
+
+            } 
+
+          // Stats
           if(PrevStat.focuser_param_varabslap || PrevStat.focuser_param_abslap){
             switch(Prev_overlay_focus){
               case CCHAN_R:
@@ -6554,6 +6833,10 @@ static int colour_convert(const unsigned short *p)
        break;
        default: break;
      }
+
+    // Flip as required         
+    Prev_Flip();
+
 
       return 0; // Preview image created, so return.
    }
@@ -8356,7 +8639,7 @@ static int init_mmap(void)
  req.memory = V4L2_MEMORY_MMAP;
  if(-1 == xioctl(fd, VIDIOC_REQBUFS, &req)){
    if(EINVAL == errno) {
-     sprintf(msgtxt,"%s does not support user memory mapping.", dev_name);
+     sprintf(msgtxt,"%s does not support user memory mapping.", Dev_Name);
      show_message(msgtxt,"Camera Error: ",MT_ERR,1);
      return 1;
     } else {
@@ -8366,7 +8649,7 @@ static int init_mmap(void)
     }
    }
  if(req.count < 2){
-     sprintf(msgtxt,"Insufficient MMAP buffer memory on %s",dev_name);
+     sprintf(msgtxt,"Insufficient MMAP buffer memory on %s",Dev_Name);
      show_message(msgtxt,"Camera Error: ",MT_ERR,1);
      return 1;
    }
@@ -8417,7 +8700,7 @@ static int init_userp(unsigned int buffer_size)
  req.memory = V4L2_MEMORY_USERPTR;
  if(-1 == xioctl(fd, VIDIOC_REQBUFS, &req)) {
    if(EINVAL == errno) {
-     sprintf(msgtxt,"%s does not support user pointer i/o.", dev_name);
+     sprintf(msgtxt,"%s does not support user pointer i/o.", Dev_Name);
      show_message(msgtxt,"Camera Error: ",MT_ERR,1);
      return 1;
     } else {
@@ -8467,10 +8750,15 @@ static int init_device(void)
  char msgtxt[1024];
  int returnval;
  int formats_exhausted = 0;
+ int forbidden_format = CAF_ALLOK;
+
+            sprintf(msgtxt,"Running Init Device");
+            show_message(msgtxt,"Camera Init: ",MT_INFO,0);
+
 
  if(-1 == xioctl(fd, VIDIOC_QUERYCAP, &cap)) {
    if (EINVAL == errno) {
-     sprintf(msgtxt,"%s is not a V4L2 device", dev_name);
+     sprintf(msgtxt,"%s is not a V4L2 device", Dev_Name);
      show_message(msgtxt,"Camera Error: ",MT_ERR,1);
      return 1;
     } else {
@@ -8481,7 +8769,7 @@ static int init_device(void)
   }
 
  if(!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-   sprintf(msgtxt,"%s is not a video capture device", dev_name);
+   sprintf(msgtxt,"%s is not a video capture device", Dev_Name);
    show_message(msgtxt,"Camera Error: ",MT_ERR,1);
    return 1;
   }
@@ -8489,7 +8777,7 @@ static int init_device(void)
  switch (io) {
         case IO_METHOD_READ:
                 if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
-                  sprintf(msgtxt,"%s does not support read i/o", dev_name);
+                  sprintf(msgtxt,"%s does not support read i/o", Dev_Name);
                   show_message(msgtxt,"Camera Error: ",MT_ERR,1);
                   return 1;
                 }
@@ -8498,7 +8786,7 @@ static int init_device(void)
         case IO_METHOD_MMAP:
         case IO_METHOD_USERPTR:
                 if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
-                  sprintf(msgtxt,"%s does not support streaming i/o", dev_name);
+                  sprintf(msgtxt,"%s does not support streaming i/o", Dev_Name);
                   show_message(msgtxt,"Camera Error: ",MT_ERR,1);
                   return 1;
                 }
@@ -8549,8 +8837,8 @@ static int init_device(void)
    }
  if(fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_YUYV){
    show_message("The camera driver does not support YUYV format.","FYI: ",MT_INFO,0);
-   FormatForbidden=CAF_YUYV;
    formats_exhausted++;
+   forbidden_format=CAF_YUYV;
   } else show_message("YUYV support is OK.","FYI: ",MT_INFO,0);
  show_message("Testing for MJPEG format support ...","FYI: ",MT_INFO,0);
  fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
@@ -8561,9 +8849,10 @@ static int init_device(void)
    }
  if(fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_MJPEG){
    show_message("The camera driver does not support MJPEG format.","FYI: ",MT_INFO,0);
-   FormatForbidden=CAF_MJPEG;
    formats_exhausted++;
+   forbidden_format=CAF_MJPEG;
   } else show_message("MJPEG support is OK.","FYI: ",MT_INFO,0);
+ FormatForbidden=forbidden_format;
  if(formats_exhausted==2){
    FormatForbidden=CAF_ALLBAD;
    show_message("The Camera driver does not support YUYV or MJPEG format.\nPlease save your work and restart the program with a different camera.","Camera Error: ",MT_ERR,1);
@@ -8673,7 +8962,9 @@ static int close_device(void)
    return 1;
  }
  fd = -1;
+ if(gui_up) gtk_label_set_text (GTK_LABEL(lab_cam_tasks),"CAMERA TASKS (no device)");
  change_cam_status(CS_OPENED,0);
+
  return 0;
 }
 
@@ -8682,26 +8973,31 @@ static int open_device(void)
  struct stat st;
  char msgtxt[1024];
 
- if(-1 == stat(dev_name, &st)) {
-   sprintf(msgtxt,"Cannot identify '%s':\n%d, %s", dev_name, errno, strerror(errno));
+ if(-1 == stat(Dev_Name, &st)) {
+   sprintf(msgtxt,"Cannot identify '%s':\n%d, %s", Dev_Name, errno, strerror(errno));
    show_message(msgtxt,"Camera Error: ",MT_ERR,1);
    return 1;
   }
 
  if(!S_ISCHR(st.st_mode)) {
-   sprintf(msgtxt,"%s is not a device.", dev_name);
+   sprintf(msgtxt,"%s is not a device.", Dev_Name);
    show_message(msgtxt,"Camera Error: ",MT_ERR,1);
    return 1;
   }
 
- fd = open(dev_name, O_RDWR | O_NONBLOCK, 0); // O_RDWR is required 
+ fd = open(Dev_Name, O_RDWR | O_NONBLOCK, 0); // O_RDWR is required 
 
  if(-1 == fd){
-   sprintf(msgtxt,"Cannot open '%s':\n%d, %s",dev_name, errno, strerror(errno));
+   sprintf(msgtxt,"Cannot open '%s':\n%d, %s",Dev_Name, errno, strerror(errno));
    show_message(msgtxt,"Camera Error: ",MT_ERR,1);
    return 1;
   }
   
+
+ sprintf(msgtxt,"CAMERA TASKS (%s)",Dev_Name);
+ if(gui_up) gtk_label_set_text (GTK_LABEL(lab_cam_tasks),msgtxt);
+
+
   change_cam_status(CS_OPENED,1);
 
   return 0;
@@ -8753,6 +9049,10 @@ void tidy_up(void)
    show_message("> Freeing dark field correction image name.","",MT_INFO,0);
    free(DFFile);
   }
+ if(PCDFile!=NULL){
+   show_message("> Freeing preview colour dark field correction image name.","",MT_INFO,0);
+   free(PCDFile);
+  }
  if(CSFile!=NULL){
    show_message("> Freeing camera settings file name.","",MT_INFO,0);
    free(CSFile);
@@ -8765,9 +9065,9 @@ void tidy_up(void)
    show_message("> Freeing preview mask image file name.","",MT_INFO,0);
    free(PrevStat.MaskFile);
   }
- if(dev_name!=NULL){
+ if(Dev_Name!=NULL){
    show_message("> Freeing device name.","",MT_INFO,0);
-   free(dev_name);
+   free(Dev_Name);
   }
  if(SSrow!=NULL){
    show_message("> Freeing preview row sampler.","",MT_INFO,0);
@@ -8792,6 +9092,10 @@ void tidy_up(void)
  if(Preview_flat!=NULL){
    show_message("> Freeing preview master flat.","",MT_INFO,0);
    free(Preview_flat);
+  }
+ if(Preview_ColDark!=NULL){
+   show_message("> Freeing preview colour dark.","",MT_INFO,0);
+   free(Preview_ColDark);
   }
  if(PreviewRow!=NULL){
    show_message("> Freeing preview row buffer.","",MT_INFO,0);
@@ -8926,12 +9230,6 @@ static void btn_cam_settings_click(GtkWidget *widget, gpointer data)
  if(Ser_active>0) return; // Don't allow changes during a series capture
  if(Av_limit>1) return; // Don't allow changes during an average capture
 
- // If none of the supported formats are provided by the camera, you
- // cannot allow settings to be set:
- if(FormatForbidden==CAF_ALLBAD){
-   show_message("You cannot apply settings because your camera does not support YUYV or MJPEG streaming. Restart the program with another camera.","FYI: ",MT_INFO,1);
-   return;  
-  }
 
  if(!camera_status.cs_opened){
     if(open_device()){
@@ -9549,8 +9847,8 @@ static void btn_help_about_click(GtkWidget *widget, gpointer data)
   About_dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG(About_dialog),"PARD Capture (Stand Alone)");
   if(PardIcon_ready) gtk_about_dialog_set_logo (GTK_ABOUT_DIALOG(About_dialog),PardIcon_pixbuf);
-  gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(About_dialog),"v. 1.1.0");
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG(About_dialog),"Copyright © 2000-2023 Dr Paul J. Tadrous");
+  gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(About_dialog),PARDCAP_VERN);
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG(About_dialog),"Copyright © 2000-2024 Dr Paul J. Tadrous");
   gtk_about_dialog_set_comments (GTK_ABOUT_DIALOG(About_dialog),"Image capture for scientific applications. This version is optimised for OptArc cameras. This is an offshoot of the PARDUS robotic microscopy project.");
   gtk_window_set_title (GTK_WINDOW (About_dialog), "About PARD Capture");  
   gtk_about_dialog_set_website (GTK_ABOUT_DIALOG(About_dialog),"https://github.com/TadPath/PARDUS");  
@@ -9567,6 +9865,7 @@ static gboolean img_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
 // already zoomed in).
 { 
  char imsg[128];
+ int  click_x,click_y;
  
  // Do nothing if not in preview tile select mode or if not previewing.
  if(Need_to_preview==PREVIEW_OFF) return TRUE;
@@ -9601,10 +9900,18 @@ static gboolean img_preview_click(GtkWidget  *event_box,  GdkEventButton *event,
   }
 
  // If we get here it means the user is selecting a tile position, so
- // set it:
-
- Prevclick_X=(int)event->x;
- Prevclick_Y=(int)event->y;
+ // set it taking account of whether the preview is flipped in any way:
+ if(prev_flip_h || prev_flip_v){
+   click_x=(int)event->x;
+   click_y=(int)event->y;
+   if(prev_flip_h) click_x=PreviewWd-click_x;
+   if(prev_flip_v) click_y=PreviewHt-click_y;
+   Prevclick_X=click_x;
+   Prevclick_Y=click_y;
+  } else {
+   Prevclick_X=(int)event->x;
+   Prevclick_Y=(int)event->y;
+  }
 
     // Centre the tile on the user's XY coordinates
     Img_startcol=(int)(Prev_scaledim*(double)Prevclick_X)-PreviewWd/2;
@@ -10538,6 +10845,264 @@ if(rawdou==0){
  return 0;
 }
 
+int test_selected_pcd_filename(char *filename)
+// Attempt to read the file header and see if it is suitable for use as a
+// preview colour dark field subtraction image. If successful, copy the file
+// name into the global Selected_PCD_filename and set the PrevCD_Pending flag to
+// 1 and sets the GUI widgets to sensitive (it sets them insensitive otherwise) 
+// Return 0 on success and sets PrevCD_Pending to 1.
+// It returns 1 on failure.
+{
+ char msgtxt[256];
+ int lht,lwd,imfmt;
+ int16_t bitcount;
+
+ // The default position - we'll update it if filename passes the test 
+  PrevCD_Pending=0;
+
+ // No useable mask selected
+ if(!strcmp(filename,"[None]") || !strcmp(filename,"[Full]") || !strcmp(filename,"[UNDF]") || !strcmp(filename,"None.bmp")){
+   if(!strcmp(filename,"None.bmp")) sprintf(Selected_PCD_filename,"[None]");
+   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepcd),FALSE);
+   gtk_widget_set_sensitive (chk_usepcd,FALSE);
+   gtk_widget_set_sensitive (CamsetWidget[windex_upc],FALSE);
+   gtk_widget_set_sensitive (CamsetWidget[windex_upc2],FALSE);
+   return 1;
+ }
+
+ // Read the mask image file header to get dimensions and file type
+ imfmt=SAF_YUYV; // I use SAF_YUYV just as a reference value to see if
+                 // it changes (if it doesn't then no acceptable format
+                 // was found).
+ if(!get_ppm_header(filename, &lht,&lwd))imfmt=SAF_RGB;       // PPM colour
+ else if(!get_bmp_header(filename, &lht,&lwd,&bitcount)){     // BMP
+    switch(bitcount){
+        case 24:imfmt=SAF_BMP; break;     // colour    bmp  
+        default:
+             show_message("Selected preview colour dark bmp image is not 24 bit (other bit depths are not supported). Cannot proceed.","FAILED: ",MT_ERR,1);
+             return 1;
+      }   
+ }
+
+ if(imfmt==SAF_YUYV) { // It is not one of the allowed unsigned char formats
+         show_message("Selected preview colour dark image is not of an acceptable format. Preview colour dark field correction can't be done. Try selecting another file.","FAILED: ",MT_ERR,1);
+         return 1;
+        }                 
+
+    sprintf(Selected_PCD_filename,"%s",filename);
+    PrevCD_Pending=1;
+    gtk_widget_set_sensitive (chk_usepcd,TRUE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_upc],TRUE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_upc2],TRUE);
+
+    sprintf(msgtxt,"You selected preview colour dark image: %s\nWill attempt to load and process it when you click 'Apply',",name_from_path(Selected_PCD_filename));
+    show_message(msgtxt,"FYI: ",MT_INFO,1);
+
+   return 0;
+}
+
+static void btn_cs_load_pcd_click(GtkWidget *widget, gpointer data) 
+// This just gets the file name and checks the format - it doesn't load
+// the image. Acceptable input images can only be 24 bpp BMP or binary ppm.
+{
+ gint res;
+ GtkFileChooserAction fca_open = GTK_FILE_CHOOSER_ACTION_OPEN;
+ GtkFileChooser *pcd_load_chooser;  // Preview colour dark field image
+ GtkFileFilter  *pcd_ppm_filter;
+ GtkFileFilter  *pcd_bmp_filter;
+ 
+ PrevCD_Pending=0;
+ 
+ // Set up the 'Preview colour dark image' dialogue with the image choosing
+ // settings. We only show this when the user clicks the [Select] button in the
+ // camera settings window: 
+                                     
+ pcd_ppm_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (pcd_ppm_filter,"ppm images");
+ gtk_file_filter_add_pattern (pcd_ppm_filter, "*.ppm");
+                                     
+ pcd_bmp_filter  = gtk_file_filter_new();
+ gtk_file_filter_set_name (pcd_bmp_filter,"bmp images");
+ gtk_file_filter_add_pattern (pcd_bmp_filter, "*.bmp");
+
+ load_file_dialog = gtk_file_chooser_dialog_new ("Load a Preview Colour Dark Image",
+                                      GTK_WINDOW(Win_main),
+                                      fca_open,
+                                      "_Cancel",
+                                      GTK_RESPONSE_CANCEL,
+                                      "_Open",
+                                      GTK_RESPONSE_ACCEPT,
+                                      NULL);
+
+ pcd_load_chooser = GTK_FILE_CHOOSER (load_file_dialog);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (pcd_load_chooser),pcd_ppm_filter);
+ gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (pcd_load_chooser),pcd_bmp_filter);
+ gtk_file_chooser_set_filter(GTK_FILE_CHOOSER (pcd_load_chooser),pcd_bmp_filter);
+ // gtk_file_chooser_set_current_folder (pcd_load_chooser,MaskFile);
+ 
+ // Run the 'file load' dialogue
+ res = gtk_dialog_run (GTK_DIALOG (load_file_dialog));
+ if (res == GTK_RESPONSE_ACCEPT)
+  {
+   gchar *filename;
+   filename = gtk_file_chooser_get_filename (pcd_load_chooser);
+   test_selected_pcd_filename((char *)filename);
+   g_free(filename);
+  }
+
+ // Remove the filters from the file load dialogue and close it.
+ gtk_file_chooser_remove_filter(pcd_load_chooser,pcd_ppm_filter);
+ gtk_file_chooser_remove_filter(pcd_load_chooser,pcd_bmp_filter);
+ gtk_widget_destroy(load_file_dialog);
+ 
+ return;
+}
+
+void nullify_pcd(void)
+// Nullify the preview colour dark field image (set it to all zeros)
+{
+ // Re-initialise the preview mask to be all 255 across the whole field 
+ memset(Preview_ColDark, 0, PreviewImg_rgb_size*sizeof(unsigned char));
+ PrevCD_Loaded = MASK_NONE;
+ PrevCD_Perform = 0;
+
+ // GUI stuff - don't do this if the camera settings window is not
+ // visible because the dynamically allocated GUI controls will not be
+ // addressable and GTK errors will result. This situation may arise
+ // during the running of a script if the camera settings window was
+ // closed prior to running it.
+ sprintf(PCDFile,"[None]");
+ if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepcd),FALSE);
+    gtk_widget_set_sensitive (chk_usepcd,FALSE);
+    gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_upc]),"No");
+    gtk_widget_set_sensitive (CamsetWidget[windex_upc],FALSE);
+    gtk_widget_set_sensitive (CamsetWidget[windex_upc2],FALSE);
+    // Set label to show nullified ('[Full]') filename
+    gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_pcdi]), PCDFile);  
+   }
+ if(PrevCD_Pending) show_message("Any pre-existing Preview colour dark image has been nullified. Preview colour dark fielding is disabled till a new image is loaded.","FYI: ",MT_INFO,1);
+ return;
+}
+
+void set_pcd_pending(void)
+{
+ if(!strcmp(Selected_PCD_filename,"[None]") || !strcmp(Selected_PCD_filename,"[Full]") || !strcmp(Selected_PCD_filename,"[UNDF]")){
+   PrevCD_Pending=0;
+ } else PrevCD_Pending=1;
+}
+
+static int init_pcd_image(void)
+// Load any user-specified preview colour dark file and get it ready for use.
+// Check the format and support, etc.
+// Return 0 on success and the loaded image is present in Preview_ColDark.
+// Return 1 on failure and Preview_ColDark is set to all zeros.
+{
+ int lht,lwd,imfmt,idx;
+ unsigned char *tmploc;
+ int tmpimsz;
+ char msgtxt[320];
+ unsigned char cref[1024];    
+ int16_t bitcount;
+
+ if(!strcmp(Selected_PCD_filename,"[None]") || !strcmp(Selected_PCD_filename,"[Full]") || !strcmp(Selected_PCD_filename,"[UNDF]")){
+   PrevCD_Pending=0;
+   if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepcd),FALSE);
+     gtk_widget_set_sensitive (chk_usepcd,FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upc],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upc2],FALSE);
+    }
+   return 0;
+ }
+
+ // Read the image file header to get dimensions and file type.
+ // The errors shouldn't occur because we checked previously but I keep the
+ // checks for them in because when this is part of the full PARDUS server the
+ // file names will be supplied over the network from the client script and not
+ // via popup file chooser boxes (as they are here in this standalone version
+ // and where the previous checks were done).
+ if(!get_ppm_header(Selected_PCD_filename, &lht,&lwd))imfmt=SAF_RGB;// PPM colour
+ else if(!get_bmp_header(Selected_PCD_filename, &lht,&lwd,&bitcount)){ // BMP
+    switch(bitcount){
+        case 24:imfmt=SAF_BMP; break;     // colour    bmp  
+        default:
+             show_message("Selected preview mask bmp image is not 24 bit (other bit depths are not supported). Cannot proceed.","FAILED: ",MT_ERR,1);
+             nullify_pcd(); return 1;
+      }   
+ } else { // It is not one of the allowed unsigned char formats
+         show_message("Selected preview colour dark image is not of an acceptable format. No preciew colour dark correction can be done. Try selecting another file.","FAILED: ",MT_ERR,1);
+         nullify_pcd(); return 1;
+        }
+
+ tmpimsz=PreviewImg_rgb_size;
+
+ // Check dimensions are identical to current main image
+ if(lht!=PreviewHt){
+    show_message("Selected preview colour dark image is not the same height as the preview image. Cannot proceed.","FAILED: ",MT_ERR,1);
+    nullify_pcd(); return 1;
+   }     
+ if(lwd!=PreviewWd){
+    show_message("Selected preview colour dark image is not the same width as the preview image. Cannot proceed.","FAILED: ",MT_ERR,1);
+    nullify_pcd(); return 1;
+   }     
+
+ // We got memory for the colour dark image. Now get memory for a temporary
+ // array to load the selected image and try reading the image into it
+ tmploc=(unsigned char *)calloc(tmpimsz,sizeof(unsigned char));
+ if(tmploc==NULL){
+     show_message("Failed to allocate memory to store the preview colour dark image. Cannot proceed to load it.","FAILED: ",MT_ERR,1);
+     nullify_pcd(); return 1;
+    }
+
+ // We got memory, so now try reading the image into it
+ sprintf(msgtxt,"There was a problem reading the chosen preview colour dark image file. Cannot proceed.");
+ switch(imfmt){
+        case SAF_RGB:
+            if(get_ppm(Selected_PCD_filename, &tmploc)){
+              show_message(msgtxt,"FAILED: ",MT_ERR,1);
+              nullify_pcd(); free(tmploc); return 1;
+            }
+        break;
+        case SAF_BMP:
+            if(get_bmp(Selected_PCD_filename, &tmploc, &lht, &lwd, cref)){
+              show_message(msgtxt,"FAILED: ",MT_ERR,1);
+              nullify_pcd(); free(tmploc); return 1;
+            }
+        break;
+        default: // This should not happen
+         show_message("Unrecognised image format for the preview colour dark image.","Program Error: ",MT_ERR,1);
+         nullify_pcd(); free(tmploc); return 1;
+    }
+
+ // Now copy the read image into Preview_ColDark.
+
+ for(idx=0;idx<PreviewImg_rgb_size;idx++){
+     Preview_ColDark[idx]=tmploc[idx];
+   }
+ PrevCD_Loaded = MASK_YRGB;
+
+ // we're done with the temporary array now do free it
+ free(tmploc);
+
+ // Now we set the GUI:
+ sprintf(PCDFile,"%s",Selected_PCD_filename);
+ sprintf(msgtxt,"Preview colour dark image loaded: %s",PCDFile);
+ show_message(msgtxt,"FYI: ",MT_INFO,0);
+ 
+ if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+     //set label to show filename
+     gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_pcdi]), name_from_path(PCDFile));  
+     gtk_widget_set_sensitive (chk_usepcd,TRUE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upc],TRUE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upc2],TRUE);
+
+  }
+ 
+ return 0;
+}
+
+
 int test_selected_pmsk_filename(char *filename)
 // Attempt to read the file header and see if it is suitable for use as a
 // preview mask. If successful, copy the file name into the PrevStat
@@ -10549,10 +11114,12 @@ int test_selected_pmsk_filename(char *filename)
  char msgtxt[256];
  int lht,lwd,imfmt;
  int16_t bitcount;
+
+  // The default position - we'll update it if filename passes the test.
+  PrevStat.mask_pending=0;
  
  // No useable mask selected
  if(!strcmp(filename,"[None]") || !strcmp(filename,"[Full]") || !strcmp(filename,"[UNDF]") || !strcmp(filename,"None.bmp")){
-   PrevStat.mask_pending=0;
    if(!strcmp(filename,"None.bmp")) sprintf(PrevStat.Selected_Mask_filename,"[None]");
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepmsk),FALSE);
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_dsppmsk),FALSE);
@@ -11529,6 +12096,8 @@ int update_framerate_resolutions(void)
  int fdx,fintdx,comboidx;
  struct v4l2_frmsizeenum frmsizeenum;
  struct v4l2_frmivalenum frmivalenum;
+ float currfr,maxfr;
+ unsigned int mdenom,mnum;
  
  // Query the camera to list the device's frame sizes for the current image
  // stream format into the frame size drop-down list
@@ -11564,14 +12133,23 @@ int update_framerate_resolutions(void)
                                    // because this is going to be the
                                    // maximum frame rate for the current
                                    // resolution entry in the combo list
+         currfr=maxfr=0.0; // To evaluate the actual frame rate
+         mdenom=mnum=1;    // Maximum frame rate integers
          while(0 == ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &frmivalenum)){
               sprintf(ctrl_name2," at %u/%u fps",frmivalenum.discrete.denominator,frmivalenum.discrete.numerator);
               sprintf(msgtxt,"\t\tFrame rate [%d]%s",fintdx,ctrl_name2);
               show_message(msgtxt,"",MT_INFO,0);
-              if(frmivalenum.discrete.denominator>maxframerate[comboidx]) maxframerate[comboidx]=frmivalenum.discrete.denominator / frmivalenum.discrete.numerator;
+              currfr=(float)(frmivalenum.discrete.denominator)/(float)(frmivalenum.discrete.numerator);
+              if(currfr>maxfr){
+                 mdenom=frmivalenum.discrete.denominator;
+                 mnum=frmivalenum.discrete.numerator;
+                 maxfr=currfr;
+                }
               fintdx++;
               frmivalenum.index=fintdx;
              }
+         maxframerate[comboidx]=mdenom / mnum;
+         sprintf(ctrl_name2," at %u/%u fps",mdenom,mnum);
          // Done enumerating frame intervals for this resolution.
          sprintf(msgtxt,"%s%s",ctrl_name,ctrl_name2);
          gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT (combo_sz),NULL,msgtxt);
@@ -11994,6 +12572,32 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
    }
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_ppi]),numstr);
   sprintf(msgtxt,"You chose: Preview pre-process - Invert intensities? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Flip horizontal?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usefph))==TRUE){
+       prev_flip_h=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       prev_flip_h=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_fph]),numstr);
+  sprintf(msgtxt,"You chose: Preview pre-process - Flip horizontal? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
+  // Get the 'Flip vertical?' selection 
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usefpv))==TRUE){
+       prev_flip_v=1;
+       numstr = g_strdup_printf("Yes");
+   } else {
+       prev_flip_v=0 ;
+       numstr = g_strdup_printf("No");
+   }
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_fpv]),numstr);
+  sprintf(msgtxt,"You chose: Preview pre-process - Flip vertical? - %s",numstr);
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
 
@@ -12572,7 +13176,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   }  
   preview_fps = 1000/tdx;
   gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_fps]),numstr); 
-  sprintf(msgtxt,"You chose: frame rate %s fps (delay = %d)",numstr,preview_fps);
+  sprintf(msgtxt,"You chose: frame rate %s fps (delay = %d ms)",numstr,preview_fps);
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
   // Notify the timeout that it needs to update its interval parameter
@@ -12615,7 +13219,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
        if(PrevStat.mask_pending==0){
           PrevStat.mask_status=MASK_YES;
           numstr = g_strdup_printf("Yes");
-         } else { // Something went wring loading the image so nullify the mask
+         } else { // Something went wrong loading the image so nullify the mask
           PrevStat.mask_status=MASK_NO;
           numstr = g_strdup_printf("Loading Error");
           gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepmsk),FALSE);
@@ -12632,7 +13236,8 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   sprintf(msgtxt,"You chose: Use the preview mask for stats? - %s",numstr);
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
- 
+
+
   // Get the 'Display the preview mask?' selection 
   if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_dsppmsk))==TRUE && PrevStat.mskfile_loaded==MASK_YRGB){
        PrevStat.mask_show=MASK_YES;
@@ -12645,6 +13250,41 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
   sprintf(msgtxt,"You chose: Display the preview mask? - %s",numstr);
   show_message(msgtxt,"FYI: ",MT_INFO,0);
   g_free(numstr);
+
+
+  // If the user elects to use dark field correction for a colour preview,
+  // set flags accordingly
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usepcd))==TRUE){
+    // Update the preview colour dark field image
+    // This checks if  the current file name is [None] or similar and returns
+    // 0 if so. This is needed to enact any file name read from a settings file
+    // instead of the GUI file chooser:
+    set_pcd_pending();
+    // If an acceptable file name is provided try loading it:
+    if(PrevCD_Pending){
+       PrevCD_Pending=init_pcd_image();
+       //If the image loaded successfully PrevCD_Pending will now be 0
+      }
+    if(PrevCD_Pending==0){
+       PrevCD_Perform=MASK_YES;
+       numstr = g_strdup_printf("Yes");
+      } else { // Something went wrong loading the image so disable its use
+       PrevCD_Perform=MASK_NO;
+       numstr = g_strdup_printf("Loading Error");
+       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_usepcd),FALSE);
+      }
+    // If the user did not elect to use colour preview dark field correction,
+    // generate an all zero dark field subtraction image.
+   } else {
+       PrevCD_Perform=MASK_NO;
+       numstr = g_strdup_printf("No");
+   }
+
+  gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_upc]),numstr);
+  sprintf(msgtxt,"You chose: Use the preview colour dark field image? - %s",numstr);
+  show_message(msgtxt,"FYI: ",MT_INFO,0);
+  g_free(numstr);
+
 
  // Has the preview mask or mask status changed?
  pmask_status_changed=(pmask_status_changed!=PrevStat.mask_status)?1:0;
@@ -12942,7 +13582,10 @@ static int add_settings_line_to_gui(const gchar *ctrl_value, const gchar *ctrl_n
          markup = g_markup_printf_escaped (format2, ctrl_name);
        break;
        case 1: // Normal font, subheading
-       default:
+         markup = g_markup_printf_escaped (format1, ctrl_name);
+       break;
+       default:// This should not happen - bad programming if it does
+         show_message("Undefined heading markup!","Program Error: ",MT_ERR,1);
          markup = g_markup_printf_escaped (format1, ctrl_name);
        break;
      }
@@ -12968,7 +13611,7 @@ static int add_settings_line_to_gui(const gchar *ctrl_value, const gchar *ctrl_n
   gtk_widget_show(CamsetWidget[windex]);
   // For controls that are not custom ones supplied by PARD Capture
   // but are read from the camera device itself, it may be possible to
-  // allow interactive real-time setting of these with the GUI slider.
+  // allow [I]nteractive real-time setting of these with the GUI [S]lider: 'IS'.
   // So create a callback function on the edit box so that the user can
   // select that value to be the one linked to the interactive control
   // slider.
@@ -13005,7 +13648,6 @@ static int add_settings_custom_widget(GtkWidget *cwidget, int *cwidx, const char
    *cwidx=0;
    gtk_grid_attach (GTK_GRID (grid_camset), cwidget, 0, rowdex, 1, 1);
    gtk_widget_show(cwidget);
-   if(next_windex()) return 1;
    *cwidx = windex; // Make a note that this index is for this widget's current value label
    numstr = g_strdup_printf("%s",ctxt);
    CamsetWidget[*cwidx]=gtk_label_new (numstr);  cswt_id[*cwidx]= CS_WTYPE_LABEL;
@@ -13014,11 +13656,14 @@ static int add_settings_custom_widget(GtkWidget *cwidget, int *cwidx, const char
    gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[*cwidx], 1, rowdex, 1, 1);
    gtk_widget_show(CamsetWidget[*cwidx]);    // Show the current value label next to the widget
    if(next_windex()) return 1;
-   CamsetWidget[windex]=gtk_label_new (ltxt);  cswt_id[windex]= CS_WTYPE_LABEL; // The widget's desription label
+   numstr = g_strdup_printf("%s",ltxt);
+   CamsetWidget[windex]=gtk_label_new (numstr);  cswt_id[windex]= CS_WTYPE_LABEL; // The widget's desription label
+   g_free(numstr);
    gtk_widget_set_halign (CamsetWidget[windex], GTK_ALIGN_START);
    gtk_grid_attach (GTK_GRID (grid_camset), CamsetWidget[windex], 2, rowdex, 1, 1);
    gtk_widget_show(CamsetWidget[windex]);
    rowdex++;
+   if(next_windex()) return 1;
   return 0;
 }
 
@@ -13055,8 +13700,11 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
 
  
  
- windex = windex_gn = windex_bs = windex_camfmt = windex_safmt = 0;
- windex_fps = windex_plut = windex_imroot = 0;
+ windex = 0;
+
+ // Entry box / Label windex handles (as opposed to check/combo box windexes)
+ windex_gn = windex_bs = windex_camfmt = windex_safmt = 0;
+ windex_fps = windex_plut = windex_imroot = windex_fit = 0;
  windex_fno = windex_sz = windex_avd = windex_to = windex_rt = 0;
  windex_srn = windex_srd = windex_jpg = windex_del = 0;
  windex_lsr = windex_lsg = windex_lsb = 0;
@@ -13453,6 +14101,18 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
    (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_useppi)))?"Yes":"No",
    "Invert intensities?")) return TRUE;
 
+// Now add the 'Flip horizontal?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_usefph, &windex_fph, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usefph)))?"Yes":"No",
+   "Flip horizontal?")) return TRUE;
+
+// Now add the 'Flip vertical?' check box and make it
+// visible and create its current value and description labels
+   if(add_settings_custom_widget(chk_usefpv, &windex_fpv, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usefpv)))?"Yes":"No",
+   "Flip vertical?")) return TRUE;
+
 // Now add the 'Display Laplacian? [Monochrome only]' check box and make it
 // visible and create its current value and description labels
    if(add_settings_custom_widget(chk_useppl, &windex_ppl, 
@@ -13582,6 +14242,33 @@ static gboolean on_camset_show (GtkWidget *widget, GdkEvent  *event,  gpointer  
    if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"_________________________\n",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
    rowdex++; 
 
+       
+// Now add the 'Use the preview colour dark field image?' check box and make it
+// visible and create its current value and description labels
+   windex_upc2=0;
+   if(add_settings_custom_widget(chk_usepcd, &windex_upc, 
+   (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chk_usepcd)))?"Yes":"No",
+   "Use the preview colour dark field image?")) return TRUE;
+   windex_upc2=windex; // The description text - need this so I can make
+                       // it 'insensitive' or 'sensitive'
+                             
+// Now add the 'Preview colour dark image' button and create its
+// current value and description labels
+   if(PrevCD_Loaded==MASK_NONE) sprintf(fname,"[None]");
+    else sprintf(fname,"%s",name_from_path(PCDFile));
+   if(add_settings_custom_widget(btn_cs_load_pcd, &windex_pcdi, fname,"Preview colour dark image")) return TRUE;
+   if(PrevCD_Loaded==MASK_NONE){
+     gtk_widget_set_sensitive (chk_usepcd,FALSE);
+     gtk_label_set_text(GTK_LABEL(CamsetWidget[windex_upc]),"No");
+     gtk_widget_set_sensitive (CamsetWidget[windex_upc],FALSE);
+     gtk_widget_set_sensitive (CamsetWidget[windex_upc2],FALSE);
+
+   }
+
+ // Add a separator
+   if(add_settings_line_to_gui((const gchar *)"0", (const gchar *)"_________________________\n",GTK_INPUT_PURPOSE_EMAIL)) return TRUE;
+   rowdex++; 
+
 
 
 
@@ -13633,7 +14320,7 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
  // add entries). We do this before destroying the text widgets to avoid
  // errors of calling out to non-existant text label widgets
  gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(combo_sz)); 
- 
+
  // First delete text in edit boxes - needed otherwise there are "pango"
  // run-time critical warnings of the type: Pango-CRITICAL **:
  // pango_layout_get_cursor_pos: assertion 'index >= 0 && index <=
@@ -13641,11 +14328,16 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
  // If control widgets were created, look for those with edit boxes and
  // delete the edit box text
   if(windex){ 
+   char clstr[5];
+   sprintf(clstr, "    ");
    for(ctrlindex=0;ctrlindex<windex;ctrlindex++){
        switch(cswt_id[ctrlindex]){
            case CS_WTYPE_ENTRY:
             gtk_editable_delete_text(GTK_EDITABLE(CamsetWidget[ctrlindex]), 0, -1);
+            gtk_widget_destroy(GTK_WIDGET(CamsetWidget[ctrlindex]));
+            break;
            case CS_WTYPE_LABEL:
+            gtk_label_set_text(GTK_LABEL(CamsetWidget[ctrlindex]), clstr);
             gtk_widget_destroy(GTK_WIDGET(CamsetWidget[ctrlindex]));
            break;
            default: break;
@@ -13654,6 +14346,7 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
         cswt_id[ctrlindex]=CS_WTYPE_UNDEF;
       }
   }
+
   // Unfade settings button on main window (if we are not in a delayed
   // start countdown):
   if(!Delayed_start_in_progress)
@@ -13699,6 +14392,10 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
   hide_remove_from_container(chk_useppl,GTK_CONTAINER(grid_camset)); 
   // Hide the Invert? selector check box
   hide_remove_from_container(chk_useppi,GTK_CONTAINER(grid_camset)); 
+  // Hide the Flip horizontal? selector check box
+  hide_remove_from_container(chk_usefph,GTK_CONTAINER(grid_camset)); 
+  // Hide the Flip vertical? selector check box
+  hide_remove_from_container(chk_usefpv,GTK_CONTAINER(grid_camset)); 
   // Hide the Focusser use absolute Laplacian? selector check box
   hide_remove_from_container(chk_usefls,GTK_CONTAINER(grid_camset)); 
   // Hide the use preview mask selector check box 
@@ -13707,6 +14404,10 @@ static gboolean on_camset_delete_event (GtkWidget *widget, GdkEvent  *event,  gp
   hide_remove_from_container(chk_dsppmsk,GTK_CONTAINER(grid_camset)); 
   // Hide the preview mask file selector button
   hide_remove_from_container(btn_cs_load_pmsk,GTK_CONTAINER(grid_camset)); 
+  // Hide the use preview colour dark selector check box 
+  hide_remove_from_container(chk_usepcd,GTK_CONTAINER(grid_camset)); 
+  // Hide the preview colour dark file selector button
+  hide_remove_from_container(btn_cs_load_pcd,GTK_CONTAINER(grid_camset)); 
   // Hide the use dark field correction selector check box
   hide_remove_from_container(chk_usedfcor,GTK_CONTAINER(grid_camset)); 
   // Hide the dark field correction reference file selector button
@@ -13774,6 +14475,96 @@ static void grab_prev_adjust_value (GtkSpinButton *button, gpointer padjtype)
  return;
 }
 
+static void close_cam_with_query(char *query_message, int just_close)
+{
+ gint choice;
+
+ gtk_window_set_title (GTK_WINDOW (dlg_choice), "Close Camera?");
+ gtk_message_dialog_set_markup(GTK_MESSAGE_DIALOG(dlg_choice),(const char *)query_message);
+ choice = gtk_dialog_run(GTK_DIALOG(dlg_choice));
+ if(choice == GTK_RESPONSE_YES)
+  {
+
+   if(gtk_widget_is_visible(win_cam_settings)==TRUE){
+     on_camset_delete_event (win_cam_settings, NULL,  btn_cam_settings);
+    }
+   show_message("> Closing camera connection.","",MT_INFO,0);
+   if(Need_to_preview==PREVIEW_ON){ // Stop any previewing first.
+       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_cam_preview),FALSE);
+      }
+
+   if(just_close){ // No need to reset resolution to VGA, just close:
+     if(camera_status.cs_streaming) stop_streaming();
+     uninit_device();
+     close_device();
+     goto done_closing;
+    }
+
+   // Close and uninitialise device while also resetting dims to VGA and
+   // nullify any mask / flat field  / dark field image. This is done in
+   // preparation for a possible change of video input device.
+  
+   Selected_Ht = 480;
+   Selected_Wd = 640; 
+  
+   switch(set_image_dims_to_VGA())
+    {
+      case CID_OK: // All OK - nothing more to do. No need to set
+                   // Preview_changed because set_image_dims_to_VGA()
+                   // will do this if it succeeds in setting the new
+                   // dimnensions and, if it fails, we set the
+                   // Preview_changed flag in the cases below. The only
+                   // other option is that change_image_dimensions()
+                   // returns CID_OK because the new image dimensions
+                   // have not changed at all from the previous ones -
+                   // in which case the preview does not need to be
+                   // updated due to a dimension change.
+      break;
+      case CID_NOCLOSE: // Failed - couldn't close the imaging device
+       show_message("Failed to close the current device. Terminate the program now to avoid a crash.","Error: ",MT_ERR,1);
+      break;
+      // User error notices for the following three cases will have been
+      // given via change_image_dimensions() so no need to create new
+      // error pop up dialogue boxes here:
+      case CID_NOREVERT: // Failed and couldn't even revert to previous.
+                         // The program could crash if not exited soon!
+      case CID_REVERTED: // Failed to change resolution - reverted back
+                         // to previous resolution.
+      case CID_NOSTREAM: // Succeeded in changing dimensions but failed
+                         // to reopen the imaging stream.
+      break;
+      default: // This should not happen unless the program was edited incorrectly.
+       show_message("Unrecognised return value for change_image_dimensions().","Program Error: ",MT_ERR,1);
+      break;
+    }
+    // Update the preview settings
+    update_preview_settings(0);
+    
+   }
+
+done_closing:
+ return;
+}
+
+
+static void combo_vnum_selected(GtkWidget * combovn, GdkEvent * event, gpointer data)
+{
+ gchar *numstr;
+ int idx;
+
+ numstr = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combovn));
+ sscanf(numstr,"%d",&idx);
+ g_free(numstr);
+
+ DevNum=idx;
+
+ sprintf(Dev_Name,"/dev/video%d",DevNum);
+
+ printf("\nSelecting device: %s\n",Dev_Name);
+
+ return;
+}
+
 static gboolean key_press_event_wm (GtkWidget * widget, GdkEvent * event, gpointer data)
 {
  GdkEventKey key = event->key;
@@ -13796,22 +14587,54 @@ static gboolean key_press_event_wm (GtkWidget * widget, GdkEvent * event, gpoint
              }
         case GDK_KEY_c: // Close camera
              if(camera_status.cs_opened){
-               gint choice;
-               gtk_window_set_title (GTK_WINDOW (dlg_choice), "Close Camera?");
-               gtk_message_dialog_set_markup(GTK_MESSAGE_DIALOG(dlg_choice),"Do you really want to close the camera connection?");
-               choice = gtk_dialog_run(GTK_DIALOG(dlg_choice));
-               if(choice == GTK_RESPONSE_YES)
-                {
-                 show_message("> Closing camera connection.","",MT_INFO,0);
-                 if(gtk_widget_is_visible(win_cam_settings)==TRUE) gtk_window_close(GTK_WINDOW(win_cam_settings));
-                 if(Need_to_preview==PREVIEW_ON){ // Stop any previewing first.
-                     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_cam_preview),FALSE);
-                    }
-                if(camera_status.cs_streaming) stop_streaming();
-                if(camera_status.cs_initialised) uninit_device();
-                close_device();
-                Camera_was_closed=1;
-               }
+               close_cam_with_query("Do you really want to close the camera connection?",1);
+             }
+        return TRUE;
+        case GDK_KEY_v: // Select video device
+             if(camera_status.cs_opened){
+               close_cam_with_query("This action will close the current camera connection. Do you want to proceed?",0);
+             }
+             if(!camera_status.cs_opened){
+               GtkWidget *dialog, *label, *content_area, *combo_vnum;
+               GtkDialogFlags flags;
+               int idx;
+               const gchar *vnumstr[] = {"0","1","2","3","4","5","6","7","8","9"};
+              
+               // Create the widgets
+               flags =  GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT;
+               dialog = gtk_dialog_new_with_buttons ("Video device",
+                                                     GTK_WINDOW(Win_main),
+                                                     flags,
+                                                     "OK",
+                                                     GTK_RESPONSE_NONE,
+                                                     NULL);
+               content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+
+               // Create the main label for the dialog
+               label = gtk_label_new ("Select video device channel");
+
+               // Create the video device number selection combo
+               // Create the combo box and append the string values to it.
+               combo_vnum = gtk_combo_box_text_new ();
+               for(idx = 0; idx < 10; idx++){
+                   gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo_vnum), vnumstr[idx]);
+                  }
+               // Choose the default item index to display from the beginning
+               gtk_combo_box_set_active (GTK_COMBO_BOX (combo_vnum), DevNum);
+               g_signal_connect (combo_vnum, "changed", G_CALLBACK (combo_vnum_selected),NULL);
+              
+               // Ensure that the dialog box is destroyed when the user responds
+              
+               g_signal_connect_swapped (dialog,
+                                         "response",
+                                         G_CALLBACK (gtk_widget_destroy),
+                                         dialog);
+              
+               // Add the label & combo, and show everything we’ve added
+              
+               gtk_container_add (GTK_CONTAINER (content_area), label);
+               gtk_container_add (GTK_CONTAINER (content_area), combo_vnum);
+               gtk_widget_show_all (dialog);               
              }
         return TRUE;
         case GDK_KEY_bracketleft:  // Move the histogram overlay position
@@ -14093,6 +14916,11 @@ if(!strcmp(argv[1],"-l")){
 //                                                                    //
 //====================================================================//
 
+   // The camera tasks label
+   lab_cam_tasks=gtk_label_new ("CAMERA TASKS (no device)");
+   gtk_widget_set_halign (lab_cam_tasks, GTK_ALIGN_CENTER);
+
+
    // The camera status label
    lab_cam_status=gtk_label_new ("Closed");
    gtk_widget_set_halign (lab_cam_status, GTK_ALIGN_START);
@@ -14196,6 +15024,15 @@ if(!strcmp(argv[1],"-l")){
     }
    sprintf(PrevStat.MaskFile,"/"); // Initialising to root - will need to change
                                    // if porting to non-*ix OS
+
+   Preview_ColDark= (unsigned char *)calloc(PreviewImg_rgb_size,sizeof(unsigned char));
+   if(Preview_ColDark==NULL){
+         show_message("No RAM available for preview colour dark field image.","Error: ",MT_ERR,0);
+         return 1;
+    }
+   PrevCD_Loaded = MASK_NONE;
+
+
 
    Preview_LUT=LUT_LIN;
    set_curr_lut(Preview_LUT);
@@ -14409,7 +15246,7 @@ if(!strcmp(argv[1],"-l")){
 
 
   gridrow=0;
-  gtk_grid_attach (GTK_GRID (grid_main), gtk_label_new ("CAMERA TASKS"),   0, gridrow++, 12,1);
+  gtk_grid_attach (GTK_GRID (grid_main), lab_cam_tasks,                    0, gridrow++, 12,1);
   gtk_grid_attach (GTK_GRID (grid_main), gtk_label_new ("Camera Ops"),     0, gridrow,   2, 1);
   gtk_grid_attach (GTK_GRID (grid_main), gtk_label_new ("Camera status:"), 6, gridrow,   1, 1);
   gtk_grid_attach (GTK_GRID (grid_main), lab_cam_status,                   7, gridrow,   5, 1);
@@ -14510,6 +15347,10 @@ if(!strcmp(argv[1],"-l")){
    // Select the image to use as a preview mask
    add_button(&btn_cs_load_pmsk,"Select",GTK_ALIGN_START);
    g_signal_connect (btn_cs_load_pmsk, "clicked", G_CALLBACK (btn_cs_load_pmask_click), NULL);
+    
+   // Select the image to use as a preview colour dark field image
+   add_button(&btn_cs_load_pcd,"Select",GTK_ALIGN_START);
+   g_signal_connect (btn_cs_load_pcd, "clicked", G_CALLBACK (btn_cs_load_pcd_click), NULL);
    
    // Load settings file button
    add_button(&btn_cs_load_cset,"Load...",GTK_ALIGN_START);
@@ -14597,6 +15438,12 @@ if(!strcmp(argv[1],"-l")){
     // Create the Invert intensities? option check box
     add_checkbox(&chk_useppi);
 
+    // Create the Flip horizontal? option check box
+    add_checkbox(&chk_usefph);
+
+    // Create the Flip vertical? option check box
+    add_checkbox(&chk_usefpv);
+
     // Create the Use mean abs. Laplacian? option check box
     add_checkbox(&chk_usefls);
 
@@ -14620,6 +15467,10 @@ if(!strcmp(argv[1],"-l")){
     add_checkbox(&chk_dsppmsk);
     gtk_widget_set_sensitive (chk_dsppmsk,FALSE);
  
+    // Create the use preview colour dark field option check box
+    add_checkbox(&chk_usepcd);
+    gtk_widget_set_sensitive (chk_usepcd,FALSE);
+
 
     grid_camset = gtk_grid_new();
     scrolwin_camset = gtk_scrolled_window_new  (NULL,NULL);
@@ -14734,6 +15585,16 @@ if(!strcmp(argv[1],"-l")){
   sprintf(MaskFile,"/"); // Initialising to root - will need to change
                          // if porting to non-*ix OS
   
+  
+  // Set default preview colour dark field reference image file name string
+  PCDFile = (char *)calloc(FILENAME_MAX,sizeof(char));
+  if(PCDFile==NULL){
+         show_message("No RAM available for preview colourdark field correction image file name.","Error: ",MT_ERR,0);
+         return 1;
+   }
+  sprintf(PCDFile,"/"); // Initialising to root - will need to change if
+                       // porting to non-*ix OS
+
   // Initialise memory for the flat field correction image
   FF_Image = (double *)calloc(2,sizeof(double));
   if(FF_Image==NULL){
@@ -14771,13 +15632,17 @@ if(!strcmp(argv[1],"-l")){
   mask_alloced=MASK_NO;
   sprintf(Selected_Mask_filename,"[None]");
   
-  // Set the default image capture device to /dev/video0
-  dev_name = (char *)calloc(FILENAME_MAX,sizeof(char));
-  if(dev_name==NULL){
+  // Set the default image capture device to (this will be /dev/video0)
+  Dev_Name = (char *)calloc(FILENAME_MAX,sizeof(char));
+  if(Dev_Name==NULL){
          show_message("No RAM available for device name.","Error: ",MT_ERR,1);
          return 1;
    }
-  sprintf(dev_name,"/dev/video0");
+  sprintf(Dev_Name,"/dev/video%d",DevNum);
+
+  // Set preview geometry defaults
+  prev_flip_h=0;
+  prev_flip_v=0;
 
   // Set image colour format defaults   
   CamFormat = V4L2_PIX_FMT_YUYV;
