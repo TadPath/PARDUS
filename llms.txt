@@ -8,6 +8,8 @@
 - **Universal Arrays:** Every variable is an array. Use `var[index]` for size > 1.
 - **Left-Hand Master Casting:** The target variable's type determines how the source data is converted.
 - **Whitespace:** Spaces between arguments are collapsed. Use system variable `Space` or `cat_char 32` for explicit formatting.
+- **Static Definitions Only:** `def_var` and `def_array` are permanent global registrations. **Never** place a definition inside a function, loop, or recursive path. Define all registers at the top of the script.
+
 
 ## Control Flow & Logic
 - **First-Class Control Flow:** `goto` and `call_func` accept variables.
