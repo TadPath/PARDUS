@@ -1,0 +1,134 @@
+Pardus pcs 1
+verbosity 1
+
+###############################################
+# Demonstrates the Turing complete nature of  #
+# PCS with a classical bubblesort algorithm.  #
+#                                             #
+# This is essentially the same program that   #
+# AI wrote but I have edited it to use the    #
+# PCS language features more efficiently by   #
+# making use of conditional function calls    #
+#  and the loop_while function instead of     #
+# lots of manual do_if and goto statements.   #
+###############################################
+
+
+# --- DATA SETUP ---
+def_array int Data 10 0
+set_var Data[0] 45
+set_var Data[1] 12
+set_var Data[2] 89
+set_var Data[3] 3
+set_var Data[4] 56
+set_var Data[5] 21
+set_var Data[6] 7
+set_var Data[7] 33
+set_var Data[8] 99
+set_var Data[9] 14
+
+# --- GLOBAL REGISTER SETUP ---
+def_var int i 0
+def_var int j 0
+def_var int limit 9
+def_var int inner_limit 0
+def_var int next_j 0
+def_var int val_a 0
+def_var int val_b 0
+def_var int p 0
+def_var string msg _
+
+# --- MAIN ENGINE ---
+def_func main
+    set_str msg ---_UNSORTED_DATA_---
+    print_value msg 2
+    call_func Print_Data
+
+    set_var i 0
+    call_func Outer_Loop
+
+    set_str msg ---_SORTED_DATA_---
+    print_value msg 2
+    call_func Print_Data
+return
+
+# --- SORTING LOGIC ---
+def_func Outer_Loop
+    set_var j 0
+    call_func Inner_Loop
+
+    add_var i 1
+    set_condexp i < limit
+    call_func Outer_Loop if Condexp
+
+return
+
+def_func Inner_Loop
+    set_var next_j j
+    add_var next_j 1
+
+    # Load values for comparison
+    set_var val_a Data[j]
+    set_var val_b Data[next_j]
+
+    set_condexp val_a > val_b
+    do_if Condexp
+        # Swap
+        set_var Data[j] val_b
+        set_var Data[next_j] val_a
+    enddo
+
+    add_var j 1
+
+    # Calculate inner limit: limit - i
+    set_var inner_limit limit
+    sub_var inner_limit i
+
+    set_condexp j < inner_limit
+    call_func Inner_Loop if Condexp
+return
+
+# --- UTILITY ---
+def_func Print_Data
+    set_var p 0
+
+    set_condexp p < 10
+    loop_while Condexp
+        print_value Data[p] 2
+        add_var p 1
+        set_condexp p < 10
+    endloop
+return
+
+exit
+
+Scratchpad:
+
+The output looks like this:
+
+	Script: Begin execution ...
+	[  2]: verbosity 1
+---_UNSORTED_DATA_---
+45
+12
+89
+3
+56
+21
+7
+33
+99
+14
+---_SORTED_DATA_---
+3
+7
+12
+14
+21
+33
+45
+56
+89
+99
+FYI: Finished at: Tue Apr 28 22:19:39 2026
+FYI: That took: 000:00:00:00
