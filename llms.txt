@@ -1,0 +1,105 @@
+# PCS Language Specification (PARDUS)
+> High-density reference for AI coding agents. Optimized for version 1.
+
+## Core Language Constraints
+- **Atomic Statements Only:** No nested expressions (e.g., no `x = (y + z)`). One operation per line.
+- **No String Delimiters:** Quotes are literal data. Use `set_str msg Hello World` (no quotes around Hello World).
+- **Global Scope:** No local variables. Use unique prefixes (e.g., `func_varname`) to prevent collisions.
+- **Universal Arrays:** Every variable is an array. Use `var[index]` for size > 1.
+- **Left-Hand Master Casting:** The target variable's type determines how the source data is converted.
+- **Whitespace:** Spaces between arguments are collapsed. Use system variable `Space` or `cat_char 32` for explicit formatting.
+
+## Control Flow & Logic
+- **First-Class Control Flow:** `goto` and `call_func` accept variables.
+- **Non-Local Jumps:** `goto` can jump across function boundaries for "Panic Exits" or recovery points.
+- **Recursive Functions:** `call_func` supports deep recursion.
+- **Branching:** Use `set_condexp` to generate a `0` or `1` result in the `Condexp` system variable, then use `do_if Condexp`.
+- **Logic Gates:** Use Boolean math:
+  - **AND:** `set_condexp (A + B) == 2`
+  - **OR:** `set_condexp (A + B) > 0`
+
+## AI Design Patterns
+
+### 1. The Panic Jump (Error Handling)
+Jumping from deep recursion to a main-block label:
+```pcs
+def_func Worker
+  set_condexp ErrorState == 1
+  do_if Condexp
+    goto recovery_point
+  enddo
+  call_func Worker
+return
+```
+
+### 2. Jump Tables (Dynamic State)
+```pcs
+set_var States[0] IDLE_STATE
+set_var States[1] BUSY_STATE
+goto States[CurrentIndex]
+```
+
+### 3. The Scratchpad (Persistent Memory)
+Everything below the `exit` command is ignored by the interpreter. Use this for:
+- JSON metadata
+- Future task planning
+- Reasoning/Chain-of-Thought logs
+
+## System Prompt for PCS Code Generation
+"Act as an expert PCS programmer for PARDUS. Maintain a flat logic structure with no nested expressions. Use non-local goto jumps for error recovery. Perform all math in atomic steps via math_var/add_var. Every variable is an array. Place a detailed execution plan in the scratchpad zone below the exit command."
+
+## Extended Documentation
+- Full Language Manual: [./docs/pcs/pcs_ref_ai.md]
+- Working Code Samples: [./examples/pcs/]
+
+## Full Command Dictionary
+Format: `command <required_args> [optional_args]` - Description
+
+### Variable & String Management
+- `def_var <type> <name> <val>` - Define variable (array size 1).
+- `def_array <type> <name> <size> <val>` - Define array of specific size.
+- `set_var <name> <val>` - Set variable value.
+- `set_str <var> [str1] [str2...]` - Set string (space-separated, no quotes).
+- `cat_str <var> [str1...]` - Append strings to variable.
+- `cat_char <var> <char_int>` - Append Unicode character by integer ID.
+
+### Math & Logic
+- `add_var / sub_var / mul_var / div_var <var> <val>` - Atomic arithmetic.
+- `math_var <receptor> <func> [val]` - Advanced math operations.
+- `set_condexp <val1> <condition> <val2>` - Sets system `Condexp` (0 or 1).
+- `milliduration <start_ms> <receptor>` - Calculate elapsed time in ms.
+
+### Control Flow
+- `def_func <label>` - Open function block (constant label only).
+- `return` - Close function block.
+- `call_func <label> [if <val>]` - Call function (label can be variable).
+- `goto <label> [if <val>]` - Jump to label (label can be variable).
+- `do_if <val> / else / enddo` - Conditional branching block.
+- `loop_while <val> / endloop` - Standard loop block.
+- `sleep <seconds>` - Pause execution (supports floats).
+- `exit` - Terminate script (Mandatory).
+
+### Actuator (Hardware) Control
+- `def_actuator <type> <index> <name>` - Define new hardware actuator.
+- `act_set / act_get <id> <info_ID> <vars...>` - Set/Get hardware properties.
+- `act_moveby / act_moveto <id> <duration> <pos...>` - Motion control.
+- `act_halt <id> / act_home <id> <type>` - Stop or Home actuator.
+- `act_movereport <res_var> <type> <id>` - Non-blocking motion poll.
+- `act_unit <type> <unit>` - Toggle between steps and calibrated units.
+
+### Imaging & Camera
+- `select_camera <num>` - Set active camera.
+- `camera_set <ID> <val>` - Set camera hardware control.
+- `grab_image` - Capture full-size image to client.
+- `get_preview <ON|OFF> <x> <y>` - Capture preview frame.
+- `frames_to_average / frames_to_skip <num>` - Image quality settings.
+- `save_path / save_root / save_format` - Image file destination settings.
+- `autofocus / af_setup / af_ccrit` - Server-side autofocus suite.
+
+### System & XY Scanning
+- `execute_system <cmd> [args]` - Blocking shell command.
+- `execute_daemon <cmd> [args]` - Non-blocking background process.
+- `xys_start / xys_finish / xys_scan` - Configure and run XY stage scans.
+- `xys_process <cmd> [args]` - Run external command during scan.
+- `verbosity <level>` - Set logging detail (0-3).
+- `update_gui_coords` - Sync server coordinates to GUI.
