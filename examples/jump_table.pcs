@@ -1,0 +1,106 @@
+Pardus pcs 1
+verbosity 3
+
+# PCS script to illustrate jump table functionality
+# Non-local jumps
+
+# --- SETUP ---
+def_array string States 3 IDLE
+set_str States[1] SCANNING
+set_str States[2] ERROR_RECOVERY
+
+def_var int CurrentState 0
+def_var int Iterations 0
+def_var string msg _
+
+# --- MAIN ENGINE ---
+def_func main
+    set_str msg Starting_AI_Pattern_Demo
+    print_value msg 2
+
+    # State 0: IDLE
+    set_var CurrentState 0
+    call_func State_Handler
+
+    # State 1: SCANNING
+    set_var CurrentState 1
+    call_func State_Handler
+
+    set_str msg Demo_Completed_Successfully
+    print_value msg 2
+    goto end_program
+
+# RECOVERY POINT: Non-local jump target
+panic_recovery:
+    set_var CurrentState 2
+    set_str msg Initiating_Recovery_Sequence
+    print_value msg 2
+    set_str msg Recovery_Complete_Shutting_Down  # Note 31 bytes is the maximum
+                                                 # size of any argument. If this
+                                                 # text were longer it would get
+                                                 # truncated.
+    print_value msg 2
+
+end_program:
+return
+
+# --- STATE DISPATCHER ---
+def_func State_Handler
+    # Jump to the label stored in the array
+    goto States[CurrentState]
+
+IDLE:
+    set_str msg System_is_Idle
+    print_value msg 2
+    goto finish_dispatch
+
+SCANNING:
+    set_str msg System_is_Scanning
+    print_value msg 2
+    call_func Deep_Hardware_Check
+    goto finish_dispatch
+
+ERROR_RECOVERY:
+    # This state handled by panic_recovery jump
+    goto finish_dispatch
+
+finish_dispatch:
+return
+
+# --- RECURSIVE CHECK ---
+def_func Deep_Hardware_Check
+    add_var Iterations 1
+
+    set_condexp Iterations == 3
+    do_if Condexp
+        set_str msg !!!_HARDWARE_FAILURE_DETECTED_!!!
+        print_value msg 2
+        # PANIC JUMP: Bypasses 'return', jumps to label in 'main'
+        goto panic_recovery
+    else
+        set_str msg Hardware_Check_Passed
+        print_value msg 2
+        call_func Deep_Hardware_Check
+    enddo
+return
+
+
+exit
+
+# --- AI SCRATCHPAD & PERSISTENT MEMORY ---
+# The interpreter ignores everything in this zone.
+# AI agents use this area for planning and state auditing.
+
+{
+  "script_metadata": {
+    "version": "1.0",
+    "description": "State Machine with Panic Recovery",
+    "ai_features_used": ["Jump Table", "Non-local Goto", "Recursive Depth Check"]
+  },
+  "state_definitions": {
+    "0": "IDLE - System waiting for command",
+    "1": "SCANNING - Active hardware loop",
+    "2": "ERROR_RECOVERY - Post-panic cleanup state"
+  },
+  "execution_notes": "The recursive hardware check is set to trigger a panic at Iterations == 3. This verifies the stack-bypass logic."
+}
