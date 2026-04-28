@@ -1,0 +1,149 @@
+Pardus pcs 1
+verbosity 1
+
+################################################################################
+# A script to demonstrate the use of UTF-8 Unicode characters to build a       #
+# custom graphical dashboard. This also demonstrates the use of print_clear    #
+# and print_cursor XY positioning for flicker-free targetted graphical motion. #
+################################################################################
+
+
+def_var int count 0
+def_var int xa_pos 0
+def_var int xb_pos 0
+def_var string border _
+def_var string msg _
+def_var string tab10 _
+def_var string motorlabel _
+
+def_func main
+  print_clear
+
+  call_func make_tab
+
+  # --- ROW 1: TOP BORDER ---
+  set_str border            # Note that single arguments have a size limit of
+  cat_str border ╔═════════ # 31 bytes. That is bytes not 'characters' because
+  cat_str border ══════════ # These Unicode characters take up 3 bytes each.
+  cat_str border ═════════╗ # That is why I could not simply set the whole
+  print_value border 2      # pattern in one argument. For ASCII all that will
+                            # happen is truncation but with Unicode truncation
+  # --- ROW 2: TITLE ---    # can lead to malformed sequences that won't print.
+  set_str msg
+  cat_char msg U+2551      # ║
+  add_var msg Space
+  add_var msg Space
+  cat_str msg ROBOTIC TELEMETRY SYSTEM
+  add_var msg Space
+  add_var msg Space
+  cat_char msg U+2551      # ║
+  print_value msg 2
+
+  # --- ROW 3: DIVIDER ---
+  set_str border
+  cat_char border U+2560   # ╠
+  set_var count 0
+  set_condexp count < 28         # By using a loop or adding smaller strings
+  loop_while Condexp             # sequentially you can easily overcome this 31
+    cat_char border U+2550 # ═   # char limit safely.
+    add_var count 1
+    set_condexp count < 28
+  endloop
+  cat_char border U+2563   # ╣
+  print_value border 2
+
+  # --- ROW 4 & 5: DATA SLOTS ---
+  set_str motorlabel A:          # This demonstrates the use of a function to
+  call_func make_motor_cell      # form repetitive motifs with only slight
+  print_value msg 2              # provided by the function 'argument' variable
+                                 # motorlabel.
+  set_str motorlabel B:
+  call_func make_motor_cell
+  print_value msg 2
+
+  # --- ROW 6: BOTTOM BORDER ---
+  set_str border
+  cat_str border ╚═════════
+  cat_str border ══════════
+  cat_str border ═════════╝
+  print_value border 2
+
+  # --- LIVE UPDATE LOOP ---
+  set_var count 0
+  set_condexp count < 10
+  loop_while Condexp
+    
+    # Calculate X: Start at 12 (to be inside the [ ) and add count
+    # Line 11 is the '[', so 12 is the first empty space.
+
+    # Update Motor A (3 lines up)
+    set_var xa_pos 12
+    add_var xa_pos count
+    print_cursor xa_pos 3
+    set_str msg
+    cat_char msg U+2588
+    print_value msg 0
+
+    # Update Motor B (2 lines up)
+    set_var xb_pos count
+    div_var xb_pos 2
+    add_var xb_pos 12
+    print_cursor xb_pos 2
+    set_str msg
+    cat_char msg U+2588
+    print_value msg 0
+
+    sleep 0.2
+    add_var count 1
+    set_condexp count < 10
+  endloop
+
+  print_cursor 0 0
+  set_str msg Telemetry Complete.
+  print_value msg 2
+
+return
+
+def_func make_tab
+  # Add 10 spaces into tab10
+  set_str tab10
+  set_var count 0
+  set_condexp count < 10
+  loop_while Condexp
+    cat_char tab10 32
+    add_var count 1
+    set_condexp count < 10
+  endloop
+return
+
+def_func make_motor_cell
+  set_str msg
+  cat_char msg U+2551      # ║
+  add_var msg Space
+  cat_str msg MOTOR
+  add_var msg Space
+  add_var msg motorlabel
+  add_var msg Space
+  cat_str msg [
+  add_var msg tab10
+  cat_str msg ]     
+  add_var msg Space
+  add_var msg Space
+  add_var msg Space
+  add_var msg Space
+  add_var msg Space
+  add_var msg Space
+  cat_char msg U+2551      # ║
+return
+
+exit
+
+The output from this function at the end of execution looks like this:
+
+╔════════════════════════════╗
+║  ROBOTIC TELEMETRY SYSTEM  ║
+╠════════════════════════════╣
+║ MOTOR A: [██████████]      ║
+║ MOTOR B: [█████     ]      ║
+╚════════════════════════════╝
+Telemetry Complete.
