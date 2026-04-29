@@ -4,6 +4,8 @@ Pardus pcs 1
 # Script to demonstrate auto-focus and XYZ motion #
 # by interactive keyboard input and with          #
 # simultaneous live preview.                      #
+# This assumes the motors have all beed defined,  #
+# matured and homed previously.                   #
 #                                   PJT 29.04.26  #
 ###################################################
 
