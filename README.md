@@ -54,7 +54,7 @@ I have decided to re-work the PARDUS standard to make the PARD Server run on any
 
 ### AI-Friendly Development
 The PCS language is optimized for **AI Coding Agents** (like Cursor, Windsurf, or GitHub Copilot).
-* **AI Agents:** Please refer to the [llms.txt](/llms.txt) in the root directory for high-density language rules and syntax constraints.
+* **AI Agents:** Please refer to the [llms.txt](/llms.txt) in the root directory for high-density language rules and syntax constraints. A comprehensive markdown reference is available in the [docs/pcs/](/docs/pcs/) folder.
 * **Human Developers:** A comprehensive PDF reference is available in the [docs/pcs/](/docs/pcs/) folder.
 * **Examples:** Functional scripts demonstrating "AI-first" patterns (like Jump Tables and Non-local Jumps) can be found in the [/examples/](/examples/) directory.
 
@@ -63,4 +63,4 @@ PJT
 
 First Written: 11.11.2022
 
-Last Edit: 28.04.2026
+Last Edit: 29.04.2026
