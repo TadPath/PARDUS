@@ -1,0 +1,174 @@
+Pardus pch 1
+
+################################################################################
+# This is a header file I use with many of my practical  scripts.              #
+# The pin mappings, direction constants, etc. used here are correct for my CNC #
+# stage setup and connections but you must edit them as required to be correct #
+# for your own machinery or else you can do serious damage to your hardware.   #
+#                                                               PJT 29.04.2026 #
+################################################################################
+
+#define INFO_ENA_STATE 1 
+#define INFO_HOMED_TO  2 
+#define INFO_DIRN1     3 
+#define INFO_DIRN2     4 
+#define INFO_DIRNC     5 
+#define INFO_DIRNP     6  
+#define INFO_MSDENOM   7 
+#define INFO_MSDEMAX   8 
+#define INFO_PULWIDTH  9 
+#define INFO_BLSTEPS   10       
+#define INFO_BLSTMAX   11
+#define INFO_CALIMAX   12
+#define INFO_STEPCOUNT 13
+#define INFO_SW_LIM1   14
+#define INFO_SW_LIM2   15
+#define INFO_NHS       16
+#define INFO_ISD_HOBL  17
+#define INFO_LIMSTATE  18
+#define INFO_PIN_PUL   19
+#define INFO_PIN_DIR   20
+#define INFO_PIN_LIM1  21
+#define INFO_PIN_LIM2  22
+#define INFO_PIN_DIAG  23
+#define INFO_PIN_ENA   24
+#define INFO_NAME_LS1  25
+#define INFO_NAME_LS2  26
+#define INFO_NAME_SW1  27
+#define INFO_NAME_SW2  28
+#define INFO_NAME_UNI  29
+#define INFO_MATURITY  30       
+#define INFO_XYZCOORDS 31
+#define INFO_DURALAM   32 
+#define INFO_STEPLAM   33 
+#define INFO_ONESTEP   34       
+#define INFO_FASTMSD   35
+#define INFO_MMODE     36
+#define INFO_TMCSGVAL  37 
+#define INFO_TMCSTATUS 38 
+#define INFO_TMCCHCONF 39 
+#define INFO_SG_BUFFPC 40
+#define INFO_SG_THRESH 41
+#define INFO_TURBO_BST 42
+#define INFO_TMCMSCNT  43
+#define INFO_TENSTEPS1 44
+#define INFO_TENSTEPS2 45
+
+    
+
+#define LIM_UNSET   0
+#define LIM_SWTC1   1
+#define LIM_SWTC2   2
+#define LIM_NULL1   3
+#define LIM_NULL2   4
+#define LIM_SOFT1   5
+#define LIM_SOFT2   6
+#define LIM_ZERO    7
+#define LIM_STALL   8
+
+#define TMC_SI_OVER_TEMP 1
+#define TMC_SI_PREO_TEMP 2
+#define TMC_SI_SHORTGNDA 3
+#define TMC_SI_SHORTGNDB 4
+#define TMC_SI_SHORTSUPA 5
+#define TMC_SI_SHORTSUPB 6
+#define TMC_SI_OPENLOADA 7
+#define TMC_SI_OPENLOADB 8
+#define TMC_SI_CS_ACTUAL 9
+#define TMC_SI_TEMP_THRS 10
+#define TMC_SI_STNDSTILL 11
+#define TMC_SI_SPRDCYCLE 12
+
+#define TMC_CI_TOFFLEVEL 1
+#define TMC_CI_HYSTSTART 2
+#define TMC_CI_HYST__END 3
+#define TMC_CI_CPBLANKTM 4
+#define TMC_CI_VSENSITIV 5
+#define TMC_CI_MRESMSDEN 6
+#define TMC_CI_INTERPOLN 7
+#define TMC_CI_DOUBLEDGE 8
+#define TMC_CI_DISSHRTTG 9
+#define TMC_CI_DISSHRTTL 10
+
+#define MM_STEALTHY 0
+#define MM_PRECISE  1
+
+#define AFFA_IGNORE     1
+#define AFFA_EXIT       2
+
+#define CCHAN_Y 1
+#define CCHAN_R 2
+#define CCHAN_G 3
+#define CCHAN_B 4
+
+
+##################################################
+# You should confirm these with practicals:      #
+#                                                #
+
+#define LIM_LEFT    1
+#define LIM_FRONT   1
+#define LIM_UP      1
+#define LIM_RIGHT   2
+#define LIM_BACK    2
+#define LIM_DOWN    2
+
+#define DIRNRBD 1
+#define DIRNLFU 0
+
+#                                                #
+##################################################
+
+
+    #################
+  ###               ###
+###  PIN DEFINITIONS  ###
+  ###               ###
+    #################
+
+#define FREE_PIN 255
+
+####################
+#  ARDUINO INPUTS  #
+####################
+
+########################################
+# Analogue pins, not going to drivers: #
+#                                      #
+#define OPTO_XL 0
+#define OPTO_XR 1
+#define OPTO_YF 2
+#define OPTO_YB 3
+#define OPTO_ZU 5
+#define OPTO_ZD 4
+#                                      #
+########################################
+
+########################################
+# Analogue pins for driver DIAG pins:  #
+#                                      #
+#define DIAG_X  8
+#define DIAG_Y  9
+#define DIAG_Z  10
+#                                      #
+########################################
+
+
+########################################
+#   ARDUINO OUTPUTS TO DRIVER INPUTS   #
+########################################
+
+#define ENA_X  33
+#define ENA_Y  34
+#define ENA_Z  35
+
+#define PUL_X  22
+#define PUL_Y  23
+#define PUL_Z  24
+
+#define DIR_X  30
+#define DIR_Y  31
+#define DIR_Z  32
+
+
+exit
