@@ -1,0 +1,97 @@
+Pardus pcs 1
+verbosity 3
+
+################################################
+# Testing array variables and autocasting.     #
+# Also note 'verbosity 3' so demonstrating     #
+# verbose output.                              #
+################################################
+
+# 1. Define the Data Array
+def_array float MyData 5 0.0
+set_var MyData[0] 10.5
+set_var MyData[1] 21.0
+set_var MyData[2] 31.5
+set_var MyData[3] 42.0
+set_var MyData[4] 52.5
+
+# 2. Define an Integer Index Map
+def_array int IntMap 3 0
+set_var IntMap[0] 4
+set_var IntMap[1] 2
+
+# 3. Define a String Index Map (Testing Autocasting)
+def_array string StrMap 2 0
+set_var StrMap[0] 3
+set_var StrMap[1] 1
+
+def_var string msg _
+
+def_func main
+  set_str msg --- Recursive Array Test Start ---
+  print_value msg 2
+
+  # Test 1: Integer Array indexing Float Array
+  # Should resolve: MyData[ IntMap[0] ] -> MyData[4] -> 52.5
+  set_str msg Testing IntMap[0] (should be 52.5):
+  print_value msg 2
+  print_value MyData[IntMap[0]]
+
+  # Test 2: String Array indexing Float Array (Autocasting Test)
+  # Should resolve: MyData[ StrMap[0] ] -> MyData["3"] -> MyData[3] -> 42.0
+  set_str msg Testing StrMap[0] (should be 42.0):
+  print_value msg 2
+  print_value MyData[StrMap[0]]
+
+  # Test 3: Double Nesting (The "Spaghetti" Test)
+  # Resolves: MyData[ IntMap[ StrMap[1] ] ] 
+  # -> StrMap[1] is 1
+  # -> IntMap[1] is 2
+  # -> MyData[2] is 31.5
+  set_str msg Testing Double Nest (should be 31.5):
+  print_value msg 2
+  print_value MyData[IntMap[StrMap[1]]]
+
+return
+exit
+
+--- Scratchpad ---
+
+Output looks like this:
+
+	Script: Begin execution ...
+	[  2]: verbosity 3
+	[ 11]: def_array float MyData 5 0.0
+	[ 12]: set_var MyData[0] 10.5
+	[ 13]: set_var MyData[1] 21.0
+	[ 14]: set_var MyData[2] 31.5
+	[ 15]: set_var MyData[3] 42.0
+	[ 16]: set_var MyData[4] 52.5
+	[ 19]: def_array int IntMap 3 0
+	[ 20]: set_var IntMap[0] 4
+	[ 21]: set_var IntMap[1] 2
+	[ 24]: def_array string StrMap 2 0
+	[ 25]: set_var StrMap[0] 3
+	[ 26]: set_var StrMap[1] 1
+	[ 28]: def_var string msg _
+	[ 30]: def_func main
+	[ 31]: set_str msg --- Recursive Array Test Start ---
+	[ 32]: print_value msg 2
+--- Recursive Array Test Start ---
+	[ 36]: set_str msg Testing IntMap[0] (should be 52.5):
+	[ 37]: print_value msg 2
+Testing IntMap[0] (should be 52.5):
+	[ 38]: print_value MyData[IntMap[0]]
+52.5
+	[ 42]: set_str msg Testing StrMap[0] (should be 42.0):
+	[ 43]: print_value msg 2
+Testing StrMap[0] (should be 42.0):
+	[ 44]: print_value MyData[StrMap[0]]
+42
+	[ 51]: set_str msg Testing Double Nest (should be 31.5):
+	[ 52]: print_value msg 2
+Testing Double Nest (should be 31.5):
+	[ 53]: print_value MyData[IntMap[StrMap[1]]]
+31.5
+	[ 55]: return
+

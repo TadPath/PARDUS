@@ -1,0 +1,455 @@
+Pardus pcs 1
+
+###################################################
+# Script to demonstrate auto-focus and XYZ motion #
+# by interactive keyboard input and with          #
+# simultaneous live preview.                      #
+#                                   PJT 29.04.26  #
+###################################################
+
+###############################################
+#       Run in almost silent mode             #
+###############################################
+
+verbosity 1 # Only show intentional print output and errors.
+            # Only log errors.
+
+#include ppinclude.pch
+            
+#define USE_STEPS 0
+#define USE_CALIBRATED_UNITS 1
+#define STEPPER_MOTOR 1
+#define AUTO_DURATION 0
+#define STILL_IN_MOTION 0
+            
+
+###############################################
+#       Global variable definitions           #
+###############################################
+
+def_var string tab _  # Create string variable to hold a tab
+def_var string inp _  # Create string variable to hold user input
+def_var string msg _  # Create string variable used to print message
+def_var int idx 0     # General purpose integer
+def_var int htogg 0   # Integer used to toggle the histogram
+def_var int ftogg 0   # Integer used to toggle the focus bars
+def_var int mtogg 0   # Integer used to toggle StealthChop / SpreadCycle
+
+
+def_var int    actype 0   # Receptacle for movereport
+def_var int    actid 0    # Receptacle for movereport
+def_var int    movedone 0
+def_var int    homed_to 0
+def_var float  revs    0.0
+def_var float  currzpos 0.0
+def_var float  zrefpos  0.0
+def_var int    zmsdenom 0
+def_var int    zmaxmsdenom 0
+
+def_var int z_isd0 800
+def_var int z_isd1 801
+
+def_var int xy_isd0 800
+def_var int xy_isd1 801
+
+
+def_var float  revs_x  0.0
+def_var float  revs_y  0.0
+def_var float  revs_z  0.0
+
+def_func main
+
+###############################################
+#       Set up for motor movement             #
+###############################################
+
+get_actuators    # Update the local list of actuators from the server.
+
+# Check is all axes are defined and homed (idx will be set to 1 if not).
+call_func check_if_stage_is_set
+goto end_of_script if idx
+
+# Set motion parameters for the axes
+act_unit STEPPER_MOTOR USE_STEPS         
+act_accel STEPPER_MOTOR 0.45 z_isd0 z_isd1
+set_var revs_x  65536.0
+set_var revs_y  65536.0
+set_var revs_z  4096.0
+
+
+# Set backlash steps in atomic (1/256) steps (but this is integerised so only
+# multiples of 'onestep' will have an effect. For msdenom of 8 (1/8 steps) and
+# maxmsdenom of 256 (1/256 steps), 'onestep' = 32:
+act_set X_Axis INFO_BLSTMAX 64
+act_set Y_Axis INFO_BLSTMAX 160
+act_set Z_Axis INFO_BLSTMAX 32
+
+###############################################
+#    Set up a welcome & help message          #
+###############################################
+
+print_clear         # Clear the 'screen'
+call_func make_tab  # Make a convenience tab string
+
+#------------------------------------#
+# Print the message                  #
+#------------------------------------#
+set_var msg tab
+cat_str msg Welcome to the Live Preview demo
+print_value msg
+print_value Space
+set_var msg tab
+cat_str msg Press 's' to start and stop the live preview
+print_value msg
+set_var msg tab
+cat_str msg Press 'h' to toggle the histogram overlay
+print_value msg
+set_var msg tab
+cat_str msg Press 'f' to toggle the focus assist overlay
+print_value msg
+print_value Space
+set_var msg tab
+cat_str msg Press <, >, ^, v, +, - to move the stage
+print_value msg
+set_var msg tab
+cat_str msg Press m to toggle SpreadCycle / StealthChop
+print_value msg
+print_value Space
+set_var msg tab
+cat_str msg Press r to set the reference position in Z
+print_value msg
+set_var msg tab
+cat_str msg Press g to go to the reference position in Z
+print_value msg
+set_var msg tab
+cat_str msg Press a to initiate auto-focus hill climbing search
+print_value msg
+print_value Space
+set_var msg tab
+cat_str msg Press 'q' to quit
+print_value msg
+print_value Space
+print_value Space
+
+
+#------------------------------------#
+# Wait for user to press 's'         #
+#------------------------------------#
+prv_toggle fc_vmul ON         # Set the focus measure to VMUL
+input_again:
+set_str inp            # Set inp to ""
+poll_user ON OFF inp   # Get input from the user
+set_condexp inp == s
+do_if Condexp
+  call_func go_live 
+enddo
+set_condexp inp == q
+goto end_of_script if Condexp
+goto input_again
+
+###############################################
+#          End of main program                #
+###############################################
+
+return
+
+###############################################
+#  Functions are defined below this point.    #
+###############################################
+
+#------------------------------------#
+#      check_if_stage_is_set         #
+# Prints error messages and sets idx #
+# to 1 if there is an error.         #
+# Otherwise idx is set to 0.         #
+#------------------------------------#
+def_func check_if_stage_is_set
+set_var idx 0      
+
+set_condexp NSteppers < 3
+do_if Condexp
+  set_var msg tab
+  cat_str msg Full set of XYZ actuators not defined
+  print_value msg
+  set_var idx 1
+enddo
+
+act_getid X_Axis
+set_condexp CurrActIdx < 0
+do_if Condexp
+  set_var msg tab
+  cat_str msg X-Axis is not defined
+  print_value msg
+  set_var idx 1
+else
+  act_get CurrAct INFO_HOMED_TO homed_to
+  set_condexp homed_to == LIM_UNSET
+  do_if Condexp
+    set_var msg tab
+    cat_str msg X-Axis is not homed
+    print_value msg
+    set_var idx 1
+  enddo
+ enddo
+
+act_getid Y_Axis
+set_condexp CurrActIdx < 0
+do_if Condexp
+  set_var msg tab
+  cat_str msg Y-Axis is not defined
+  print_value msg
+  set_var idx 1
+else
+  act_get CurrAct INFO_HOMED_TO homed_to
+  set_condexp homed_to == LIM_UNSET
+  do_if Condexp
+    set_var msg tab
+    cat_str msg Y-Axis is not homed
+    print_value msg
+    set_var idx 1
+  enddo
+ enddo
+
+act_getid Z_Axis
+set_condexp CurrActIdx < 0
+do_if Condexp
+  set_var msg tab
+  cat_str msg Z-Axis is not defined
+  print_value msg
+  set_var idx 1
+else
+  act_get CurrAct INFO_HOMED_TO homed_to
+  set_condexp homed_to == LIM_UNSET
+  do_if Condexp
+    set_var msg tab
+    cat_str msg Z-Axis is not homed
+    print_value msg
+    set_var idx 1
+  enddo
+  act_get Z_Axis INFO_STEPCOUNT currzpos
+  af_setup currzpos 256 1 DIRNLFU CCHAN_G AFFA_IGNORE
+  af_ccrit 50 0 200 10000
+enddo
+
+return
+
+
+#------------------------------------#
+#    make_tab - make a tab string    #
+#------------------------------------#
+def_func make_tab
+set_var idx 0             
+set_condexp idx < 5
+set_var tab Space
+loop_while Condexp
+   add_var tab Space
+   add_var idx 1
+   set_condexp idx < 5 # Corrected to maintain 5-space tab logic
+endloop
+return
+
+
+#------------------------------------#
+#     go_live - Interactive live     #
+#------------------------------------#
+def_func go_live
+
+loop_while TRUE
+
+   get_preview OFF 0 0
+
+   set_str inp
+   poll_user OFF OFF inp
+
+   set_condexp inp == s
+   goto input_again if Condexp
+
+   set_condexp inp == h
+   do_if Condexp
+     do_if htogg
+        prv_toggle hgm_show ON
+        set_var htogg 0         
+     else
+        prv_toggle hgm_show OFF
+        set_var htogg 1
+     enddo
+   enddo
+
+   set_condexp inp == f
+   do_if Condexp
+     do_if ftogg
+        prv_fc_show 1
+        set_var ftogg 0
+     else
+        prv_fc_show 0
+        set_var ftogg 1
+      enddo
+   enddo
+   
+   set_condexp inp == r
+   do_if Condexp
+     act_getid Z_Axis
+     act_get CurrAct INFO_STEPCOUNT zrefpos 
+     set_var msg tab
+     cat_str msg Z-reference position set as
+     add_var msg Space
+     add_var msg zrefpos
+     print_value msg
+     print_value Space
+   enddo
+
+   set_condexp inp == g
+   do_if Condexp
+     act_getid Z_Axis
+     act_set CurrAct INFO_ENA_STATE 1 
+     set_var revs zrefpos
+     act_accel STEPPER_MOTOR 0.45 xy_isd0 xy_isd1
+     call_func goto_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+
+   set_condexp inp == a
+   do_if Condexp
+     act_getid Z_Axis
+        set_var msg tab
+        cat_str msg (Auto)focus in progress ...
+        print_value msg
+     act_get Z_Axis INFO_STEPCOUNT currzpos
+     af_setup currzpos 2048 1 DIRNLFU CCHAN_G AFFA_IGNORE
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 z_isd0 z_isd1
+     autofocus
+     act_set CurrAct INFO_ENA_STATE 0 
+        set_var msg tab
+        cat_str msg AF done.
+        print_value msg
+   enddo
+
+   set_condexp inp == m
+   do_if Condexp
+     do_if mtogg
+        set_var mtogg 0
+        set_var msg tab
+        cat_str msg Moving with StealthChop
+        print_value msg
+     else
+        set_var mtogg 1
+        set_var msg tab
+        cat_str msg Moving with SpreadCycle
+        print_value msg
+      enddo
+   enddo
+
+   set_condexp inp == >
+   do_if Condexp
+     act_getid X_Axis
+     act_set CurrAct INFO_DIRNC DIRNRBD
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 xy_isd0 xy_isd1
+     set_var revs revs_x
+     call_func move_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+   
+   set_condexp inp == <
+   do_if Condexp
+     act_getid X_Axis
+     act_set CurrAct INFO_DIRNC DIRNLFU
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 xy_isd0 xy_isd1
+     set_var revs revs_x
+     call_func move_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+
+   set_condexp inp == ^
+   do_if Condexp
+     act_getid Y_Axis
+     act_set CurrAct INFO_DIRNC DIRNLFU
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 xy_isd0 xy_isd1
+     set_var revs revs_y
+     call_func move_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+   
+   set_condexp inp == v
+   do_if Condexp
+     act_getid Y_Axis
+     act_set CurrAct INFO_DIRNC DIRNRBD
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 xy_isd0 xy_isd1
+     set_var revs revs_y
+     call_func move_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+
+   set_condexp inp == +
+   do_if Condexp
+     act_getid Z_Axis
+     act_set CurrAct INFO_DIRNC DIRNLFU
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 z_isd0 z_isd1
+     set_var revs revs_z
+     call_func move_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+   
+   set_condexp inp == -
+   do_if Condexp
+     act_getid Z_Axis
+     act_set CurrAct INFO_DIRNC DIRNRBD
+     act_set CurrAct INFO_ENA_STATE 1 
+     act_accel STEPPER_MOTOR 0.45 z_isd0 z_isd1
+     set_var revs revs_z
+     call_func move_curr_axis       
+     act_set CurrAct INFO_ENA_STATE 0
+   enddo
+
+   set_condexp inp == q
+   goto end_of_script if Condexp
+
+endloop
+return
+
+
+############################
+# Function  move_curr_axis #
+############################
+def_func move_curr_axis
+act_set CurrAct INFO_MMODE mtogg 
+act_moveby CurrAct 0 revs
+call_func wait_till_finished_moving
+return
+
+
+############################
+# Function  goto_curr_axis #
+############################
+def_func goto_curr_axis
+act_set CurrAct INFO_MMODE mtogg 
+act_moveto CurrAct 0 revs
+call_func wait_till_finished_moving
+return
+
+#######################################
+# Function  wait_till_finished_moving #
+#######################################
+def_func wait_till_finished_moving
+act_movereport movedone actype actid
+set_var idx 0
+set_condexp movedone == STILL_IN_MOTION
+loop_while Condexp
+  get_preview OFF 0 0
+  act_movereport movedone actype actid
+  set_condexp movedone == STILL_IN_MOTION
+endloop
+return
+
+
+###############################################
+#          End of entire script               #
+###############################################
+
+end_of_script:
+exit

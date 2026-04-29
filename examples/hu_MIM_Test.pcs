@@ -1,0 +1,574 @@
+Pardus pcs 1
+
+############################################################################
+# Script to get data for measuring Minimal Incremental Motion (MIM) of an  #
+# X or Y axis (or both).                                                   #
+# Demonstration motion commands and use of the frame grabber, printing to  #
+# a file, etc. Also demonstrates getting user input from the keyboard and  #
+# setting output file names with date and time stamps.                     #
+# This script assumes the actuator has already been defined, matured and   #
+# homed.                                                     PJT 26.03.26  #
+############################################################################
+
+###############################################
+#       Run in almost silent mode             #
+###############################################
+
+verbosity 1 # Only show intentional print output and errors.
+            # Only log errors.
+
+#include ppinclude.pch
+            
+#define STEPPER_MOTOR   1
+#define AUTO_DURATION   0
+#define STILL_IN_MOTION 0
+#define LATCH_ON        2
+            
+
+###############################################
+#       Global variable definitions           #
+###############################################
+
+def_var string tab _          # Create string variable to hold a tab
+def_var string inp _          # Create string variable to hold user input
+def_var string msg _          # Create string variable used to print message
+def_var int idx 0             # General purpose integer
+def_var int move_number 0     # Number of measurment steps to move in any loop
+def_var int max_moves   0     # Number of measurment moves in the test loop
+def_var int reset_moves 0     # Number of moves in the reset loop second leg
+def_var int shiftsteps  0     # Number of atomic steps per move
+def_var int controlexpt 0     # Whether this is a control or test (OFF/ON)
+def_var int both_dirs_done 0  # End of test flag
+def_var int refpos   0        # Start position for tests on the chosen axis
+def_var int refpos_x 0        # Start position for tests on the X axis
+def_var int refpos_y 0        # Start position for tests on the Y axis
+
+def_var int    actype    0    # Receptacle for movereport
+def_var int    actid     0    # Receptacle for movereport
+def_var int    movedone  0
+def_var int    homed_to  0
+def_var float  mvdist    0.0  # Distance for current movement
+def_var float  currpos   0.0  # To report current axis position during test
+
+def_var int    testmsdenom 0       # The microstep denominator for this test
+def_var int    tense_f     0       # Axis tension correction steps for forward.
+def_var int    tense_b     0       # Axis tension correction steps for backward.
+def_var float  teststeps   0.0     # Number of atomic steps per movement
+def_var float  resetsteps  0.0     # No. of atomic steps per movement for reset
+# The reason we have both teststeps and resetsteps is that for a motion test we
+# would set both of these to the same value but when doing a control test we
+# would set resetsteps to the value we will (or did) use for the motion test but
+# we would set teststeps to 0.0 because the control needs to do everythin that
+# the test would have done (including the reset action) but without motion 
+# during the actual test period. If such a control shows the stage sits 
+# perfectly still then we can be confident that any motion seen in the motion
+# steps and without contamination from residual drift of the reset action.
+# The reason we end the reset move by doing reset_moves at resetsteps per move
+# it so allow the system to settle into the rythm of the test pulses becuase a
+# longer travel distance (or shorted) will allow more (or less) wind up torsion
+# to build in the drive chain such that a tensioning factor that would be  
+# optimal for the actual test steps might not be optimal to deal with the one-
+# off larger (or shorter) motion of the reset. So ending the reset motion with
+# these steps under the same conditions as the test allows the torsion to settle
+# into that experienced during test conditions (it gives time for any excess
+# drift to dissipate before we start the test). 
+
+
+# Variables to set up motion for the X and Y axes:
+def_var int    xy_isd0     8000
+def_var int    xy_isd1     6401
+def_var float  reset_dist    0.0   # Number of steps for the mechanical resets
+def_var float  rst2ndlegdist 0.0   # Number of atomic steps in the reset 2nd leg
+def_var float  cap_delay 0.0       # Delay before capture in seconds
+
+###############################################
+#                main function                #
+###############################################
+def_func main
+
+#---------------------------------------------#
+#       Set up for motor movement             #
+#---------------------------------------------#
+
+get_actuators    # Update the local list of actuators from the server.
+
+# Check is all axes are defined and homed (idx will be set to 1 if not).
+call_func check_if_stage_is_set
+goto end_of_script if idx
+
+
+################################################################################
+#---------------------------------------------#                                #
+#    Set the parameters for this test         #                                #
+#---------------------------------------------#                                #
+                                                                               #
+# Set the initial 'goto' position to start the test                            #
+set_var refpos_x 6048000                                                       #
+set_var refpos_y 3211600                                                       #
+                                                                               #
+# Set the msdenom and number of atomic steps per movement for this test        #
+set_var  testmsdenom 64     # The MSDENOM for this test                        #
+set_var  shiftsteps  4.0    # Number of atomic steps per move                  #
+set_var  controlexpt OFF    # Whether this is a control (ON) or test (OFF)     #
+set_var  resetsteps  shiftsteps   # No of atomic steps per movement for reset. #
+set_var  max_moves   65     # Number of movements in the measurement loops     #
+set_var  reset_dist  25600  # Number of steps used in the mechanical reset     #
+set_var  reset_moves  10    # Reset moves under test conditions                #
+set_var  cap_delay   4.0    # Time to settle before starting image capture.    #
+#                                                                              #
+################################################################################
+
+# Calculate the initial distance for the second leg of the reset
+set_var currpos teststeps        # Using currpos as a temporary work variable
+mul_var currpos reset_moves      # The second leg will travel the whole
+set_var rst2ndlegdist reset_dist # rst2ndlegdist in one move followed by
+sub_var rst2ndlegdist currpos    # reset_moves done at teststeps atomic steps
+                                 # per move so we need to subtract 
+                                 # (teststeps * reset_moves) from reset_dist
+                                 # to get the initial move distance.
+
+# Calculate atomic steps for motion and reset depending on control status
+do_if controlexpt
+  set_var  teststeps   0.0    # No motion during a control run - measuring drift
+else
+  set_var  teststeps  shiftsteps   # Otherwise use shiftsteps
+enddo
+
+
+
+#---------------------------------------------#
+#    Set up a welcome & help message          #
+#---------------------------------------------#
+
+print_clear         # Clear the 'screen'
+call_func make_tab  # Create a tab string
+
+#------------------------------------#
+# Print the message                  #
+#------------------------------------#
+set_var msg tab
+cat_str msg Welcome to the Minimal Incrememntal Movement (MIM) Test
+print_value msg
+print_value Space
+set_var msg tab
+cat_str msg Press 's' to start the test
+print_value msg
+print_value Space
+set_var msg tab
+cat_str msg Press 'q' to quit
+print_value msg
+print_value Space
+print_value Space
+
+
+#------------------------------------#
+# Wait for user to press 's'         #
+#------------------------------------#
+prv_toggle fc_vmul ON  # Set the focus measure to VMUL
+input_again:
+set_str inp            # Set inp to ""
+poll_user ON OFF inp   # Get input from the user
+set_condexp inp == s
+do_if Condexp
+  call_func go_live 
+enddo
+set_condexp inp == q
+goto end_of_script if Condexp
+goto input_again
+
+###############################################
+#          End of main program                #
+###############################################
+
+return
+
+###############################################
+#  Functions are defined below this point.    #
+###############################################
+
+
+################################################################################
+#                                                                              #
+
+###############################################
+#     go_live - Main measurement function     #
+###############################################
+def_func go_live
+
+# Enable the motors. Regardless of which axis is being tested I enable all axes
+# to prevent drift in the unused direction and to maintain thermal equilibrium:
+act_set X_Axis INFO_ENA_STATE 1 
+act_set Y_Axis INFO_ENA_STATE 1 
+act_set Z_Axis INFO_ENA_STATE 1 
+
+# This test will be for the X-axis but before we go into the X-axis motion I
+# want to do a mechanical reset on Y to ensure it displays the same stability
+# and lack of drift which it showed during the Y-axis tests. So here we go:
+
+act_getid Y_Axis            # Set CurrAct to the axis we want to move          #
+# Set some common motion parameters for the axis under study:                  #
+act_set CurrAct INFO_ISD_HOBL 12000      # Tensioning correction ISD           #
+act_set CurrAct INFO_TURBO_BST LATCH_ON  # Needed to move the heavy stage      #
+set_var refpos refpos_y                                                        #
+set_var  tense_f     512    # Steps for wind/unwind axis tensioning forwards   #
+set_var  tense_b     256    # Steps for wind/unwind axis tensioning backwards  #
+call_func mecha_reset_f     # Perform the reset for forward motion.            #
+
+# Now we set up the X-axis for motion study
+act_getid X_Axis            # Set CurrAct to the axis we want to move          #
+# Set some common motion parameters for the axis under study:                  #
+act_set CurrAct INFO_ISD_HOBL 12000       # Tensioning correction ISD          #
+act_set CurrAct INFO_TURBO_BST LATCH_ON   # X is also heavy (but less than Y)  #
+set_var refpos refpos_x                                                        #
+set_var  tense_f     128    # Steps for wind/unwind axis tensioning left       #
+set_var  tense_b     512    # Steps for wind/unwind axis tensioning right      #
+call_func mecha_reset_f     # Perform the reset for left motion.               #
+
+# Set up the frame grabber
+grabber_timeout 10
+save_format pgm
+save_resolution 2592 1944
+frame_number 0
+save_root aximg_f    # We start with the left motion series (labeled 'f')
+save_path ./
+frames_to_average 4
+frames_to_skip 4
+grabber_retries 16
+
+# Set up a file to contain the output
+set_var msg Axis_data_
+add_var msg DateTime
+cat_str msg .txt
+print_file 0 msg
+
+# Entry point for the capture loop
+capture_again:
+
+# Set the test movement distance
+set_var mvdist  teststeps
+
+# Initialise the loop variable
+set_var move_number 0
+set_condexp move_number < max_moves
+
+# Wait cap_delay seconds  
+sleep cap_delay  
+
+# Start the capture loop
+loop_while Condexp
+
+   # Print the current axis position
+   act_get CurrAct INFO_STEPCOUNT currpos 
+   set_var msg tab
+   add_var msg move_number
+   add_var msg Space
+   cat_str msg Position =
+   add_var msg Space
+   add_var msg currpos
+   add_var msg Space
+   cat_str msg Time(ms) =
+   add_var msg Space
+   add_var msg Millis
+   print_value msg
+   
+   # Capture image
+   grab_image
+
+   # Poll for user input and quit if requested to do so.
+   set_str inp
+   poll_user OFF OFF inp
+   set_condexp inp == q
+   goto end_of_script if Condexp
+
+   # Move by one test distance
+   call_func move_curr_axis  
+
+   # Wait cap_delay seconds  
+   sleep cap_delay  
+   
+   # Increment the loop variable and update the loop test.
+   add_var move_number 1
+   set_condexp move_number < max_moves
+
+endloop
+
+# We only do two directions per script run:
+add_var both_dirs_done 1
+set_condexp both_dirs_done >= 2
+goto end_of_script if Condexp
+
+# Set up theframe grabber for the right direction test
+save_root aximg_b
+frame_number 0
+
+# Remove drive tensioning corrections for the mechanical reset:
+act_set CurrAct INFO_TENSTEPS1 0
+act_set CurrAct INFO_TENSTEPS2 0
+
+# Go to the start position
+set_var mvdist refpos
+call_func goto_curr_axis 
+
+# Perform the mechanical reset. The next movement test is right so we start
+# the reset by moving left followed by right.
+# There is no need to do a reset on the stationary axis at this point.
+
+     act_set CurrAct INFO_DIRNC DIRNLFU
+     set_var mvdist reset_dist
+     call_func move_curr_axis    # This moves by mvdist steps
+   
+     # Now set the tensioning value for X right to 'tense_b' atomic steps.
+     act_set CurrAct INFO_TENSTEPS2 tense_b
+
+     # Switch direction to the direction of the test and move reset_dist
+     act_set CurrAct INFO_DIRNC DIRNRBD
+     # Do the first part of this second leg of the motion as a single move
+     set_var mvdist rst2ndlegdist     
+     call_func move_curr_axis
+     # Go the remainder of the way in steps of equal size & interval of the test
+     # Set the reset movement distance
+     set_var mvdist  resetsteps
+     # Initialise the loop variable
+     set_var move_number 0
+     set_condexp move_number < reset_moves
+     # Wait cap_delay seconds  
+     sleep cap_delay
+     # Start the reset steps loop
+     loop_while Condexp
+        # Sleep for the time it would take to capture an image
+        sleep 10
+        # Poll for user input and quit if requested to do so.
+        set_str inp
+        poll_user OFF OFF inp
+        set_condexp inp == q
+        goto end_of_script if Condexp
+        # Move by one test distance
+        call_func move_curr_axis  
+        # Wait cap_delay seconds  
+        sleep cap_delay  
+        # Increment the loop variable and update the loop test.
+        add_var move_number 1
+        set_condexp move_number < reset_moves
+     endloop 
+
+# Go back to the capture loop
+goto capture_again
+
+
+goto end_of_script
+
+return
+
+#                                                                              #
+################################################################################
+
+
+
+
+##################################################
+#  mecha_reset_f - Mechanical reset forward/left #
+##################################################
+def_func mecha_reset_f
+
+
+# Set precision mode:
+act_set CurrAct INFO_MMODE MM_PRECISE # Set PRECISE mode (SpreadCycle)
+
+# Set the acceleration profile for the test movements:
+act_accel STEPPER_MOTOR 0.0 xy_isd0 xy_isd1
+
+# Set the MSDENOM to that used for the test.
+act_set CurrAct INFO_MSDENOM testmsdenom
+
+# Remove drive tensioning corrections for the mechanical reset:
+act_set CurrAct INFO_TENSTEPS1 0
+act_set CurrAct INFO_TENSTEPS2 0
+
+# Go to the start position
+set_var mvdist refpos
+call_func goto_curr_axis
+
+# Perform the mechanical reset. The intended first test measure is forward or
+# left so we start the reset by moving backwards or right followed by forwards
+# or left
+
+act_set CurrAct INFO_DIRNC DIRNRBD
+set_var mvdist reset_dist
+call_func move_curr_axis    # This moves by mvdist steps
+
+# Now set the tensioning value for forward/left to 'tense_f' atomic steps.
+# We defined the following for the axess in the null homing script:
+# act_set CurrAct INFO_DIRN1 DIRNLFU
+# act_set CurrAct INFO_DIRN2 DIRNRBD
+# Thus left/forward/up is DIRN1 so we set INFO_TENSTEPS1
+act_set CurrAct INFO_TENSTEPS1 tense_f
+
+# Switch direction to the direction of the test and move reset_dist
+act_set CurrAct INFO_DIRNC DIRNLFU
+# Do the first part of this second leg of the motion as a single move
+set_var mvdist rst2ndlegdist
+call_func move_curr_axis
+# Go the remainder of the way in steps of equal size & interval of the test
+# Set the reset movement distance
+set_var mvdist  resetsteps
+# Initialise the loop variable
+set_var move_number 0
+set_condexp move_number < reset_moves
+# Wait cap_delay seconds
+sleep cap_delay
+# Start the reset steps loop
+loop_while Condexp
+   # Sleep for the time it would take to capture an image
+   sleep 10
+   # Poll for user input and quit if requested to do so.
+   set_str inp
+   poll_user OFF OFF inp
+   set_condexp inp == q
+   goto end_of_script if Condexp
+   # Move by one test distance
+   call_func move_curr_axis
+   # Wait cap_delay seconds
+   sleep cap_delay
+   # Increment the loop variable and update the loop test.
+   add_var move_number 1
+   set_condexp move_number < reset_moves
+endloop
+
+return
+
+
+
+######################################
+#      check_if_stage_is_set         #
+# Prints error messages and sets idx #
+# to 1 if there is an error.         #
+# Otherwise idx is set to 0.         #
+######################################
+def_func check_if_stage_is_set
+set_var idx 0      
+
+set_condexp NSteppers < 3
+do_if Condexp
+  set_var msg tab
+  cat_str msg Full set of XYZ actuators not defined
+  print_value msg
+  set_var idx 1
+enddo
+
+act_getid X_Axis
+set_condexp CurrActIdx < 0
+do_if Condexp
+  set_var msg tab
+  cat_str msg X-Axis is not defined
+  print_value msg
+  set_var idx 1
+else
+  act_get CurrAct INFO_HOMED_TO homed_to
+  set_condexp homed_to == LIM_UNSET
+  do_if Condexp
+    set_var msg tab
+    cat_str msg X-Axis is not homed
+    print_value msg
+    set_var idx 1
+  enddo
+ enddo
+
+act_getid Y_Axis
+set_condexp CurrActIdx < 0
+do_if Condexp
+  set_var msg tab
+  cat_str msg Y-Axis is not defined
+  print_value msg
+  set_var idx 1
+else
+  act_get CurrAct INFO_HOMED_TO homed_to
+  set_condexp homed_to == LIM_UNSET
+  do_if Condexp
+    set_var msg tab
+    cat_str msg Y-Axis is not homed
+    print_value msg
+    set_var idx 1
+  enddo
+ enddo
+
+act_getid Z_Axis
+set_condexp CurrActIdx < 0
+do_if Condexp
+  set_var msg tab
+  cat_str msg Z-Axis is not defined
+  print_value msg
+  set_var idx 1
+else
+  act_get CurrAct INFO_HOMED_TO homed_to
+  set_condexp homed_to == LIM_UNSET
+  do_if Condexp
+    set_var msg tab
+    cat_str msg Z-Axis is not homed
+    print_value msg
+    set_var idx 1
+  enddo
+enddo
+
+return
+
+
+
+######################################
+#    make_tab - make a tab string    #
+######################################
+def_func make_tab
+set_var idx 0             
+set_condexp idx < 5
+set_var tab Space
+loop_while Condexp
+   add_var tab Space
+   add_var idx 1
+   set_condexp idx < 5 # Corrected to maintain 5-space tab logic
+endloop
+return
+
+
+############################
+# Function  move_curr_axis #
+############################
+def_func move_curr_axis
+act_moveby CurrAct AUTO_DURATION mvdist
+call_func wait_till_finished_moving
+return
+
+
+############################
+# Function  goto_curr_axis #
+############################
+def_func goto_curr_axis
+act_moveto CurrAct 0 mvdist
+call_func wait_till_finished_moving
+return
+
+#######################################
+# Function  wait_till_finished_moving #
+#######################################
+def_func wait_till_finished_moving
+act_movereport movedone actype actid
+set_var idx 0
+set_condexp movedone == STILL_IN_MOTION
+loop_while Condexp
+  sleep 0.25
+  act_movereport movedone actype actid
+  set_condexp movedone == STILL_IN_MOTION
+endloop
+return
+
+
+###############################################
+#          End of entire script               #
+###############################################
+
+end_of_script:
+
+# Do not disable the motors or the system will cool and loose thermal
+# equilibrium and show increased drift. Let the user disable the motors when
+# they have finished all their runs.
+
+
+exit
