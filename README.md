@@ -48,7 +48,7 @@ I have decided to re-work the PARDUS standard to make the PARD Server run on any
 ## For now:
 * I have extracted the basic image acquisition aspects of the PARD Server and put them into a fully functioning 'Stand Alone' program called [**PARD Capture**](https://github.com/TadPath/PARDUS/tree/main/PARD_Capture) which is available here in this repository. This has some extended features that were not available in the original PARD Server.
 
-* I have developed a new open hardware standard for the PUMA CNC stage that is currently still under development but alread many of the CAD files are up on the PUMA repository.
+* I have developed a new open hardware standard for the PUMA CNC stage that is currently still under development but already many of the CAD files are up on the PUMA repository.
 * I have extended the capabilities of PARDcap to include TCP/IP server features in a much more extensive way than the old system and also not dependent on the RPi.
 * I have greatly extended the PCS programming language into a Turing complete programming language. This is currently functional but not totally complete. The modern version of PCS has been designed with both AI coders as well as human coders in mind so it has many advanced features for the era of AI coding assistants.
 
