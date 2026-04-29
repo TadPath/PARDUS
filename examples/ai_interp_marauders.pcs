@@ -1,0 +1,711 @@
+Pardus pcs 1
+verbosity 1
+
+################################################
+# 'Interplanetary Marauders' - Multi-Target    #
+################################################
+
+#define DISP_Y_MAX 32
+#define DISP_X_MAX 64
+#define T_RIGHT_LIM 59
+
+#define M_COUNT 4
+#define M_WIDTH 7
+
+#define B_COUNT 2            # Max 2 bombs on screen at once
+
+#define S_COUNT 3
+
+# --- Global Variables ---
+
+# For pseudorandom number generator
+def_var int Rnd_Seed 12345   # The "seed" (start with any number)
+def_var int Rnd_A 25173      # Smaller multiplier for int32_t safety
+def_var int Rnd_C 13849      # Different increment
+def_var int Rnd_M 32767      # Modulus
+#---------------------------------
+
+def_var string title_msg _
+
+def_array int S_X 3 10       # Initial X positions: 10, 25, 40
+def_array int S_Health 3 3   # 3 hits each
+def_var int S_Y 5            # Shields hover at Y=5
+def_var int Cur_S 0          # Loop index for shields
+def_var int Proj_X 0
+def_var int Proj_Hit FALSE
+def_var int S_Right 0
+def_array string S_Sprites 4 _ # 0=empty, 1=failing, 2=damaged, 3=solid
+
+def_array int B_X 2 0
+def_array int B_Y 2 0
+def_array int B_Active 2 FALSE
+def_var int Cur_B 0          # Loop index for bombs
+def_var int Rnd_Val 0        # For firing probability
+def_var int T_Right 0        # Global scratchpad for turret collision
+
+def_var string score_disp _  # To hold the "SCORE: X" string
+
+def_var int Slot_Found FALSE
+def_var int fleet_bounce FALSE
+
+def_var int M_Hit_Count 0
+def_array int M_X 4 10        # Positions for 4 marauders
+def_array int M_Dir 4 1       # Directions for 4 marauders
+def_array int M_Active 4 TRUE  # Life state
+def_var int next_X 0
+def_var int M_Offset_Y 2      # Vertical gap between rows
+def_var int M_Local_Y 0       # Calculation scratchpad for Y
+
+def_var float frame_delay 0.05 # Dynamic sleep timer
+def_var int logic_sum 0       # For Boolean AND operations
+
+def_var int Cur_M 0
+def_var int Marauder_Y 0
+def_var int M_Right_Edge 0
+def_var int idx 0
+
+def_var string M_Sprite <o>
+def_var string M_ExSprite _
+def_var string M_Clear _
+def_var string win_msg _
+def_var string lose_msg _
+
+def_var int Turret_X 1
+def_var int Turret_posn_change 0
+def_array string Turret 2 _
+def_var string inp _
+def_var int firing FALSE
+def_var int Missile_X 0
+def_var int Missile_Y 0
+def_var int prev_Missile_Y 0
+def_var string aether _
+
+def_func main
+  print_clear
+
+
+  # --- Build Aether Buffer ---
+  set_str aether
+  set_var idx 0
+  set_condexp idx < DISP_X_MAX
+  loop_while Condexp
+    cat_char aether 32
+    add_var idx 1
+    set_condexp idx < DISP_X_MAX
+  endloop
+
+  set_var idx 0
+  set_condexp idx < DISP_Y_MAX
+  loop_while Condexp
+    print_value aether 2
+    add_var idx 1
+    set_condexp idx < DISP_Y_MAX
+  endloop
+  print_value aether 0
+
+  call_func show_splash
+
+ # --- Setup Sprites & Entities ---
+  call_func setup_sprites    # Builds the M_Clear, M_ExSprite, etc.
+  call_func setup_marauders  # Positions the 4 marauders in the arrays
+  call_func setup_shields
+
+  set_var Marauder_Y DISP_Y_MAX
+  add_var Marauder_Y -6      # Start lower to accommodate the second row above it
+
+  call_func move_turret
+  call_func update_score
+
+  # --- Main Game Loop ---
+  set_condexp M_Hit_Count < M_COUNT
+  loop_while Condexp
+    set_str inp
+    poll_user OFF OFF inp
+
+    # Turret Movement
+    set_var Turret_posn_change 0
+    set_condexp inp == .
+    do_if Condexp
+      set_var Turret_posn_change 1
+    enddo
+    set_condexp inp == ,
+    do_if Condexp
+      set_var Turret_posn_change -1
+    enddo
+    call_func move_turret if Turret_posn_change
+
+    # Quit Check
+    set_condexp inp == q
+    goto end_game if Condexp
+
+    # Firing Logic (Player)
+    set_condexp firing == FALSE
+    do_if Condexp
+      set_condexp inp == Space
+      do_if Condexp
+        set_var firing TRUE
+        set_var Missile_X Turret_X
+        add_var Missile_X 2
+        set_var Missile_Y 2
+        set_var prev_Missile_Y 2
+      enddo
+    enddo
+
+    # --- 1. THE DESCENT TRIGGER ---
+    do_if fleet_bounce
+      set_var Cur_M 0
+      set_condexp Cur_M < M_COUNT
+      loop_while Condexp
+        set_condexp M_Active[Cur_M] == TRUE
+        do_if Condexp
+          set_var M_Local_Y Marauder_Y
+          set_condexp Cur_M > 1
+          do_if Condexp
+            add_var M_Local_Y M_Offset_Y
+          enddo
+          print_cursor M_X[Cur_M] M_Local_Y
+          print_value M_Clear 0
+        enddo
+        add_var Cur_M 1
+        set_condexp Cur_M < M_COUNT
+      endloop
+
+      add_var Marauder_Y -1
+      set_var fleet_bounce 0
+
+      set_var Cur_M 0
+      set_condexp Cur_M < M_COUNT
+      loop_while Condexp
+        mul_var M_Dir[Cur_M] -1
+        add_var Cur_M 1
+        set_condexp Cur_M < M_COUNT
+      endloop
+    enddo
+
+    # --- 2. MARAUDER PROCESSING (Move, Draw, & Fire Back) ---
+    set_var Cur_M 0
+    set_condexp Cur_M < M_COUNT
+    loop_while Condexp
+      set_condexp M_Active[Cur_M] == TRUE
+      do_if Condexp
+        set_var M_Local_Y Marauder_Y
+        set_condexp Cur_M > 1
+        do_if Condexp
+          add_var M_Local_Y M_Offset_Y
+        enddo
+
+        set_condexp M_Local_Y <= 1
+        goto end_game if Condexp
+
+        # NEW: Marauder attempts to fire a V-Bomb
+        call_func marauder_fire
+
+        add_var M_X[Cur_M] M_Dir[Cur_M]
+        print_cursor M_X[Cur_M] M_Local_Y
+        print_value M_Sprite 0
+
+        set_condexp firing == TRUE
+        call_func check_collision if Condexp
+
+        set_var next_X M_X[Cur_M]
+        add_var next_X M_Dir[Cur_M]
+        set_condexp next_X > 55
+        do_if Condexp
+          set_var fleet_bounce 1
+        enddo
+        set_condexp next_X < 2
+        do_if Condexp
+          set_var fleet_bounce 1
+        enddo
+      enddo
+      add_var Cur_M 1
+      set_condexp Cur_M < M_COUNT
+    endloop
+
+    # --- 3. PROJECTILE UPDATES ---
+    # NEW: Update the falling V-Bombs
+    call_func update_bombs
+
+    # Player Missile Update
+    set_condexp firing == TRUE
+    do_if Condexp
+      set_condexp Missile_Y >= DISP_Y_MAX
+      do_if Condexp
+        print_cursor Missile_X prev_Missile_Y
+        print_value Space 0
+        set_var firing FALSE
+      else
+
+        add_var Missile_Y 1
+        # Shield Check
+        set_condexp Missile_Y == S_Y
+        do_if Condexp
+          set_var Proj_X Missile_X
+          call_func check_shield_hit
+          do_if Proj_Hit
+            # Erase missile and stop it
+            print_cursor Missile_X prev_Missile_Y
+            print_value Space 0
+            set_var firing FALSE
+          enddo
+        enddo
+        # Only render the missile if it didn't hit a shield
+        set_condexp firing == TRUE
+        call_func render_missile if Condexp
+
+      enddo
+    enddo
+
+    # Timing and Speed
+    set_var frame_delay 0.05
+    set_var logic_sum M_Hit_Count
+    mul_var logic_sum 0.01
+    sub_var frame_delay logic_sum
+    sleep frame_delay
+
+    set_condexp M_Hit_Count < M_COUNT
+  endloop
+
+  goto win_game
+return
+
+# --- Functions (Outside Main) ---
+
+def_func setup_sprites
+  set_str Turret[0]
+  add_var Turret[0] Space
+  add_var Turret[0] Space
+  cat_char Turret[0] U+2588
+  add_var Turret[0] Space
+  add_var Turret[0] Space
+
+  set_str Turret[1]
+  add_var Turret[1] Space
+  cat_str Turret[1] ███
+  add_var Turret[1] Space
+
+  # Make M_Sprite 7 chars wide: " <o> "
+  set_str M_Sprite
+  add_var M_Sprite Space
+  cat_str M_Sprite <o>
+  add_var M_Sprite Space
+
+  set_str M_ExSprite
+  add_var M_ExSprite Space
+  cat_str M_ExSprite *X*
+  add_var M_ExSprite Space
+
+  set_str M_Clear
+  set_var idx 0
+  set_condexp idx < M_WIDTH
+  loop_while Condexp
+    add_var M_Clear Space
+    add_var idx 1
+    set_condexp idx < M_WIDTH
+  endloop
+return
+
+def_func setup_shields
+  # --- 1. Position the Shields ---
+  set_var S_X[0] 12    # Shield 0
+  set_var S_X[1] 28    # Shield 1
+  set_var S_X[2] 44    # Shield 2
+
+  # --- 2. Build Sprite 3: [###] ---
+  set_str  S_Sprites[3] [
+  add_var  S_Sprites[3] Hache
+  add_var  S_Sprites[3] Hache
+  add_var  S_Sprites[3] Hache
+  cat_char S_Sprites[3] 93
+
+  # --- 3. Build Sprite 2: [ # ] ---
+  set_str  S_Sprites[2] [
+  add_var  S_Sprites[2] Space
+  add_var  S_Sprites[2] Hache
+  add_var  S_Sprites[2] Space
+  cat_char S_Sprites[2] 93
+
+  # --- 4. Build Sprite 1: [ . ] ---
+  set_str  S_Sprites[1] [
+  add_var  S_Sprites[1] Space
+  cat_char S_Sprites[1] 46
+  add_var  S_Sprites[1] Space
+  cat_char S_Sprites[1] 93
+
+  # --- 5. Build Sprite 0: Empty (5 spaces) ---
+  set_str  S_Sprites[0]
+  add_var  S_Sprites[0] Space
+  add_var  S_Sprites[0] Space
+  add_var  S_Sprites[0] Space
+  add_var  S_Sprites[0] Space
+  add_var  S_Sprites[0] Space
+
+  # --- 6. Initial Draw Loop ---
+  set_var Cur_S 0
+  set_condexp Cur_S < S_COUNT
+  loop_while Condexp
+    set_var idx S_Health[Cur_S]
+    print_cursor S_X[Cur_S] S_Y
+    print_value S_Sprites[idx] 0
+    add_var Cur_S 1
+    set_condexp Cur_S < S_COUNT
+  endloop
+return
+
+
+
+
+def_func setup_marauders
+  # Row 1
+  set_var M_X[0] 10
+  set_var M_X[1] 30
+  # Row 2
+  set_var M_X[2] 15
+  set_var M_X[3] 35
+
+  # Set all directions to Right (1)
+  set_var idx 0
+  set_condexp idx < M_COUNT
+  loop_while Condexp
+    set_var M_Dir[idx] 1
+    set_var M_Active[idx] TRUE
+    add_var idx 1
+    set_condexp idx < M_COUNT
+  endloop
+return
+
+
+def_func move_marauder
+  # ERASE old position at current Y
+  print_cursor M_X[Cur_M] Marauder_Y
+  print_value M_Clear 0
+
+  # Update Horizontal X
+  add_var M_X[Cur_M] M_Dir[Cur_M]
+
+  # Check for Wall Hit (sets the global 'idx' flag to 1)
+  set_condexp M_X[Cur_M] > 55
+  do_if Condexp
+    set_var M_Dir[Cur_M] -1
+    set_var idx 1
+  enddo
+  set_condexp M_X[Cur_M] < 2
+  do_if Condexp
+    set_var M_Dir[Cur_M] 1
+    set_var idx 1
+  enddo
+
+  # DRAW new position at current Y
+  print_cursor M_X[Cur_M] Marauder_Y
+  print_value M_Sprite 0
+return
+
+def_func check_collision
+  # Use M_Local_Y (calculated in the main loop) instead of Marauder_Y
+  set_condexp Missile_Y == M_Local_Y
+  do_if Condexp
+    set_var M_Right_Edge M_X[Cur_M]
+    add_var M_Right_Edge M_WIDTH
+
+    set_condexp Missile_X >= M_X[Cur_M]
+    do_if Condexp
+      set_condexp Missile_X <= M_Right_Edge
+      do_if Condexp
+        # HIT DETECTED
+        set_var M_Active[Cur_M] FALSE
+        set_var firing FALSE
+        add_var M_Hit_Count 1
+
+        # --- NEW: Erase the sticky missile ---
+        print_cursor Missile_X prev_Missile_Y
+        print_value Space 0
+
+        # Update the HUD immediately on a hit
+        call_func update_score
+
+        # Use the same local Y to draw the explosion sprite
+        print_cursor M_X[Cur_M] M_Local_Y
+        print_value M_ExSprite 0
+      enddo
+    enddo
+  enddo
+return
+
+def_func move_turret
+  add_var Turret_X Turret_posn_change
+  set_condexp Turret_X < 1
+  do_if Condexp
+    set_var Turret_X 1
+  enddo
+  set_condexp Turret_X > T_RIGHT_LIM
+  do_if Condexp
+    set_var Turret_X T_RIGHT_LIM
+  enddo
+  print_cursor Turret_X 1
+  print_value Turret[0] 0
+  print_cursor Turret_X 0
+  print_value Turret[1] 0
+return
+
+def_func render_missile
+  print_cursor Missile_X prev_Missile_Y
+  print_value Space 0
+  print_cursor Missile_X Missile_Y
+  print_value ┃ 0
+  set_var prev_Missile_Y Missile_Y
+return
+
+def_func update_score
+  set_str score_disp
+  cat_str score_disp SCORE:
+  add_var score_disp Space
+  add_var score_disp M_Hit_Count
+
+  # Print at the very top (Y = DISP_Y_MAX)
+  print_cursor 0 DISP_Y_MAX
+  print_value score_disp 0
+return
+
+def_func marauder_fire
+  # 1. Reset our UNIQUE bomb-slot flag
+  set_var Slot_Found FALSE
+
+  # 2. Check if a specific slot is open (let's check Slot 0 first)
+  set_condexp B_Active[0] == FALSE
+  do_if Condexp
+    set_var Slot_Found TRUE
+    set_var Cur_B 0
+  enddo
+
+  # 3. If Slot 0 was full, check Slot 1
+  set_condexp Slot_Found == FALSE
+  do_if Condexp
+    set_condexp B_Active[1] == FALSE
+    do_if Condexp
+      set_var Slot_Found TRUE
+      set_var Cur_B 1
+    enddo
+  enddo
+
+  # 4. Only fire if a slot was found AND marauder is alive
+  set_condexp M_Active[Cur_M] == TRUE
+  do_if Condexp
+    do_if Slot_Found
+      call_func get_random
+
+      # Probability check
+      set_condexp Rnd_Val < 300
+      do_if Condexp
+         set_var B_Active[Cur_B] TRUE
+         set_var B_X[Cur_B] M_X[Cur_M]
+         add_var B_X[Cur_B] 2
+
+         # Calculate the specific Y for THIS marauder (Important!)
+         set_var B_Y[Cur_B] Marauder_Y
+         set_condexp Cur_M > 1
+         do_if Condexp
+           add_var B_Y[Cur_B] M_Offset_Y
+         enddo
+         add_var B_Y[Cur_B] -1
+      enddo
+    enddo
+  enddo
+return
+
+
+
+def_func update_bombs
+  set_var Cur_B 0
+  set_condexp Cur_B < B_COUNT
+  loop_while Condexp
+    set_condexp B_Active[Cur_B] == TRUE
+    do_if Condexp
+      # 1. ERASE old
+      print_cursor B_X[Cur_B] B_Y[Cur_B]
+      print_value Space 0
+
+      # 2. MOVE down
+      add_var B_Y[Cur_B] -1
+
+      # --- Shield Check ---
+      set_condexp B_Y[Cur_B] == S_Y
+      do_if Condexp
+        set_var Proj_X B_X[Cur_B]
+        call_func check_shield_hit
+        do_if Proj_Hit
+          set_var B_Active[Cur_B] FALSE
+          # No need to print Space here if we gate the DRAW step below
+        enddo
+      enddo
+
+      # --- 3. Boundary & Draw Logic ---
+      set_condexp B_Y[Cur_B] < 0
+      do_if Condexp
+        set_var B_Active[Cur_B] FALSE
+      else
+        # ONLY DRAW if the bomb survived the shield hit!
+        set_condexp B_Active[Cur_B] == TRUE
+        do_if Condexp
+          # 4. DRAW new
+          print_cursor B_X[Cur_B] B_Y[Cur_B]
+          print_value v 0
+
+          # 5. COLLISION WITH TURRET
+          set_condexp B_Y[Cur_B] <= 1
+          do_if Condexp
+            set_var T_Right Turret_X
+            add_var T_Right 5
+            set_condexp B_X[Cur_B] >= Turret_X
+            do_if Condexp
+              set_condexp B_X[Cur_B] <= T_Right
+              do_if Condexp
+                # ERASE bomb before jumping to Game Over
+                print_cursor B_X[Cur_B] B_Y[Cur_B]
+                print_value Space 0
+                goto end_game
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+    add_var Cur_B 1
+    set_condexp Cur_M < B_COUNT
+  endloop
+return
+
+def_func get_random
+  mul_var Rnd_Seed Rnd_A
+  add_var Rnd_Seed Rnd_C
+  math_var Rnd_Seed imod Rnd_M
+  math_var Rnd_Seed abs
+  set_var Rnd_Val Rnd_Seed
+return
+
+def_func check_shield_hit
+  set_var Proj_Hit FALSE
+  set_var Cur_S 0
+  set_condexp Cur_S < S_COUNT
+  loop_while Condexp
+    # Only check if shield still has health
+    set_condexp S_Health[Cur_S] > 0
+    do_if Condexp
+      # Shield X-Range Check
+      set_var S_Right S_X[Cur_S]
+      add_var S_Right 5
+
+      set_condexp Proj_X >= S_X[Cur_S]
+      do_if Condexp
+        set_condexp Proj_X <= S_Right
+        do_if Condexp
+          # HIT!
+          add_var S_Health[Cur_S] -1
+          set_var Proj_Hit TRUE
+
+          # --- NEW: If it was the player missile, erase it ---
+          set_condexp Proj_X == Missile_X
+          do_if Condexp
+             print_cursor Missile_X prev_Missile_Y
+             print_value Space 0
+          enddo
+
+          # Update the shield visual immediately
+          # S_Health[Cur_S] is 2, 1, or 0 now
+          set_var idx S_Health[Cur_S]
+          print_cursor S_X[Cur_S] S_Y
+          print_value S_Sprites[idx] 0
+
+          # Break the loop early since a projectile can only hit one shield
+          set_var Cur_S S_COUNT
+        enddo
+      enddo
+    enddo
+    add_var Cur_S 1
+    set_condexp Cur_S < S_COUNT
+  endloop
+return
+
+def_func show_splash
+  # Center the title in the middle of our 32-line aether
+  print_cursor 20 20
+  set_str title_msg INTERPLANETARY MARAUDERS
+  print_value title_msg 0
+
+  print_cursor 22 15
+  set_str title_msg PRESS [S] TO START
+  print_value title_msg 0
+
+  # Wait for input (Corrected PCS Logic)
+  set_var idx FALSE
+  set_condexp idx == FALSE
+  loop_while Condexp
+    set_str inp
+    poll_user OFF OFF inp
+    set_condexp inp == s
+    do_if Condexp
+      set_var idx TRUE
+    enddo
+    sleep 0.1
+    set_condexp idx == FALSE
+  endloop
+
+  # --- THE WIPE ---
+  # Overwrite the title lines with aether to "clear" them without print_clear
+  print_cursor 0 20
+  print_value aether 0
+  print_cursor 0 15
+  print_value aether 0
+return
+
+# --- End Game Labels ---
+
+win_game:
+  # Message 1: Top Centre-ish
+  print_cursor 20 18
+  set_str win_msg
+  cat_str win_msg MARAUDERS NEUTRALISED!
+  print_value win_msg
+  # Message 2: Middle Centre
+  print_cursor 22 16
+  def_var string success_str MISSION_SUCCESS
+  print_value success_str 0
+goto exit_sequence
+
+
+end_game:
+  print_cursor 15 15
+  set_str lose_msg
+  cat_str lose_msg PLANET FALL: YOU LOSE!
+  print_value lose_msg 2
+
+exit_sequence:
+  print_cursor 0 0
+  print_value Game_Over 2
+exit
+
+
+################################################################################
+# AI SCRATCHPAD - PERSISTENT MEMORY & REASONING LOG                            #
+# Target: PCS AI Interpreter / Future Coding Agents                            #
+################################################################################
+# {
+#   "project": "Interplanetary Marauders",
+#   "version": "1.2",
+#   "engine_architecture": "Aether-Grid Coordinate System (XY)",
+#   "patterns_implemented": {
+#     "aether_initialization": "Pre-fills terminal buffer with spaces to enable XY print_cursor on empty lines.",
+#     "atomic_boolean_logic": "Uses (A + B) == 2 for AND, and (A + B) > 0 for OR.",
+#     "collision_detection": "AABB (Axis-Aligned Bounding Box) using M_Local_Y and Missile_X/Y.",
+#     "prng_algorithm": "Linear Congruential Generator (LCG) using int32_t safety multipliers.",
+#     "flicker_reduction": "Self-erasing sprites (leading/trailing spaces) to halve I/O commands."
+#   },
+#   "lessons_learned": [
+#     "Global variable collisions: Unique prefixes (fleet_bounce, Cur_M) are mandatory.",
+#     "Non-latching cursor: print_cursor resets to 0,0 after every print_value.",
+#     "Coordinate timing: Erase must happen at old coordinates before updating global state.",
+#     "String delimiters: Spaces are separators; use cat_char/Space variable for internal whitespace."
+#   ],
+#   "ai_coding_tip": "When adding features, never nest math. Maintain a flat execution flow. If a script crashes with negative coordinates, check the Planet Fall boundary check placement."
+# }
+################################################################################
+
