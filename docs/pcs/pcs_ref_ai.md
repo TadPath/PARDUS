@@ -2,7 +2,7 @@ The PCS Programming Language
 
 by Dr. Paul J. Tadrous
 
-27.02.2020 - 28.04.2026
+27.02.2020 - 30.04.2026
 
 Table of Contents
 
@@ -194,139 +194,145 @@ frames_to_skip 70
 
 get_actuators 71
 
-get_camsettings 71
+get_camsettings 72
 
-get_preview 72
+get_preview 73
 
-get_preview_focus 72
+get_preview_focus 73
 
-get_preview_stats 72
+get_preview_stats 73
 
-get_preview_tc 73
+get_preview_tc 74
 
-get_resolutions 74
+get_resolutions 75
 
-goto 74
+goto 75
 
-grabber_predelay 78
+grabber_predelay 79
 
-grabber_retries 78
+grabber_retries 79
 
-grabber_timeout 78
+grabber_timeout 79
 
-grab_image 78
+grab_image 79
 
-jpeg_quality 79
+jpeg_quality 80
 
-loop_while 79
+loop_while 80
 
-math_var 79
+math_var 80
 
-mul_var 81
+milliduration 82
 
-poll_user 81
+mul_var 84
 
-preview_clear 83
+poll_user 84
 
-preview_file 83
+preview_clear 86
 
-preview_save 83
+preview_file 86
 
-preview_tile 83
+preview_save 86
 
-print_clear 84
+preview_tile 86
 
-print_cursor 84
+print_clear 87
 
-print_file 84
+print_colour 87
 
-print_value 85
+print_size 87
 
-prv_cdf_use 87
+print_cursor 88
 
-prv_fc_posn 87
+print_file 88
 
-prv_fc_show 87
+print_value 89
 
-prv_hgm_posn 88
+prv_cdf_use 90
 
-prv_hgm_satlim_l 88
+prv_fc_posn 91
 
-prv_hgm_satlim_u 88
+prv_fc_show 91
 
-prv_hgm_scales 89
+prv_hgm_posn 91
 
-prv_lut 89
+prv_hgm_satlim_l 91
 
-prv_mask_use 89
+prv_hgm_satlim_u 92
 
-prv_m_bias 90
+prv_hgm_scales 92
 
-prv_mcor_eject 90
+prv_lut 93
 
-prv_mdf_set 90
+prv_mask_use 93
 
-prv_mff_set 91
+prv_m_bias 94
 
-prv_m_integral 91
+prv_mcor_eject 94
 
-prv_size 91
+prv_mdf_set 94
 
-prv_toggle 92
+prv_mff_set 94
 
-return 94
+prv_m_integral 95
 
-save_coords 94
+prv_size 95
 
-save_doubles 95
+prv_toggle 95
 
-save_format 95
+return 98
 
-save_path 97
+save_coords 98
 
-save_resolution 98
+save_doubles 98
 
-save_root 98
+save_format 99
 
-select_camera 99
+save_path 101
 
-set_condexp 99
+save_resolution 101
 
-set_str 102
+save_root 102
 
-set_var 103
+select_camera 102
 
-skip_frames 103
+set_condexp 103
 
-sleep 104
+set_str 105
 
-sub_var 104
+set_var 106
 
-tc_threshold 104
+skip_frames 107
 
-tmc_chconf_parse 105
+sleep 107
 
-tmc_status_parse 107
+sub_var 107
 
-undef_actuator 108
+tc_threshold 108
 
-update_gui_coords 108
+tmc_chconf_parse 109
 
-verbosity 108
+tmc_status_parse 110
 
-xys_af_period 109
+undef_actuator 111
 
-xys_finish 109
+update_gui_coords 112
 
-xys_process 109
+verbosity 112
 
-xys_scan 109
+xys_af_period 112
 
-xys_start 109
+xys_finish 112
 
-yuyv_bias 109
+xys_process 113
 
-yuyv_gain 110
+xys_scan 113
+
+xys_start 113
+
+yuyv_bias 113
+
+yuyv_gain 113
 
 # Introduction
 
@@ -2563,6 +2569,38 @@ This determines (more precisely, 'suggests') whereabouts in the 640x480 main pre
 print_clear
 
 This clears the text buffer in the script console, including anything out of sight (i.e. ant text that would have needed scrolling to be seen).
+
+### print_colour
+
+print_colour <R/P> [<G> <B>]
+
+This sets the foreground colour of any subsequent print_value prints to the script console. This is a latching command - the colour you set here remains active until either you change it with another print_colour command or the script terminates. At the start of each script run, the default foreground colour for print_value output will always be white.
+
+<R/P> - an integer varval >= 0 and <= 255 and is the red component of a 24 bit colour or a 256 colour palette entry.
+
+<G> - an integer varval >= 0 and <= 255 and is the green component of a 24 bit colour
+
+<B> - an integer varval >= 0 and <= 255 and is the blue component of a 24 bit colour
+
+**Note:** 8-bit Palette Mode (1 argument): This selects a colour from a fixed RGB332 mapping:
+
+Red: Bits 7-5 (8 levels)
+
+Green: Bits 4-2 (8 levels)
+
+Blue: Bits 1-0 (4 levels)
+
+**Note**: In 8-bit palette mode a <R/P> value of 0 is black and 255 is white.
+
+**Note**: 24-bit True Colour Mode (3 arguments): The three input values are the red, green and blue components of a 24 bit colour. This allows for precise control to select over 16.7 million colours.
+
+### print_size
+
+print_size <point_size>
+
+This sets the font size of any subsequent print_value prints to the script console. This is a latching command - the colour you set here remains active until either you change it with another print_size command or the script terminates. At the start of each script run, the default font size for print_value output will always be 12.
+
+<point_size> - an integer varval >= 1 and <= 72.
 
 ### print_cursor
 
