@@ -45,15 +45,15 @@ Unfortunately the COVID Pandemic got in the way of me preparing the code for rel
 
 I have decided to re-work the PARDUS standard to make the PARD Server run on any Linux computer (with suffient resources) so that it is no longer restricted to a Raspberry Pi. This is because, although the RPi system worked well for the low powered applications I was doing for the demo system in 2019, it is not very scaleable and limits the potential of the project. Likewise I want to avoid reliance on a custom PCB in favour of already existing open source interface hardware. Therefore both the source code and the hardware standard defined in the original PARDUS need extensive revision and I will do what I can but **this project is unfunded and done in my own time** so progress may be quite slow as I have many other commitments.
 
-## For now:
+## For now (2026):
 * I have extracted the basic image acquisition aspects of the PARD Server and put them into a fully functioning 'Stand Alone' program called [**PARD Capture**](https://github.com/TadPath/PARDUS/tree/main/PARD_Capture) which is available here in this repository. This has some extended features that were not available in the original PARD Server.
 
 * I have developed a new open hardware standard for the PUMA CNC stage that is currently still under development but already many of the CAD files are up on the PUMA repository.
-* I have extended the capabilities of PARDcap to include TCP/IP server features in a much more extensive way than the old system and also not dependent on the RPi.
-* I have greatly extended the PCS programming language into a Turing complete programming language. This is currently functional but not totally complete. The modern version of PCS has been designed with both AI coders as well as human coders in mind so it has many advanced features for the era of AI coding assistants.
+* I have extended the capabilities of PARDcap to re-introduce TCP/IP server features in a much more extensive way than the old system and also not dependent on the RPi.
+* I have greatly extended the PCS programming language into a Turing complete programming language. This is currently functional but still undergoing development. The modern version of PCS has been designed with both AI coders as well as human coders in mind so it has many advanced features for the era of AI coding assistants.
 
 ### AI-Friendly Development
-The PCS language is optimized for **AI Coding Agents** (like Cursor, Windsurf, or GitHub Copilot).
+The PCS programming language is optimised for **AI Coding Agents** (like Cursor, Windsurf, or GitHub Copilot).
 * **AI Agents:** Please refer to the [llms.txt](/llms.txt) in the root directory for high-density language rules and syntax constraints. A comprehensive markdown reference is available in the [docs/pcs/](/docs/pcs/) folder.
 * **Human Developers:** A comprehensive PDF reference is available in the [docs/pcs/](/docs/pcs/) folder.
 * **Examples:** Functional scripts demonstrating "AI-first" patterns (like Jump Tables and Non-local Jumps) can be found in the [/examples/](/examples/) directory.
@@ -63,4 +63,4 @@ PJT
 
 First Written: 11.11.2022
 
-Last Edit: 29.04.2026
+Last Edit: 30.04.2026
