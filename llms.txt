@@ -113,6 +113,8 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `preview_save` - Saves the last retrieved preview image to disc as a p6 ppm image.
 - `preview_tile <number>` - Specify where a preview image is displayed in the VGA preview display area.
 - `print_clear` - This clears the text buffer in the script console
+- `print_colour <R/P> [<G> <B>]` - This sets the foreground colour for print_value operations.
+- `print_size <point_size>` - This sets the font size for print_value operations.
 - `print_cursor <X> <Y>` - This sets the position of the cursor in the script console. Resets to 0,0 after every print_value command.
 - `print_file <exclusive?> <file_path>` - Allows the print_value output to be diverted to a file.
 - `print_value <varval> [format_number]` - Prints the value of <varval> to the current print cursor position in the script console (and optionally to a file)
