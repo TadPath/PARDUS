@@ -1,0 +1,472 @@
+Pardus pcs 1
+verbosity 1
+
+################################################
+# 'The Kibble Cat' - Mastery Build             #
+################################################
+
+#define DISP_Y_MAX 25
+#define DISP_X_MAX 48
+#define WIN_SCORE 18
+
+# --- Global Variables ---
+def_var int Cat_X 1
+def_var int Cat_Y 1
+def_var string Cat_Sprite =^..^=
+def_var string Kibble_Sprite .
+def_var string Wall_Sprite ██
+
+def_var int Score 0
+def_var string score_disp _
+def_var string inp _
+def_var string aether _
+def_var string Cat_Erase _
+
+def_var int idx 0
+def_var int logic_tmp 0
+def_var int check_x 0
+def_var int check_y 0
+def_var int array_ptr 0
+def_var int flicker_tmp 0
+
+# 48x25 grid
+def_array int Maze_Data 1200 0
+
+# --- 1. THE ENTRY POINT ---
+
+def_func main
+  print_clear
+
+  # Bake Strings
+  set_str aether
+  set_var idx 0
+  set_condexp idx < DISP_X_MAX
+  loop_while Condexp
+    cat_char aether 32
+    add_var idx 1
+    set_condexp idx < DISP_X_MAX
+  endloop
+
+  set_str Cat_Erase
+  set_var idx 0
+  set_condexp idx < 6
+  loop_while Condexp
+    cat_char Cat_Erase 32
+    add_var idx 1
+    set_condexp idx < 6
+  endloop
+
+  call_func setup_aether_grid
+  call_func setup_maze
+  call_func draw_hud
+
+  # --- Main Game Loop ---
+  set_var idx TRUE
+  set_condexp idx == TRUE
+  loop_while Condexp
+    set_str inp
+    poll_user OFF OFF inp
+
+    # 1. ERASE
+    print_cursor Cat_X Cat_Y
+    print_value Cat_Erase 0
+
+# --- 2. PERMISSIVE MOVEMENT LOGIC ---
+
+    # Left [,]
+    set_condexp inp == ,
+    do_if Condexp
+      set_var logic_tmp 0  # Forbidden by default
+
+      # Door 1: Lane 1 -> 0 (X: 9 -> 1) at Y: 18
+      set_condexp Cat_X == 9
+      do_if Condexp
+        set_condexp Cat_Y == 18
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 2: Lane 2 -> 1 (X: 17 -> 9) at Y: 5
+      set_condexp Cat_X == 17
+      do_if Condexp
+        set_condexp Cat_Y == 5
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 3: Lane 3 -> 2 (X: 25 -> 17) at Y: 12
+      set_condexp Cat_X == 25
+      do_if Condexp
+        set_condexp Cat_Y == 12
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 4: Lane 4 -> 3 (X: 33 -> 25) at Y: 18
+      set_condexp Cat_X == 33
+      do_if Condexp
+        set_condexp Cat_Y == 18
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 5: Lane 5 -> 4 (X: 41 -> 33) at Y: 5
+      set_condexp Cat_X == 41
+      do_if Condexp
+        set_condexp Cat_Y == 5
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      set_condexp logic_tmp == 1
+      do_if Condexp
+        add_var Cat_X -8
+      enddo
+    enddo
+
+    # Right [.]
+    set_condexp inp == .
+    do_if Condexp
+      set_var logic_tmp 0  # Forbidden by default
+
+      # Door 1: Lane 0 -> 1 (X: 1 -> 9) at Y: 18
+      set_condexp Cat_X == 1
+      do_if Condexp
+        set_condexp Cat_Y == 18
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 2: Lane 1 -> 2 (X: 9 -> 17) at Y: 5
+      set_condexp Cat_X == 9
+      do_if Condexp
+        set_condexp Cat_Y == 5
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 3: Lane 2 -> 3 (X: 17 -> 25) at Y: 12
+      set_condexp Cat_X == 17
+      do_if Condexp
+        set_condexp Cat_Y == 12
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 4: Lane 3 -> 4 (X: 25 -> 33) at Y: 18
+      set_condexp Cat_X == 25
+      do_if Condexp
+        set_condexp Cat_Y == 18
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      # Door 5: Lane 4 -> 5 (X: 33 -> 41) at Y: 5
+      set_condexp Cat_X == 33
+      do_if Condexp
+        set_condexp Cat_Y == 5
+        do_if Condexp
+          set_var logic_tmp 1
+        enddo
+      enddo
+
+      set_condexp logic_tmp == 1
+      do_if Condexp
+        add_var Cat_X 8
+      enddo
+    enddo
+
+    # Vertical Movement (Up/Down)
+    set_condexp inp == a
+    do_if Condexp
+      add_var Cat_Y 1
+      set_condexp Cat_Y > 22
+      do_if Condexp
+        set_var Cat_Y 22
+      enddo
+    enddo
+    set_condexp inp == z
+    do_if Condexp
+      add_var Cat_Y -1
+      set_condexp Cat_Y < 1
+      do_if Condexp
+        set_var Cat_Y 1
+      enddo
+    enddo
+
+    # 3. CONSUME
+    set_var check_x Cat_X
+    add_var check_x 2
+    set_var check_y Cat_Y
+    call_func try_eat
+    set_var check_x Cat_X
+    add_var check_x 3
+    call_func try_eat
+
+    # 4. DRAW
+    print_colour 252 # Yellow
+    print_cursor Cat_X Cat_Y
+    print_value Cat_Sprite 0
+
+    # 5. WIN CONDITION
+    set_condexp Score >= WIN_SCORE
+    do_if Condexp
+      set_var idx FALSE
+    enddo
+
+    set_condexp inp == q
+    do_if Condexp
+      set_var idx FALSE
+    enddo
+
+    sleep 0.1
+    set_condexp idx == TRUE
+  endloop
+
+ # Final Result
+  call_func setup_aether_grid # Wipe the maze for the victory lap
+  print_cursor 10 12
+  set_condexp Score >= 18
+  do_if Condexp
+    print_colour 31
+    print_value VICTORY:_CAT_IS_FULL! 0
+  else
+    print_colour 224
+    print_value GAME_OVER 0
+  enddo
+  sleep 2.0
+  goto final_exit
+return
+
+# --- Functions ---
+
+def_func try_eat
+  set_var array_ptr check_y
+  mul_var array_ptr 48
+  add_var array_ptr check_x
+  set_condexp Maze_Data[array_ptr] == 1
+  do_if Condexp
+    set_var Maze_Data[array_ptr] 0
+    add_var Score 1
+    call_func draw_hud
+  enddo
+return
+
+def_func setup_aether_grid
+  set_var logic_tmp 0
+  set_condexp logic_tmp < DISP_Y_MAX
+  loop_while Condexp
+    print_value aether 2
+    add_var logic_tmp 1
+    set_condexp logic_tmp < DISP_Y_MAX
+  endloop
+  print_cursor 0 0
+return
+
+def_func setup_maze
+  # --- 1. OUTER HORIZONTAL WALLS ---
+  print_colour 255
+  set_var idx 0
+  set_condexp idx < 48
+  loop_while Condexp
+    print_cursor idx 0
+    print_value Wall_Sprite 0
+    print_cursor idx 23
+    print_value Wall_Sprite 0
+
+    # Mark Bottom Wall in Array
+    set_var array_ptr 0
+    mul_var array_ptr 48
+    add_var array_ptr idx
+    set_var Maze_Data[array_ptr] 2
+
+    # Mark Top Wall in Array
+    set_var array_ptr 23
+    mul_var array_ptr 48
+    add_var array_ptr idx
+    set_var Maze_Data[array_ptr] 2
+
+    add_var idx 2
+    set_condexp idx < 48
+  endloop
+
+  # --- 2. VERTICAL BARS WITH STAGGERED DOORS ---
+  set_var idx 1
+  set_condexp idx < 23
+  loop_while Condexp
+    # Wall 1 (X=7) - Door at Y=18
+    set_condexp idx == 18
+    do_if Condexp
+      print_colour 31 # Cyan Door
+      print_cursor 7 idx
+      print_value >> 0
+    else
+      print_colour 255
+      print_cursor 7 idx
+      print_value Wall_Sprite 0
+      set_var array_ptr idx
+      mul_var array_ptr 48
+      add_var array_ptr 7
+      set_var Maze_Data[array_ptr] 2
+      add_var array_ptr 1
+      set_var Maze_Data[array_ptr] 2
+    enddo
+
+    # Wall 2 (X=15) - Door at Y=5
+    set_condexp idx == 5
+    do_if Condexp
+      print_colour 31
+      print_cursor 15 idx
+      print_value << 0
+    else
+      print_colour 255
+      print_cursor 15 idx
+      print_value Wall_Sprite 0
+      set_var array_ptr idx
+      mul_var array_ptr 48
+      add_var array_ptr 15
+      set_var Maze_Data[array_ptr] 2
+      add_var array_ptr 1
+      set_var Maze_Data[array_ptr] 2
+    enddo
+
+    # Wall 3 (X=23) - Door at Y=12
+    set_condexp idx == 12
+    do_if Condexp
+      print_colour 31
+      print_cursor 23 idx
+      print_value >> 0
+    else
+      print_colour 255
+      print_cursor 23 idx
+      print_value Wall_Sprite 0
+      set_var array_ptr idx
+      mul_var array_ptr 48
+      add_var array_ptr 23
+      set_var Maze_Data[array_ptr] 2
+      add_var array_ptr 1
+      set_var Maze_Data[array_ptr] 2
+    enddo
+
+    # NEW: Wall 4 (X=31) - Door at Y=18
+    set_condexp idx == 18
+    do_if Condexp
+      print_colour 31
+      print_cursor 31 idx
+      print_value >> 0
+    else
+      print_colour 255
+      print_cursor 31 idx
+      print_value Wall_Sprite 0
+      set_var array_ptr idx
+      mul_var array_ptr 48
+      add_var array_ptr 31
+      set_var Maze_Data[array_ptr] 2
+      add_var array_ptr 1
+      set_var Maze_Data[array_ptr] 2
+    enddo
+
+    # NEW: Wall 5 (X=39) - Door at Y=5
+    set_condexp idx == 5
+    do_if Condexp
+      print_colour 31
+      print_cursor 39 idx
+      print_value << 0
+    else
+      print_colour 255
+      print_cursor 39 idx
+      print_value Wall_Sprite 0
+      set_var array_ptr idx
+      mul_var array_ptr 48
+      add_var array_ptr 39
+      set_var Maze_Data[array_ptr] 2
+      add_var array_ptr 1
+      set_var Maze_Data[array_ptr] 2
+    enddo
+
+    add_var idx 1
+    set_condexp idx < 23
+  endloop
+
+
+  # --- 3. KIBBLE POPULATION (Lanes: 3, 11, 19, 27...) ---
+  set_var check_y 4
+  set_condexp check_y < 22
+  loop_while Condexp
+    set_var check_x 3
+    set_condexp check_x < 45
+    loop_while Condexp
+      # Check current array cell
+      set_var array_ptr check_y
+      mul_var array_ptr 48
+      add_var array_ptr check_x
+
+      set_condexp Maze_Data[array_ptr] == 0
+      do_if Condexp
+        print_colour 255
+        print_cursor check_x check_y
+        print_value Kibble_Sprite 0
+        set_var Maze_Data[array_ptr] 1
+      enddo
+
+      add_var check_x 8
+      set_condexp check_x < 45
+    endloop
+    add_var check_y 6
+    set_condexp check_y < 22
+  endloop
+return
+
+def_func draw_hud
+  print_cursor 0 24
+  print_colour 31
+  set_str score_disp SCORE:
+  add_var score_disp Score
+  print_value score_disp 0
+return
+
+final_exit:
+exit
+
+
+################################################################################
+# AI SCRATCHPAD - PERSISTENT MEMORY & REASONING LOG                            #
+# Version: 1.5 - The "Kibble Cat & Compiler Logic" Update                      #
+################################################################################
+ {
+   "project": "Interplanetary Marauders / The Kibble Cat",
+   "version": "1.5",
+   "engine_architecture": "Aether-Grid Coordinate System (XY)",
+   "compiler_rules": {
+     "entry_point": "def_func main MUST be the first function declaration encountered.",
+     "exit_directive": "The 'exit' command terminates ALL parsing. Place it at the absolute end of the active script.",
+     "scoping": "Nested functions are forbidden; the interpreter expects a flat global sequence.",
+     "argument_limit": "Command arguments (literals/names) MUST be <31 bytes. Use variables for long strings."
+   },
+   "patterns_implemented": {
+     "vertical_priming": "Use 'print_value aether 2' in a setup loop to create 3D volume in the 1D console.",
+     "permissive_routing": "Instead of AABB collision, allow lateral movement only at specific gateway (Door) coordinates.",
+     "grid_snapping": "Align movement steps with sprite width (e.g., Step 8 for a 6-char sprite + 2-char wall).",
+     "tag_sanitisation": "C-Code: Remove all tags before inserting text to prevent color bleeding/stacking."
+   },
+   "lessons_learned": [
+     "Global Condition Guarding: Re-evaluate 'set_condexp' immediately before every 'do_if' and 'loop_while' to prevent state contamination.",
+     "Lane-to-X Mapping: Coordinate checks (Cat_X == 1, 9, 17) must be exact matches for lane-based movement to work.",
+     "Smart Erase: Sprites must 'restore' background data from a logical array (Maze_Data) during erasure to prevent 'eroding' static walls.",
+     "Space-Safe Arguments: Never use spaces in command arguments; use '_' placeholders or pre-built string variables."
+   ],
+   "ai_coding_tips": [
+     "Buffer Baking: Pre-calculate screen-width strings in 'main' to maximize utility function performance.",
+     "Interstitial Buffering: Ensure (StepSize = SpriteWidth + WallWidth) to prevent entity clipping."
+   ]
+ }
+################################################################################
