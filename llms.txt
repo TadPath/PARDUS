@@ -90,6 +90,7 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `frame_number <number>` - Sets the value of the frame counter number for the file name the next captured image.
 - `frames_to_average <number>` - Sets the number of frames to average for image capture with grab_image.
 - `frames_to_skip <skip>` - Sets the number of frames to initially acquire and discard for each grab_image operation.
+- `fset_var <varname> <skip> <file>` - Sets the values in a variable or array from data in a file.
 - `get_actuators` - Get the name and index number of all extant actuators on the server.
 - `get_camsettings` - Ensures the client GUI is synchronised to the settings of the currently selected camera.
 - `get_preview <ON|OFF> <centre_x> <centre_y>` - Capture a preview image.
