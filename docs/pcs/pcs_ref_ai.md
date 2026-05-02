@@ -6,335 +6,337 @@ by Dr. Paul J. Tadrous
 
 Table of Contents
 
-1 Introduction 5
+[1 Introduction 5](#__RefHeading___Toc14920_2491002120)
 
-The PARDUS system of programs 5
+[The PARDUS system of programs 5](#__RefHeading___Toc15290_3544238716)
 
-pardclient 5
+[pardclient 5](#__RefHeading___Toc15292_3544238716)
 
-pardaemon 6
+[pardaemon 6](#__RefHeading___Toc15294_3544238716)
 
-pardserver 6
+[pardserver 6](#__RefHeading___Toc15296_3544238716)
 
-parduino 6
+[parduino 6](#__RefHeading___Toc15298_3544238716)
 
-pardcap 6
+[pardcap 6](#__RefHeading___Toc15300_3544238716)
 
-Why PARDUS and not some other software? 7
+[Why PARDUS and not some other software? 7](#__RefHeading___Toc15302_3544238716)
 
-2 General specifications 8
+[2 General specifications 8](#__RefHeading___Toc14922_2491002120)
 
-Comments 8
+[Comments 8](#__RefHeading___Toc14924_2491002120)
 
-Coding lines 8
+[Coding lines 8](#__RefHeading___Toc14926_2491002120)
 
-3 Data types, the ‘varval’ and casting 11
+[3 Data types, the ‘varval’ and casting 11](#__RefHeading___Toc1447_441156763)
 
-int 11
+[int 11](#__RefHeading___Toc14928_2491002120)
 
-float 11
+[float 11](#__RefHeading___Toc14930_2491002120)
 
-string 11
+[string 11](#__RefHeading___Toc14932_2491002120)
 
-varval 12
+[varval 12](#__RefHeading___Toc14934_2491002120)
 
-The binary choice varval 13
+[The binary choice varval 13](#__RefHeading___Toc14936_2491002120)
 
-casting 13
+[casting 13](#__RefHeading___Toc8143_1611038698)
 
-Rules for integer and float Casting: 14
+[Rules for integer and float Casting: 14](#__RefHeading___Toc14938_2491002120)
 
-*Rules for string casting*: 15
+[*Rules for string casting*: 15](#__RefHeading___Toc14940_2491002120)
 
-4 Actuators and actuator types 17
+[4 Actuators and actuator types 17](#__RefHeading___Toc14942_2491002120)
 
-Stepper 18
+[Stepper 18](#__RefHeading___Toc14944_2491002120)
 
-Binary 18
+[Binary 18](#__RefHeading___Toc14946_2491002120)
 
-M-Level 18
+[M-Level 18](#__RefHeading___Toc14916_2491002120)
 
-Servo 18
+[Servo 18](#__RefHeading___Toc14918_2491002120)
 
-5 The PCS preprocessor 20
+[5 The PCS preprocessor 20](#__RefHeading___Toc14948_2491002120)
 
-The #define directive 20
+[The #define directive 20](#__RefHeading___Toc14950_2491002120)
 
-The #include directive and header files 21
+[The #include directive and header files 21](#__RefHeading___Toc14952_2491002120)
 
-6 Variables and arrays 23
+[6 Variables and arrays 23](#__RefHeading___Toc14954_2491002120)
 
-User-defined variables 23
+[User-defined variables 23](#__RefHeading___Toc14956_2491002120)
 
-System variables 23
+[System variables 23](#__RefHeading___Toc14958_2491002120)
 
-Arrays 26
+[Arrays 26](#__RefHeading___Toc14960_2491002120)
 
-Protected names 27
+[Protected names 27](#__RefHeading___Toc14962_2491002120)
 
-7 Functions 28
+[7 Functions 28](#__RefHeading___Toc2239_1652509698)
 
-Defining a function: def_func and return 28
+[Defining a function: def_func and return 28](#__RefHeading___Toc14964_2491002120)
 
-Calling a function: call_func 28
+[Calling a function: call_func 28](#__RefHeading___Toc14966_2491002120)
 
-Function arguments 30
+[Function arguments 30](#__RefHeading___Toc14968_2491002120)
 
-Return values 30
+[Return values 30](#__RefHeading___Toc14970_2491002120)
 
-main 30
+[main 30](#__RefHeading___Toc14972_2491002120)
 
-8 Code blocks, loops and control of flow 31
+[8 Code blocks, loops and control of flow 31](#__RefHeading___Toc2192_1652509698)
 
-Control of flow 31
+[Control of flow 31](#__RefHeading___Toc14974_2491002120)
 
-9 PCS and AI Coding Agents 33
+[9 PCS and AI Coding Agents 33](#__RefHeading___Toc13149_3782552218)
 
-The AI-friendly design principles of PCS 33
+[The AI-friendly design principles of PCS 33](#__RefHeading___Toc14976_2491002120)
 
-1. Atomic and Predictable Syntax 33
+[1. Atomic and Predictable Syntax 33](#__RefHeading___Toc14978_2491002120)
 
-2. Operator Abstraction (Dynamic Dispatch) 33
+[2. Operator Abstraction (Dynamic Dispatch) 33](#__RefHeading___Toc14980_2491002120)
 
-3. Transparent State Management 33
+[3. Transparent State Management 33](#__RefHeading___Toc14982_2491002120)
 
-4. Vectorised Reasoning via Universal Arrays 34
+[4. Vectorised Reasoning via Universal Arrays 34](#__RefHeading___Toc14984_2491002120)
 
-5. Explicit Data Casting 34
+[5. Explicit Data Casting 34](#__RefHeading___Toc14986_2491002120)
 
-6. Minimalist Delimiter Logic 34
+[6. Minimalist Delimiter Logic 34](#__RefHeading___Toc14988_2491002120)
 
-7. The Scratchpad zone 34
+[7. The Scratchpad zone 34](#__RefHeading___Toc14990_2491002120)
 
-Guide for AI prompting 34
+[Guide for AI prompting 34](#__RefHeading___Toc14992_2491002120)
 
-The "PCS Expert" Prompt 34
+[The "PCS Expert" Prompt 34](#__RefHeading___Toc14994_2491002120)
 
-Guidelines for AI Code Generation 35
+[Guidelines for AI Code Generation 35](#__RefHeading___Toc14996_2491002120)
 
-Avoid blind trust 35
+[Avoid blind trust 35](#__RefHeading___Toc14998_2491002120)
 
-10 List of commands 36
+[10 List of commands 36](#__RefHeading___Toc2241_1652509698)
 
-act_accel 36
+[act_accel 36](#__RefHeading___Toc15000_2491002120)
 
-act_get 36
+[act_get 36](#__RefHeading___Toc15002_2491002120)
 
-act_getid 44
+[act_getid 44](#__RefHeading___Toc15004_2491002120)
 
-act_getname 44
+[act_getname 44](#__RefHeading___Toc15006_2491002120)
 
-act_halt 45
+[act_halt 45](#__RefHeading___Toc15008_2491002120)
 
-act_home 45
+[act_home 45](#__RefHeading___Toc15010_2491002120)
 
-act_moveby 48
+[act_moveby 48](#__RefHeading___Toc15012_2491002120)
 
-act_movereport 50
+[act_movereport 50](#__RefHeading___Toc15014_2491002120)
 
-act_moveto 51
+[act_moveto 51](#__RefHeading___Toc15016_2491002120)
 
-act_set 53
+[act_set 53](#__RefHeading___Toc15018_2491002120)
 
-act_unit 55
+[act_unit 55](#__RefHeading___Toc15020_2491002120)
 
-add_var 56
+[add_var 56](#__RefHeading___Toc15022_2491002120)
 
-af_ccrit 57
+[af_ccrit 57](#__RefHeading___Toc15024_2491002120)
 
-af_setup 58
+[af_setup 58](#__RefHeading___Toc15026_2491002120)
 
-autofocus 59
+[autofocus 59](#__RefHeading___Toc15028_2491002120)
 
-average_scale_means 59
+[average_scale_means 59](#__RefHeading___Toc15030_2491002120)
 
-call_func 59
+[call_func 59](#__RefHeading___Toc15032_2491002120)
 
-camera_set 60
+[camera_set 60](#__RefHeading___Toc15034_2491002120)
 
-cat_char 60
+[cat_char 60](#__RefHeading___Toc15036_2491002120)
 
-cat_str 61
+[cat_str 61](#__RefHeading___Toc15038_2491002120)
 
-corrections_mask 62
+[corrections_mask 62](#__RefHeading___Toc15040_2491002120)
 
-def_actuator 62
+[def_actuator 62](#__RefHeading___Toc15042_2491002120)
 
-def_array 66
+[def_array 66](#__RefHeading___Toc15044_2491002120)
 
-def_func 68
+[def_func 68](#__RefHeading___Toc15046_2491002120)
 
-def_var 68
+[def_var 68](#__RefHeading___Toc15048_2491002120)
 
-df_correction 69
+[df_correction 69](#__RefHeading___Toc15050_2491002120)
 
-div_var 69
+[div_var 69](#__RefHeading___Toc15052_2491002120)
 
-do_if 70
+[do_if 70](#__RefHeading___Toc15054_2491002120)
 
-else 70
+[else 70](#__RefHeading___Toc15056_2491002120)
 
-enddo 71
+[enddo 71](#__RefHeading___Toc15058_2491002120)
 
-endloop 71
+[endloop 71](#__RefHeading___Toc15060_2491002120)
 
-execute_daemon 71
+[execute_daemon 71](#__RefHeading___Toc15062_2491002120)
 
-execute_system 72
+[execute_system 72](#__RefHeading___Toc15064_2491002120)
 
-exit 72
+[exit 72](#__RefHeading___Toc15066_2491002120)
 
-ff_correction 72
+[ff_correction 72](#__RefHeading___Toc15068_2491002120)
 
-frame_number 73
+[fput_var 73](#__RefHeading___Toc15074_2491002120_Copy_)
 
-frames_to_average 73
+[frame_number 74](#__RefHeading___Toc15070_2491002120)
 
-frames_to_skip 74
+[frames_to_average 75](#__RefHeading___Toc15072_2491002120)
 
-fset_var 74
+[frames_to_skip 75](#__RefHeading___Toc15074_2491002120)
 
-get_actuators 75
+[fset_var 75](#__RefHeading___Toc15074_2491002120_Copy1)
 
-get_camsettings 77
+[get_actuators 77](#__RefHeading___Toc15076_2491002120)
 
-get_preview 77
+[get_camsettings 78](#__RefHeading___Toc15078_2491002120)
 
-get_preview_focus 78
+[get_preview 79](#__RefHeading___Toc15080_2491002120)
 
-get_preview_stats 78
+[get_preview_focus 79](#__RefHeading___Toc15082_2491002120)
 
-get_preview_tc 79
+[get_preview_stats 80](#__RefHeading___Toc15084_2491002120)
 
-get_resolutions 80
+[get_preview_tc 80](#__RefHeading___Toc15086_2491002120)
 
-goto 80
+[get_resolutions 81](#__RefHeading___Toc15088_2491002120)
 
-grabber_predelay 84
+[goto 82](#__RefHeading___Toc15090_2491002120)
 
-grabber_retries 84
+[grabber_predelay 85](#__RefHeading___Toc15092_2491002120)
 
-grabber_timeout 84
+[grabber_retries 85](#__RefHeading___Toc15094_2491002120)
 
-grab_image 84
+[grabber_timeout 86](#__RefHeading___Toc15096_2491002120)
 
-jpeg_quality 85
+[grab_image 86](#__RefHeading___Toc15098_2491002120)
 
-loop_while 85
+[jpeg_quality 86](#__RefHeading___Toc15100_2491002120)
 
-math_var 85
+[loop_while 86](#__RefHeading___Toc15102_2491002120)
 
-milliduration 88
+[math_var 87](#__RefHeading___Toc15104_2491002120)
 
-mul_var 89
+[milliduration 89](#__RefHeading___Toc15104_2491002120_Copy_)
 
-poll_user 89
+[mul_var 91](#__RefHeading___Toc15106_2491002120)
 
-preview_clear 91
+[poll_user 91](#__RefHeading___Toc15108_2491002120)
 
-preview_file 91
+[preview_clear 92](#__RefHeading___Toc15110_2491002120)
 
-preview_save 91
+[preview_file 92](#__RefHeading___Toc15112_2491002120)
 
-preview_tile 92
+[preview_save 93](#__RefHeading___Toc15114_2491002120)
 
-print_clear 92
+[preview_tile 93](#__RefHeading___Toc15116_2491002120)
 
-print_colour 92
+[print_clear 94](#__RefHeading___Toc15118_2491002120)
 
-print_size 93
+[print_colour 94](#__RefHeading___Toc15118_2491002120_Copy_)
 
-print_cursor 93
+[print_size 94](#__RefHeading___Toc15118_2491002120_Copy1)
 
-print_file 93
+[print_cursor 94](#__RefHeading___Toc15120_2491002120)
 
-print_value 94
+[print_file 95](#__RefHeading___Toc15122_2491002120)
 
-prv_cdf_use 96
+[print_value 96](#__RefHeading___Toc15124_2491002120)
 
-prv_fc_posn 96
+[prv_cdf_use 97](#__RefHeading___Toc15126_2491002120)
 
-prv_fc_show 97
+[prv_fc_posn 98](#__RefHeading___Toc15128_2491002120)
 
-prv_hgm_posn 97
+[prv_fc_show 98](#__RefHeading___Toc15130_2491002120)
 
-prv_hgm_satlim_l 97
+[prv_hgm_posn 98](#__RefHeading___Toc15132_2491002120)
 
-prv_hgm_satlim_u 98
+[prv_hgm_satlim_l 99](#__RefHeading___Toc15134_2491002120)
 
-prv_hgm_scales 98
+[prv_hgm_satlim_u 99](#__RefHeading___Toc15136_2491002120)
 
-prv_lut 99
+[prv_hgm_scales 100](#__RefHeading___Toc15138_2491002120)
 
-prv_mask_use 99
+[prv_lut 100](#__RefHeading___Toc15140_2491002120)
 
-prv_m_bias 100
+[prv_mask_use 100](#__RefHeading___Toc15142_2491002120)
 
-prv_mcor_eject 100
+[prv_m_bias 101](#__RefHeading___Toc15144_2491002120)
 
-prv_mdf_set 100
+[prv_mcor_eject 101](#__RefHeading___Toc15146_2491002120)
 
-prv_mff_set 101
+[prv_mdf_set 101](#__RefHeading___Toc15148_2491002120)
 
-prv_m_integral 101
+[prv_mff_set 102](#__RefHeading___Toc15150_2491002120)
 
-prv_size 101
+[prv_m_integral 102](#__RefHeading___Toc15152_2491002120)
 
-prv_toggle 102
+[prv_size 103](#__RefHeading___Toc15154_2491002120)
 
-return 104
+[prv_toggle 103](#__RefHeading___Toc15156_2491002120)
 
-save_coords 105
+[return 106](#__RefHeading___Toc15158_2491002120)
 
-save_doubles 105
+[save_coords 106](#__RefHeading___Toc15160_2491002120)
 
-save_format 105
+[save_doubles 106](#__RefHeading___Toc15162_2491002120)
 
-save_path 108
+[save_format 107](#__RefHeading___Toc15164_2491002120)
 
-save_resolution 108
+[save_path 109](#__RefHeading___Toc15166_2491002120)
 
-save_root 109
+[save_resolution 110](#__RefHeading___Toc15168_2491002120)
 
-select_camera 109
+[save_root 110](#__RefHeading___Toc15170_2491002120)
 
-set_condexp 110
+[select_camera 111](#__RefHeading___Toc15172_2491002120)
 
-set_str 112
+[set_condexp 111](#__RefHeading___Toc15174_2491002120)
 
-set_var 114
+[set_str 114](#__RefHeading___Toc15176_2491002120)
 
-skip_frames 114
+[set_var 115](#__RefHeading___Toc15178_2491002120)
 
-sleep 114
+[skip_frames 115](#__RefHeading___Toc15180_2491002120)
 
-sub_var 115
+[sleep 116](#__RefHeading___Toc15182_2491002120)
 
-tc_threshold 115
+[sub_var 116](#__RefHeading___Toc15184_2491002120)
 
-tmc_chconf_parse 116
+[tc_threshold 116](#__RefHeading___Toc15186_2491002120)
 
-tmc_status_parse 117
+[tmc_chconf_parse 118](#__RefHeading___Toc15188_2491002120)
 
-undef_actuator 118
+[tmc_status_parse 119](#__RefHeading___Toc15190_2491002120)
 
-update_gui_coords 119
+[undef_actuator 120](#__RefHeading___Toc15192_2491002120)
 
-verbosity 119
+[update_gui_coords 121](#__RefHeading___Toc15194_2491002120)
 
-xys_af_period 120
+[verbosity 121](#__RefHeading___Toc15196_2491002120)
 
-xys_finish 120
+[xys_af_period 121](#__RefHeading___Toc15198_2491002120)
 
-xys_process 120
+[xys_finish 121](#__RefHeading___Toc15200_2491002120)
 
-xys_scan 120
+[xys_process 122](#__RefHeading___Toc15202_2491002120)
 
-xys_start 120
+[xys_scan 122](#__RefHeading___Toc15204_2491002120)
 
-yuyv_bias 121
+[xys_start 122](#__RefHeading___Toc15206_2491002120)
 
-yuyv_gain 121
+[yuyv_bias 122](#__RefHeading___Toc15208_2491002120)
+
+[yuyv_gain 122](#__RefHeading___Toc15210_2491002120)
 
 # Introduction
 
@@ -441,7 +443,7 @@ goto mylabel if Condexp # Correct - goto permits a secondary 'if' command
 
 but this is illegal:
 
-```
+```pcs
 loop_while idx > 20      # Wrong! Attempt to combine 2 commands in one line.
 goto mylabel if idx > 20 # Wrong! Attempt to combine 3 commands in one line
                          # when only 2 are permitted.
@@ -1518,11 +1520,11 @@ This moves an actuator to a specific position.
 
 [posn_z] - a float-capable value >= 0.0, as for <position> but pertaining to the Z axis when <act_id> is StageXYZ.
 
-**Note**: All position units are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps - that is, in (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply will be rounded to the nearest *onestep* value (see page 47 for the meaning of onestep). For example, if you set <position> to 15 (assuming we are using atomic steps and not calibrated units) and the motor is currently at position 30, then the difference between current position (30) and desired destination (15) will be calculated as 15 atomic steps. However, when maxmsdenom is 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) this 15 atomic steps will result in an effective motion of 0 (no move at all) because (uint32_t)(0.5 + (15.0 / 32.0)) = 0.
+**Note**: All position units are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps - that is, in (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply will be rounded to the nearest *onestep* value (see page 49 for the meaning of onestep). For example, if you set <position> to 15 (assuming we are using atomic steps and not calibrated units) and the motor is currently at position 30, then the difference between current position (30) and desired destination (15) will be calculated as 15 atomic steps. However, when maxmsdenom is 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) this 15 atomic steps will result in an effective motion of 0 (no move at all) because (uint32_t)(0.5 + (15.0 / 32.0)) = 0.
 
 However if you set <position> = 14 making the difference between current position (30) and destination (14) = 16 then the effective value will be 1 step in the current 1/8 step size (= 32 atomic steps) because (uint32_t)(0.5 + (16.0 / 32.0)) = 1. The motor will therefore try to move 32 atomic steps back towards home but it will not actually move because this would take it past 0. This is because the Arduino code has this check in it prior to taking any step:
 
-```
+```c
 if(Stepperlist[id]->stepcount < Stepperlist[id]->onestep){
        Stepperlist[id]->stepcount = 0.0;
        Stepperlist[id]->limstate=LIM_ZERO;
@@ -1598,7 +1600,7 @@ This sets the way distance and position values (as supplied in motion command ar
 2. maxcalibri will always be a float capable number. It does not have to be a whole number of atomic steps. However it must not be <1.0e-3.
 3. blsteps will always be interpreted as literal steps in the motor's current microstep size. This is read-only for client. It is calculated by the server as:
 
-```
+```c
 Stepperlist[ui82]->blsteps = Stepperlist[ui82]->maxblsteps /
                                                    Stepperlist[ui82]->onestep;
 ```
@@ -1636,7 +1638,7 @@ This sets convergence criteria parameters for the autofocus command search algor
 
 <timeout> This is as an integer in milliseconds. If the AF search takes longer than this to complete it will fail. Use 0 if you do not want a timeout to be used.
 
-**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.47). For example, when using atomic steps, if you set <max_difference> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <max_difference> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <max_difference> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.49). For example, when using atomic steps, if you set <max_difference> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <max_difference> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <max_difference> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
 
 ### af_setup
 
@@ -1659,7 +1661,7 @@ This sets all but the convergence criteria parameters and focus function for the
 * ignore - this just carries on regardless - the last best value for focus will be used as best focal position and the program will continue. This can be perfectly legitimate if, for example, the auto-focus attempt took place over an area with no relevant object in the field of view of the camera (e.g. blank area of slide for microscopy).
 * exit - this will terminate the program immediately.
 
-**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.47). For example, when using atomic steps, if you set <initial_step_size> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <initial_step_size> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <initial_step_size> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.49). For example, when using atomic steps, if you set <initial_step_size> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <initial_step_size> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <initial_step_size> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
 
 **Note**: The focus function used for AF is selected using the frame grabber settings commands such as prv_toggle with the 'fc_...' (focusser statistic) options. See prv_toggle for details.
 
@@ -1819,7 +1821,7 @@ In the pardserver, each one of these essential settings is contributes a maturit
 
 **Example**: Here is an example PCS script that defines a stepper motor actuator called 'X_Axis' and matures it up ready for homing:
 
-```
+```pcs
 Pardus pcs 1
 verbosity 3
 #include ppinclude.pch   # This contains the integer values mapped to the
@@ -1861,7 +1863,7 @@ This creates and initialises a user-defined 1-dimensional array of variables.
 
 <data_type> - the data type of the elements in the array. It must be one of these: int, float, string.
 
-<varname> - a string constant defining the name of the array to be created. This is case sensitive and must not be already taken by an extant variable or array, whether a system variable or user-defined variable or array (no two arrays can have the same name as each other or as any single variable), it must not contain spaces or square brackets and must not be a protected name (see p.26).
+<varname> - a string constant defining the name of the array to be created. This is case sensitive and must not be already taken by an extant variable or array, whether a system variable or user-defined variable or array (no two arrays can have the same name as each other or as any single variable), it must not contain spaces or square brackets and must not be a protected name (see p.27).
 
 <size> - the number of elements in the array. It must be at least 1.
 
@@ -1942,7 +1944,7 @@ This creates and initialises a user-defined variable.
 
 <data_type> - the data type of the variable and must be one of these: int, float, string.
 
-<varname> - a string constant defining the name of the variable to be created. This is case sensitive and must not be already taken by an extant variable or array, whether a system variable or user-defined variable (no two variables can have the same name), it must not contain spaces or square brackets and must not be a protected name (see p.26).
+<varname> - a string constant defining the name of the variable to be created. This is case sensitive and must not be already taken by an extant variable or array, whether a system variable or user-defined variable (no two variables can have the same name), it must not contain spaces or square brackets and must not be a protected name (see p.27).
 
 <varval> - the value to initialise the new variable to. This must be a value that is compatible with the data type of the new variable.
 
@@ -2077,6 +2079,49 @@ This determines whether to load and use a flat field correction image in full fr
 
 **Note**: More detail about the use of a flat field image can be found in the pardcap user manual. More information about raw doubles format images (the .dou and .qih conventions) can be found in the Biaram user manual.
 
+### fput_var
+
+fput_var <varname> <append?> <file>
+
+This reads data from the variable <varname> and writes it to a file. The PCS system variable NWrites is set to the number of data items written into the file from the variable or to a negative number if there was an error.
+
+<varname> - the name of the variable to be read.
+
+<append?> - an binary choice varval that specifies whether the file to be written to should be created (and that will overwrite and pre-existing file with that name) or appended to. If the append option is selected and the file does not exist then the file will be created.
+
+<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be written to. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to access them.
+
+**Note**: If <varname> is an array of size > 1 then ensure you specify the start point with the usual PCS square brackets dereferencing syntax. Data will be read from the array from that point onwards till then end of the array. If <varname> is a single variable then only one data item will be read from it into the file (you should not use dereferencing brackets for single variables and that include variables that were defined as an array but with a size of 1).
+
+**Note**: The file writing process will stop when one of the following conditions is encountered:
+
+* The end of the variable or array is reached
+* There is an error accessing or writing to the file
+
+In the case of an file write error, the script will not terminate but the system variable NWrites will be set to a negative value. So the programmer should check the value of NWrites after each call to fput_var for good defensive programming. Here are the meanings of the value of NWrites after a call to the fput_var command:
+
+-1 = access denied (fopen failed).
+
+-2 = This should never occur.
+
+-3 = file IO error (ferror was set).
+
+-4 = the default value at the start of any script. Thus this will be the value before any call to fput_var is made or, after any call to fput_var, it means 'Error, not otherwise specified'.
+
+>= 0 = The number of data items written into <file>.
+
+**Note**: The data type and content of the file will be assumed to be the same as the data type of <varname> according to the following rules:
+
+<varname> is of type string: A 'data item' will be defined as a character string separated from any other data items by white space. Thus the file will be written as a text file of strings separated by white space. The last string to be written will have a space appended to it.
+
+<varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be written as a raw binary file.
+
+<varname> is of type int: A 'data item' will be defined an int32_t and the file will then be written as a raw binary file.
+
+**Note**: See also fset_var.
+
 ### frame_number
 
 frame_number <number>
@@ -2115,7 +2160,7 @@ This reads data from a file and puts the values it reads into the variable <varn
 
 **Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
-**Note**: If <varname> is an array of size > 1 then ensure you specify the entry point with the usual PCS square brackets dereferencing syntax. Data will be read into the array from that point onwards. If is a single variable then only one data item will be read into it (you should not use dereferencing brackets for single variables and that include variables that were defined as an array but with a size of 1).
+**Note**: If <varname> is an array of size > 1 then ensure you specify the entry point with the usual PCS square brackets dereferencing syntax. Data will be read into the array from that point onwards. If <varname> is a single variable then only one data item will be read into it (you should not use dereferencing brackets for single variables and that include variables that were defined as an array but with a size of 1).
 
 **Note**: The file reading process will stop when one of the following conditions is encountered:
 
@@ -2123,7 +2168,7 @@ This reads data from a file and puts the values it reads into the variable <varn
 * There is an error accessing or reading from the file
 * The variable runs out of space to accept new data
 
-In the case of an file read error, the script will not terminate but the system variable NReads will be set to a negative. So the programmer should check the value of NReads after each call to fset_var for good defensive programming. Here are the meanings of the value of NReads after a call to the fset_var command:
+In the case of a file read error, the script will not terminate but the system variable NReads will be set to a negative. So the programmer should check the value of NReads after each call to fset_var for good defensive programming. Here are the meanings of the value of NReads after a call to the fset_var command:
 
 -1 = access denied (fopen failed).
 
@@ -2143,6 +2188,8 @@ In the case of an file read error, the script will not terminate but the system 
 
 <varname> is of type int: A 'data item' will be defined an int32_t and the file will then be treated as a raw binary file and read as such - each 32 bits of the file being read as an int32_t.
 
+**Note**: See also fput_var.
+
 ### get_actuators
 
 get_actuators
@@ -2157,7 +2204,7 @@ This information also lets you know what names and index numbers to avoid when c
 
 Example: The following script calls get_actuators then proceeds to check if specific actuators exist with the names X_Axis, Y_Axis and Z_Axis. It only goes on to issue the act_halt command to those actuators that actually exist - thereby avoiding a fatal error by attempting to address an non-existent actuator:
 
-```
+```pcs
 Pardus pcs 1
 #include ppinclude.pch
 verbosity 1
@@ -2240,7 +2287,7 @@ This does one of two things in regards to tissue content (tc) measurements depen
 
 <ON|OFF> - a binary choice varval. If it evaluates to ON it calculates the tissue content value using the NDL (Normalised Differential Laplacian) on the 3x3 median filtered Y pixel data as:
 
-```
+```c
 tissue_content_ndl = (MALcurr / MALref) * log10(VARcurr / VARref)
 ```
 
@@ -2280,7 +2327,7 @@ if - If an extended (conditional) goto is required then the second argument must
 
 <varval> - a binary choice varval. If the value of <varval> evaluates to a non-zero numerical value or to TRUE or ON then the script interpreter will immediately go to the line in the script marked by <label>. Otherwise the script will continue execution from the next coding line immediately following this goto line.
 
-**Note**: A goto label itself (i.e. the token that marks the destination position in the script of a goto jump) is a string without white space followed immediately by a colon with no space between the label string and the colon - similar to goto labels in the C programming language - and that goto label must be on its own separate line. This goto label must be a string constant and not a string variable and must be unique amongst all other goto labels in the entire script. There is nothing in the PCS language interpreter rules that prevents you from using a protected name (see p.26) or the name of an extant user variable or actuator for a label but it can make a program potentially confusing to read if you do that.
+**Note**: A goto label itself (i.e. the token that marks the destination position in the script of a goto jump) is a string without white space followed immediately by a colon with no space between the label string and the colon - similar to goto labels in the C programming language - and that goto label must be on its own separate line. This goto label must be a string constant and not a string variable and must be unique amongst all other goto labels in the entire script. There is nothing in the PCS language interpreter rules that prevents you from using a protected name (see p.27) or the name of an extant user variable or actuator for a label but it can make a program potentially confusing to read if you do that.
 
 **Note**: Using the Condexp system variable as the <varval> argument in conjunction with the set_condexp command allows conditional expressions to dictate the control of flow (see set_condexp for detail).
 
@@ -2498,7 +2545,7 @@ This calculates the monotonic time in milliseconds from the value provided in <s
 
 **Example**:
 
-```
+```pcs
 Pardus pcs 1
 verbosity 1
 def_var string msg _
@@ -3205,7 +3252,7 @@ will always be false and will result in the value of Condexp being set to value 
 
 **Note**: if you wish to combine multiple comparison expressions with either a logical OR or a logical AND between expressions, this can be effected by the use of multiple variable assignments as shown in the following examples:
 
-```
+```pcs
 def_var int exp1 0
 def_var int exp2 0
 def_var int exp3 0
@@ -3342,7 +3389,7 @@ This sets lower and upper tissue content thresholds. See notes below for more in
 
 **Note**: The thresholding tests are implemented in the pardcap C source code according to the pseudocode logic shown below (tcval is the result of the TCA algorithm applied to the preview image):
 
-```
+```pseudocode
 if (<lower> < 0.0) go_ahead_with_full_image_capture(); // No thresholding
 else {
   int score = 0;
