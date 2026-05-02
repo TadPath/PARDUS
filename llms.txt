@@ -87,6 +87,7 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `execute_daemon <progname> [<arg1> ...]` - Spawn a process to run on the client host computer (non-blocking execution).
 - `execute_system <progname> [<arg1> ...]` - Initiate a process to run on the client host computer (blocking execution)
 - `exit` - Terminates a script. Mandatory for any script or header file.
+- `fput_var <varname> <append?> <file>` - Writes the values in a variable (or array) to a file.
 - `frame_number <number>` - Sets the value of the frame counter number for the file name the next captured image.
 - `frames_to_average <number>` - Sets the number of frames to average for image capture with grab_image.
 - `frames_to_skip <skip>` - Sets the number of frames to initially acquire and discard for each grab_image operation.
