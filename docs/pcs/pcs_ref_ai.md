@@ -2,7 +2,7 @@ The PCS Programming Language
 
 by Dr. Paul J. Tadrous
 
-27.02.2020 - 30.04.2026
+27.02.2020 - 02.05.2026
 
 Table of Contents
 
@@ -44,7 +44,7 @@ casting 13
 
 Rules for integer and float Casting: 14
 
-*Rules for string casting*: 14
+*Rules for string casting*: 15
 
 4 Actuators and actuator types 17
 
@@ -56,283 +56,285 @@ M-Level 18
 
 Servo 18
 
-5 The PCS preprocessor 19
+5 The PCS preprocessor 20
 
-The #define directive 19
+The #define directive 20
 
-The #include directive and header files 20
+The #include directive and header files 21
 
-6 Variables and arrays 22
+6 Variables and arrays 23
 
-User-defined variables 22
+User-defined variables 23
 
-System variables 22
+System variables 23
 
-Arrays 25
+Arrays 26
 
-Protected names 26
+Protected names 27
 
-7 Functions 27
+7 Functions 28
 
-Defining a function: def_func and return 27
+Defining a function: def_func and return 28
 
-Calling a function: call_func 27
+Calling a function: call_func 28
 
-Function arguments 29
+Function arguments 30
 
-Return values 29
+Return values 30
 
-main 29
+main 30
 
-8 Code blocks, loops and control of flow 30
+8 Code blocks, loops and control of flow 31
 
-Control of flow 30
+Control of flow 31
 
-9 PCS and AI Coding Agents 32
+9 PCS and AI Coding Agents 33
 
-The AI-friendly design principles of PCS 32
+The AI-friendly design principles of PCS 33
 
-1. Atomic and Predictable Syntax 32
+1. Atomic and Predictable Syntax 33
 
-2. Operator Abstraction (Dynamic Dispatch) 32
+2. Operator Abstraction (Dynamic Dispatch) 33
 
-3. Transparent State Management 32
+3. Transparent State Management 33
 
-4. Vectorised Reasoning via Universal Arrays 33
+4. Vectorised Reasoning via Universal Arrays 34
 
-5. Explicit Data Casting 33
+5. Explicit Data Casting 34
 
-6. Minimalist Delimiter Logic 33
+6. Minimalist Delimiter Logic 34
 
-7. The Scratchpad zone 33
+7. The Scratchpad zone 34
 
-Guide for AI prompting 33
+Guide for AI prompting 34
 
-The "PCS Expert" Prompt 33
+The "PCS Expert" Prompt 34
 
-Guidelines for AI Code Generation 34
+Guidelines for AI Code Generation 35
 
-Avoid blind trust 34
+Avoid blind trust 35
 
-10 List of commands 35
+10 List of commands 36
 
-act_accel 35
+act_accel 36
 
-act_get 35
+act_get 36
 
-act_getid 43
+act_getid 44
 
-act_getname 43
+act_getname 44
 
-act_halt 44
+act_halt 45
 
-act_home 44
+act_home 45
 
-act_moveby 46
+act_moveby 48
 
-act_movereport 48
+act_movereport 50
 
-act_moveto 50
+act_moveto 51
 
-act_set 52
+act_set 53
 
-act_unit 53
+act_unit 55
 
-add_var 54
+add_var 56
 
-af_ccrit 55
+af_ccrit 57
 
-af_setup 56
+af_setup 58
 
-autofocus 57
+autofocus 59
 
-average_scale_means 57
+average_scale_means 59
 
-call_func 57
+call_func 59
 
-camera_set 58
+camera_set 60
 
-cat_char 58
+cat_char 60
 
-cat_str 59
+cat_str 61
 
-corrections_mask 60
+corrections_mask 62
 
-def_actuator 60
+def_actuator 62
 
-def_array 63
+def_array 66
 
-def_func 65
+def_func 68
 
-def_var 66
+def_var 68
 
-df_correction 66
+df_correction 69
 
-div_var 67
+div_var 69
 
-do_if 67
+do_if 70
 
-else 68
+else 70
 
-enddo 68
+enddo 71
 
-endloop 68
+endloop 71
 
-execute_daemon 68
+execute_daemon 71
 
-execute_system 69
+execute_system 72
 
-exit 69
+exit 72
 
-ff_correction 70
+ff_correction 72
 
-frame_number 70
+frame_number 73
 
-frames_to_average 70
+frames_to_average 73
 
-frames_to_skip 70
+frames_to_skip 74
 
-get_actuators 71
+fset_var 74
 
-get_camsettings 72
+get_actuators 75
 
-get_preview 73
+get_camsettings 77
 
-get_preview_focus 73
+get_preview 77
 
-get_preview_stats 73
+get_preview_focus 78
 
-get_preview_tc 74
+get_preview_stats 78
 
-get_resolutions 75
+get_preview_tc 79
 
-goto 75
+get_resolutions 80
 
-grabber_predelay 79
+goto 80
 
-grabber_retries 79
+grabber_predelay 84
 
-grabber_timeout 79
+grabber_retries 84
 
-grab_image 79
+grabber_timeout 84
 
-jpeg_quality 80
+grab_image 84
 
-loop_while 80
+jpeg_quality 85
 
-math_var 80
+loop_while 85
 
-milliduration 82
+math_var 85
 
-mul_var 84
+milliduration 88
 
-poll_user 84
+mul_var 89
 
-preview_clear 86
+poll_user 89
 
-preview_file 86
+preview_clear 91
 
-preview_save 86
+preview_file 91
 
-preview_tile 86
+preview_save 91
 
-print_clear 87
+preview_tile 92
 
-print_colour 87
+print_clear 92
 
-print_size 87
+print_colour 92
 
-print_cursor 88
+print_size 93
 
-print_file 88
+print_cursor 93
 
-print_value 89
+print_file 93
 
-prv_cdf_use 90
+print_value 94
 
-prv_fc_posn 91
+prv_cdf_use 96
 
-prv_fc_show 91
+prv_fc_posn 96
 
-prv_hgm_posn 91
+prv_fc_show 97
 
-prv_hgm_satlim_l 91
+prv_hgm_posn 97
 
-prv_hgm_satlim_u 92
+prv_hgm_satlim_l 97
 
-prv_hgm_scales 92
+prv_hgm_satlim_u 98
 
-prv_lut 93
+prv_hgm_scales 98
 
-prv_mask_use 93
+prv_lut 99
 
-prv_m_bias 94
+prv_mask_use 99
 
-prv_mcor_eject 94
+prv_m_bias 100
 
-prv_mdf_set 94
+prv_mcor_eject 100
 
-prv_mff_set 94
+prv_mdf_set 100
 
-prv_m_integral 95
+prv_mff_set 101
 
-prv_size 95
+prv_m_integral 101
 
-prv_toggle 95
+prv_size 101
 
-return 98
+prv_toggle 102
 
-save_coords 98
+return 104
 
-save_doubles 98
+save_coords 105
 
-save_format 99
+save_doubles 105
 
-save_path 101
+save_format 105
 
-save_resolution 101
+save_path 108
 
-save_root 102
+save_resolution 108
 
-select_camera 102
+save_root 109
 
-set_condexp 103
+select_camera 109
 
-set_str 105
+set_condexp 110
 
-set_var 106
+set_str 112
 
-skip_frames 107
+set_var 114
 
-sleep 107
+skip_frames 114
 
-sub_var 107
+sleep 114
 
-tc_threshold 108
+sub_var 115
 
-tmc_chconf_parse 109
+tc_threshold 115
 
-tmc_status_parse 110
+tmc_chconf_parse 116
 
-undef_actuator 111
+tmc_status_parse 117
 
-update_gui_coords 112
+undef_actuator 118
 
-verbosity 112
+update_gui_coords 119
 
-xys_af_period 112
+verbosity 119
 
-xys_finish 112
+xys_af_period 120
 
-xys_process 113
+xys_finish 120
 
-xys_scan 113
+xys_process 120
 
-xys_start 113
+xys_scan 120
 
-yuyv_bias 113
+xys_start 120
 
-yuyv_gain 113
+yuyv_bias 121
+
+yuyv_gain 121
 
 # Introduction
 
@@ -431,7 +433,7 @@ The command may then be followed by a number of additional coding symbols separa
 
 Only one prime command per line is permitted. One or more secondary commands may be permitted for certain prime commands in which case those secondary commands must be included in the correct sequence on the same line as the prime command. Details will be given of such cases in the detailed description of the prime commands later in this manual. For example, this is legal:
 
-```
+```pcs
 set_condexp idx > 20    # Correct - single conditional expression command
 loop_while Condexp      # Correct - single loop_while evaluation command
 goto mylabel if Condexp # Correct - goto permits a secondary 'if' command
@@ -457,11 +459,11 @@ The general rules for white space in a script are these:
 * The amount of white space that follows a command is also irrelevant as long as it does not overflow the read buffer before a newline character is encountered (at the time of writing the line buffer is 1024 characters).
 * The amount of white space between arguments is also irrelevant. For example if you separate command arguments by 5 spaces or 1 space it makes not difference. This is particularly relevant to specifying words to add to a string variable - you can't just add more spaces between words by simply separating those words by more spaces in the command. See specific string handling commands for details.
 
-The interpreter has a limit on the maximum size of any argument. This is set by the MAX_ARGLEN value in the interpreter source code which, at the time of writing is 31 bytes.
+The interpreter has a limit on the maximum size of any argument - with a few specific exceptions. This is set by the MAX_ARGLEN value in the interpreter source code which, at the time of writing, is 31 bytes. The exceptions relate to arguments that represent file names and directory paths in certain commands and those arguments can have up to SCNFNAME_MAX bytes (without white space) before they get truncated. Currently, SCNFNAME_MAX is set to 259. See specific commands for when those exceptional cases are allowed.
 
 It is important to note that bytes do not necessarily equate to characters. While standard ASCII characters are 1 byte each, UTF-8 Unicode characters (such as box-drawing symbols or emojis) typically consume 3 or 4 bytes each. For example, the ═ symbol uses 3 bytes; therefore, a single argument can contain a maximum of 10 of these characters before exceeding the 31-byte limit.
 
-**Caution**: Exceeding MAX_ARGLEN with Unicode characters will result in malformed UTF-8 sequences. Because the interpreter truncates at the byte level, a multi-byte character may be cut in half, causing the entire string to fail to render on the console.
+**Caution**: Exceeding MAX_ARGLEN with Unicode characters will result in malformed UTF-8 sequences. Because the interpreter truncates arguments at the byte level, a multi-byte character may be cut in half, causing the entire string to fail to render on the console.
 
 At each stage, the interpreter will attempt to perform the script action but will terminate the script if a fatal error is encountered and will print some information about the error and source line where the error occurred to aid debugging.
 
@@ -501,14 +503,14 @@ add_var mystring rhsstring
 
 To add a space the system variable Space is available. Also, to add a hash symbol '#' (which cannot be entered as an argument in a command because the script interpreter treats '#' as the beginning of a comment and so will not read it in as an argument) the system variable Hache is available. So if you wanted a space between the existing contents of mystring and rhsstring you can do it like this:
 
-```
+```pcs
 add_var mystring Space
 add_var mystring rhsstring
 ```
 
 and if you wanted to have a hash between them you would do it like this:
 
-```
+```pcs
 add_var mystring Hache
  add_var mystring rhsstring
 ```
@@ -567,7 +569,7 @@ For command arguments that expect a floating point number, if you supply an inte
 
 For variable manipulations (e.g. addition, subtraction, multiplication and division) the value supplied as the value to operate with will be converted to the same type as the variable to be operated upon. So if you try to multiply an integer varval by a floating point varval the floating point value will be rounded to an integer to do the manipulation (the actual floating point varval will not itself be altered but the value it supplies for this specific purpose will be converted prior to being used for that purpose). As a specific example, if you have an integer variable with value 38000 and you want to multiply it by 1.25 to get the result 47500, if you try this directly you will just get 38000 because the 1.25 will be rounded to the nearest integer i.e. 1 :
 
-```
+```pcs
 def_var int ivar1 38000
     mul_var ivar1 1.25
     print_value ivar   # This will show a result of 38000
@@ -575,7 +577,7 @@ def_var int ivar1 38000
 
 The correct way to do this is via casting using an intermediate variable of float type:
 
-```
+```pcs
 def_var int ivar1 38000
     def_var float fvar1 ivar1   # If fvar1 was previously defined
                                 # then just use 'set_var fvar1
@@ -595,7 +597,7 @@ For operations and comparisons where the LHS-value is not a string but the RHS-v
 
 When you set a string variable with an int or a float then the string variable will take the ASCII / UTF-8 form of that numerical value. For example:
 
-```
+```pcs
 def_var float f1 5.431
  def_var string str1 f1
 ```
@@ -604,14 +606,14 @@ At the end of the above commands the variable str1 will contain "5.431" (without
 
 In the source code of the interpreter this 'casting a number to a string' is done using sprintf like this: sprintf(tmpstr,"%g",f1). This cast is automatic and imperative whenever a numerical value is required by the context - you don't get to chose whether it happens or not. Such casting happens in the opposite direction to that described above so:
 
-```
+```pcs
 def_var string str1 5.431
  def_var float f1 str1
 ```
 
 will make f1 have the actual numerical value of 5.431 because the string would have been converted to an actual float (double) in the interpreter program using C code like sscanf(str1,"%lg",&f1). However this means you will get the following behaviour which might not seem intuitive at first:
 
-```
+```pcs
 def_var string str1 5,431
  def_var float f1 str1
 ```
@@ -620,7 +622,7 @@ Note the use of the comma instead of a decimal point. At the end of these two co
 
 Because a non-string variable can be used as an RHS-value in the set_var and add_var commands that set or add to a string variable, this gives the user way of incorporating numerical values into strings similar to how the C language function itoa and ftoa work or a rudimentary form of the C language printf formatting specifiers %d %g and %f but without their rich set of formatting options. For example this sequence of commands:
 
-```
+```pcs
 add_var mystring Space
 add_var mystring =
 add_var mystring Space
@@ -641,7 +643,7 @@ The actuator types are described below. In the very earliest versions of the PCS
 
 The following are 'actuator type' constants as defined in the interpreter source code:
 
-```pcs
+```c
 #define ACT_STEPPER  1
 #define ACT_BINARY   2
 #define ACT_MLEVEL   3
@@ -832,6 +834,7 @@ These are a set of variables that always exist and the script writer has read-ac
 | NServos | int | After a get_actuators command this reports the number of servos currently defined on the server. |
 | CurrActIdx | int | This reports the index number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
 | CurrActType | int | This reports the actuator type number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
+| NReads | int | This reports the result of any call to the command fset_var. The default value at the start of any script is -1. |
 | Millis | int | This is a rolling millisecond counter and is updated whenever it is used. Although it is an int (signed) it will never be negative because it rolls over to 0 after 2147483647 (about 24 days) so effectively acts as a 'uint31_t'. |
 | PMRep1 | float | The last known step count (in atomic steps) of the X axis stepper motor. |
 | PMRep2 | float | The last known step count (in atomic steps) of the Y axis stepper motor. |
@@ -907,7 +910,7 @@ Note that the <function_label> argument can be a string variable meaning that th
 
 Note the option of making a function call conditional on the value of a varval being non zero (similar to the extended goto command). This way you could shorten PCS command sequences. For example you could re-write this:
 
-```
+```pcs
 act_getid X_Axis
 set_condexp CurrActIdx >= 0
 do_if Condexp
@@ -930,7 +933,7 @@ enddo
 
 to just this (by also functionalising the halt and disable code into the function halt_disable):
 
-```
+```pcs
 act_getid X_Axis
 set_condexp CurrActIdx >= 0
 call_func halt_disable if Condexp
@@ -972,21 +975,21 @@ In PCS, code blocks are defined by specific pairs of commands only - not by any 
 
 The function block:
 
-```
+```pcs
 def_func
 return
 ```
 
 The while loop block
 
-```
+```pcs
 loop_while
 endloop
 ```
 
 The 'if' (with optional 'else') block(s):
 
-```
+```pcs
 do_if
 else
 enddo
@@ -1127,7 +1130,7 @@ This reads the value of the <info_ID> struct member of the actuator defined by <
 
 <info_ID> - must be an integer corresponding to a readable item from the actuator's data structure. For stepper actuators, the currently valid readable info item integers are shown below (taken from parddefs.h - see that header file for details of the struct members and their meanings but an extract from that file is provided in the 'Notes' section below for quick reference here). Note that only the integer value of the information item must be supplied, not the 'INFO_' token string, *unless* you make a pch header file containing these #defines (excluding the C comments) and #include it in your script, then you may use these #defined 'INFO_' token strings in your PCS script to make it more readable:
 
-```pcs
+```c
 #define INFO_ENA_STATE 1  // Ardu only    // Ask Ardu
 #define INFO_HOMED_TO  2                  // Ask Ardu  // Read only
 #define INFO_DIRN1     3                  // LG
@@ -1191,7 +1194,7 @@ In the latter case the supplied <act_id> is overridden by the stepper actuator I
 
 **Note**: Here is an extract from the parddefs.h file that describes the actual stepper motor struct members the above info items relate to (as well as struct members the PCS script writer does not have direct access to):
 
-```pcs
+```c
 // Actuator Definition Structure for a Stepper Motor
 #ifdef ARDUINO
 // This is the structure as used on the Arduino:
@@ -1288,7 +1291,7 @@ typedef struct {
 
 and here are some of the relevant #defined constants with their explanations:
 
-```pcs
+```c
 // The ENA values
 #define ENA_DISABLED 0  // Disabled, non-energised, coils
 #define ENA_ENABLED  1  // Enabled, energised, coils but not currently spinning
@@ -1398,7 +1401,7 @@ Home the actuator defined by <act_id> in a way defined by <home_type>
 
 If the actuator is of type stepper these integers are potentially valid:
 
-```pcs
+```c
 #define LIM_SWTC1  1 // Home to limit switch 1 (triggered by moving in dirn1)
 #define LIM_SWTC2  2 // Home to limit switch 2 (triggered by moving in dirn2)
 #define LIM_NULL1  3 // Null-homed 1 (step count goes to 0 by moving in dirn1)
@@ -1753,11 +1756,13 @@ corrections_mask <OFF|ON|image_file>
 
 This determines whether to load and use a corrections mask for flat field and dark field correction during full frame image capture (separate commands exist for preview images).
 
-<OFF|ON|image_file> - the string constant symbols OFF or ON or the name of an image file (either the full path and name or just the name but in any case no white spaces are allowed).
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
 **Note**: If you select to supply an image file for the mask it only loads the file and passes it to the server. It does not set the 'Use mask' flag to ON. Whether to use that file or not depends on you issuing this command again with a specific OFF or ON argument (it defaults to OFF before you first make a definitive choice).
 
-**Note**: Permitted file formats for a corrections mask are pgm (P5), ppm (P6) or bmp (8bpp or 24bpp).
+**Note**: Permitted file formats for a corrections mask are pgm (P5), ppm (P6) or bmp (8bpp or 24bpp). For a file name to be acceptable it must have a ipgm, .ppm or .bmp extension (case is not important here).
 
 **Note**: More detail about the use of a corrections mask can be found in the pardcap user manual.
 
@@ -1953,7 +1958,9 @@ df_correction <OFF|ON|image_file>
 
 This determines whether to load and use a dark field correction image for full frame image capture (separate commands exist for preview images).
 
-<OFF|ON|image_file> - the string constant symbols OFF or ON or the name of an image file (either the full path and name or just the name but in any case no white spaces are allowed).
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the dark field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
 **Note**: If you select to supply an image file this command only loads the file and passes it to the server. It does not set the 'Use df correction' flag to ON. Whether to use that file or not depends on you issuing this command again with a specific OFF or ON argument (it defaults to OFF before you first make a definitive choice).
 
@@ -2060,11 +2067,13 @@ ff_correction <OFF|ON|image_file>
 
 This determines whether to load and use a flat field correction image in full frame image capture (separate commands exist for preview images).
 
-<OFF|ON|image_file> - the string constant symbols OFF or ON or the name of an image file (either the full path and name or just the name but in any case no white spaces are allowed).
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the flat field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
 **Note**: If you select to supply an image file this command only loads the file and passes it to the server. It does not set the 'Use ff correction' flag to ON. Whether to use that file or not depends on you issuing this command again with a specific OFF or ON argument (it defaults to OFF before you first make a definitive choice).
 
-**Note**: A flat field correction image can only be pgm (P5), ppm (P6), bmp, or raw doubles (mono or colour). For information about the use of raw doubles images see the section on df_correction.
+**Note**: A flat field correction image can only be pgm (P5), ppm (P6), bmp, or raw doubles (mono or colour). For a file name to be acceptable it must have an extension or name ending appropriate to its format (case is not important here) and must be one of: .pgm, .ppm, .bmp, _y.dou, _i.dou, _r.dou, _g.dou, _b.dou . For more information about the use of raw doubles images see the section on df_correction.
 
 **Note**: More detail about the use of a flat field image can be found in the pardcap user manual. More information about raw doubles format images (the .dou and .qih conventions) can be found in the Biaram user manual.
 
@@ -2091,6 +2100,48 @@ frames_to_skip <skip>
 This sets the number of frames for the frame grabber to grab and discard prior to saving a frame when the grab_image command is issued. This allows any frames stored in the grabber's frame buffer cache to be expunged to ensure that only the most recently 'seen' frames are grabbed.
 
 <number> - an integer, >= 0, that specifies the number of frames to skip.
+
+### fset_var
+
+fset_var <varname> <skip> <file>
+
+This reads data from a file and puts the values it reads into the variable <varname>. The PCS system variable NReads is set to the number of data items read into the variable from the file or to a negative number if there was an error.
+
+<varname> - the name of the variable to be set.
+
+<skip> - an integer, >= 0, that specifies the number of data items to skip.
+
+<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be read. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: If <varname> is an array of size > 1 then ensure you specify the entry point with the usual PCS square brackets dereferencing syntax. Data will be read into the array from that point onwards. If is a single variable then only one data item will be read into it (you should not use dereferencing brackets for single variables and that include variables that were defined as an array but with a size of 1).
+
+**Note**: The file reading process will stop when one of the following conditions is encountered:
+
+* The file runs out of data (EOF)
+* There is an error accessing or reading from the file
+* The variable runs out of space to accept new data
+
+In the case of an file read error, the script will not terminate but the system variable NReads will be set to a negative. So the programmer should check the value of NReads after each call to fset_var for good defensive programming. Here are the meanings of the value of NReads after a call to the fset_var command:
+
+-1 = access denied (fopen failed).
+
+-2 = file is shorter than the <skip> number of data items.
+
+-3 = file read error (ferror was set).
+
+-4 = the default value at the start of any script. Thus this will be the value before any call to fset_var is made or, after any call to fset_var, it means 'Error, not otherwise specified'.
+
+>= 0 = The number of data items read into <varname>.
+
+**Note**: The data type and content of the file will be assumed to be the same as the data type of <varname> according to the following rules:
+
+<varname> is of type string: A 'data item' will be defined as a character string separated from any other data items by white space. Thus the file will be scanned looking for strings separated by white space (not by any other delimiters) and each such string will count as 1 data item for the purposes of reading (and also for the purposes of skipping <skip> data items before assignments begin). During the <skip> phase, there is no limit on the size of strings skipped. During the reading phase there is a limit put on the size of each string read into each element of <varname> of 1023 non-white-space characters. If a string is encountered that is longer than this, then the first 1023 characters will be read into the current location in <varname> (i.e. it will read a truncated version of that string) and an error warning will be printed to the script console but the program will not terminate and NReads will not go negative. The rest of the truncated string will be ignored and the next data item in the file will be read to the next position in <varname> (if it is an array of of size > 1).
+
+<varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be treated as a raw binary file and read as such - each 64 bits of the file being read as a double.
+
+<varname> is of type int: A 'data item' will be defined an int32_t and the file will then be treated as a raw binary file and read as such - each 32 bits of the file being read as an int32_t.
 
 ### get_actuators
 
@@ -2542,7 +2593,9 @@ preview_file <file_path>
 
 Sets the file path and file name which will be used to save preview images with the command preview_save (which see).
 
-<file_path> - the name of the file (optionally with full path) to be saved. No white space is allowed.
+<file_path> - a string varval. This must evaluate the name of the file (optionally with full path) to be saved. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
 **Note**: You must call this command at least once for any camera from which you wish to save a preview image or the command preview_save will have no effect.
 
@@ -2624,7 +2677,7 @@ This allows the print_value output to be diverted to a file. This acts as a beha
 
 <exclusive> - a binary choice varval. If this evaluates to non-zero (ON) it will cause any print to file output to be printed to the chosen file in <file_path> only and will block any printing to the console or log file. If this evaluates to zero (OFF) then the print_value output will be printed to both the log file +/ script console as well as to the chosen file.
 
-<file_path> - the file name (or full path including file name) of the file to be written to (without white space), or the word NULL (all in capitals). If this is not NULL then the interpreter will assume it is a file name and will attempt to print the print_value output to that file. If this is NULL then no attempt will be made to print the print_value output to a file.
+<file_path> - a string varval that evaluates to the file name (or full path including file name) of the file to be written to (without white space), or the word NULL (all in capitals). If this is not NULL then the interpreter will assume it is a file name and will attempt to print the print_value output to that file. If this is NULL then no attempt will be made to print the print_value output to a file.
 
 **Note**: Any printing to a file will be done with the 'a' (append) option. This means that if the file does not already exist a new file will be created otherwise any existing file will have the new output appended to it.
 
@@ -2684,9 +2737,11 @@ prv_cdf_use <ON|OFF|image_file>
 
 Whether or not to apply subtraction of a custom preview colour dark field image. This is not the same as the dark field image used for the full resolution image dark field subtraction.
 
-<ON|OFF|image_file> - Supply either the strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the colour dark field image. File names and paths must not contain spaces.
+<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the colour dark field image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
 
-**Note**: Acceptable formats for the image file are: PPM (P6) and BMP (24 bpp). No other options are allowed.
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: Acceptable formats for the image file are: PPM (P6) and BMP (24 bpp). No other options are allowed. For a file name to be acceptable it must have a .ppm or .bmp extension (case is not important here).
 
 **Note**: The ON/OFF actions will only work if you have loaded a custom colour dark field image before setting this to ON or OFF. Submitting a file name will cause pardcap to assess the file and set 'pending' flag to 1 if it is successful. The ON/OFF status will be whatever it happens to be at the pardcap end and will not change just by virtue of submitting an image file. So you need to call this function twice the very first time you use it in a script. The first call is to submit your file. Then, if the file was accepted OK, call it again with either ON or OFF.
 
@@ -2793,9 +2848,11 @@ prv_mask_use <ON|OFF|image_file>
 
 Whether or not to apply a custom preview mask to the calculation of preview stats. This is not the same as whether or not to display that mask over the preview image - for that see the command prv_toggle.
 
-<ON|OFF|image_file> - Supply either the strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mas image. File names and paths must not contain spaces.
+<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
 
-**Note**: Acceptable formats for the image file are: PGM (p5), PPM (P6) and BMP (8 bpp or 24 bpp). No other options are allowed. If you supply a colour format image then the 'intensity' component of an HSI transform is calculated for each pixel as (R+G+B)/3 and this is thresholded to be an 'on' pixel if it is >127 and and 'off' pixel otherwise. The same threshold is used to binarise grey scale images.
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: Acceptable formats for the image file are: PGM (p5), PPM (P6) and BMP (8 bpp or 24 bpp). No other options are allowed. If you supply a colour format image then the 'intensity' component of an HSI transform is calculated for each pixel as (R+G+B)/3 and this is thresholded to be an 'on' pixel if it is >127 and and 'off' pixel otherwise. The same threshold is used to binarise grey scale images. For a file name to be acceptable it must have a .pgm, .ppm or .bmp extension (case is not important here).
 
 **Note**: The ON/OFF actions will only work if you have loaded a mask image before setting this to ON or OFF. Submitting a file name will cause pardcap to assess the file and set 'pending' flag to 1 if it is successful. The ON/OFF status will be whatever it happens to be at the pardcap end and will not change just by virtue of submitting a file. So you need to call this function twice the very first time you use it in a script. The first call is to submit your file. Then, if the file was accepted OK, call it again with either ON or OFF.
 
@@ -2821,9 +2878,11 @@ prv_mdf_set <image_file>
 
 This loads the supplied dark field corrections image and sets it as active for use with monochrome previewing.
 
-<image_file> - the name (optionally to include the full path) of the image to use. This must not contain white space.
+<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
 
-**Note**: The image must be of raw doubles mono format with its name ending in _Y.dou and be of the same dimensions as the preview image.
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: The image must be of raw doubles mono format with its name ending in _y.dou (case is not important here) and be of the same dimensions as the preview image.
 
 **Note**: The only way to deactivate its use is to perform a prv_mcor_eject command, which see.
 
@@ -2833,9 +2892,11 @@ prv_mff_set <image_file>
 
 This loads the supplied flat field corrections file and sets it as active for use with monochrome previewing.
 
-<image_file> - the name (optionally to include the full path) of the image to use. This must not contain white space.
+<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
 
-**Note**: The image must be of raw doubles mono format with its name ending in _Y.dou and be of the same dimensions as the preview image.
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: The image must be of raw doubles mono format with its name ending in _y.dou (case is not important here) and be of the same dimensions as the preview image.
 
 **Note**: The only way to deactivate its use is to perform a prv_mcor_eject command, which see.
 
@@ -3058,7 +3119,9 @@ save_path <image_full_save_path>
 
 This sets the absolute path name (the directory) for saving images and any files associated with them.
 
-<image_full_save_path> - a string varval specifying a directory path. It must not contain white space and must not include the file name - only the directory path.
+<image_full_save_path> - a string varval specifying a directory path. It must not contain white space and must not include the file name - only the directory path. This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: Any argument longer than SCNFNAME_MAX bytes will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
 **Note**: The <image_full_save_path> must contain at least one directory separator (/ or  depending on your OS) to be valid. The interpreter will automatically use the last separator found in your path to join the directory to the file name. You do not need to end the path with a slash; if you do, the resulting file path will contain a double slash (e.g., path//root_0001.bmp).". While this double slash may be handled correctly by your OS, it is cleaner and better practice to avoid the use of a terminal slash in case some OS or applications have difficulties with double slashes in path names.
 
@@ -3082,7 +3145,9 @@ save_root <image_name_root>
 
 This allows you to input the string used to construct the common part of file names generated when you grab an image with grab_image.
 
-<image_name_root> is a string varval without white space which will be used to construct the file name of the saved image and any associated file (like an external header file for saving in raw doubles format).
+<image_name_root> is a string varval specifying a string without white space which will be used to construct the file name of the saved image and any associated file (like an external header file for saving in raw doubles format). This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
 **Note**: This may include a path component if you want to store the image in a particular location but the path must not contain any white space. If you do this, avoid the use of a slash at the start of the <image_name_root> (that will be handled for you automatically by the interpreter).
 
@@ -3312,7 +3377,7 @@ Extracts a piece of config information from the current value of the locally sto
 
 **Note**: The currently acceptable <chconf_info> options are defined in parddefs.h as:
 
-```pcs
+```c
 // TMC2209 chopconf info item
 #define TMC_CI_TOFFLEVEL 1
 #define TMC_CI_HYSTSTART 2
@@ -3368,7 +3433,7 @@ Extracts a piece of status information from the current value of the locally sto
 
 Note: The currently acceptable <status_info> options are defined in parddefs.h as:
 
-```pcs
+```c
 // TMC2209 status info item
 #define TMC_SI_OVER_TEMP 1
 #define TMC_SI_PREO_TEMP 2
