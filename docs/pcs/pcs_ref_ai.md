@@ -68,7 +68,7 @@ Table of Contents
 
 [System variables 23](#__RefHeading___Toc14958_2491002120)
 
-[Arrays 26](#__RefHeading___Toc14960_2491002120)
+[Arrays 27](#__RefHeading___Toc14960_2491002120)
 
 [Protected names 27](#__RefHeading___Toc14962_2491002120)
 
@@ -742,7 +742,7 @@ Arguments:
 
 The main use is to allow the script writer to use human-meaningful words in their script where numerical values are required by the main PCS syntax. For example to use the word 'ACT_STEPPER' in place of the numerical value '1' by means of the preprocessor directive:
 
-```pcs
+```c
 #define ACT_STEPPER  1
 ```
 
@@ -836,7 +836,8 @@ These are a set of variables that always exist and the script writer has read-ac
 | NServos | int | After a get_actuators command this reports the number of servos currently defined on the server. |
 | CurrActIdx | int | This reports the index number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
 | CurrActType | int | This reports the actuator type number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
-| NReads | int | This reports the result of any call to the command fset_var. The default value at the start of any script is -1. |
+| NReads | int | This reports the result of any call to the command fset_var. The default value at the start of any script is -4. |
+| NWrites | int | This reports the result of any call to the command fput_var. The default value at the start of any script is -4. |
 | Millis | int | This is a rolling millisecond counter and is updated whenever it is used. Although it is an int (signed) it will never be negative because it rolls over to 0 after 2147483647 (about 24 days) so effectively acts as a 'uint31_t'. |
 | PMRep1 | float | The last known step count (in atomic steps) of the X axis stepper motor. |
 | PMRep2 | float | The last known step count (in atomic steps) of the Y axis stepper motor. |
