@@ -58,6 +58,11 @@ def_var int M_Local_Y 0       # Calculation scratchpad for Y
 def_array int M_Explode_Timer 4 0  # How many frames left for each explosion
 def_var int flicker_tmp 0     # For explosion flicker
 def_var int fleet_idx 0
+def_array string Ex_Stages 4 _ # Explosion states
+def_array int M_Explode_Idx 4 0  # Tracks which sprite frame (3,2,1,0) to show
+def_var int m_loop 0       # Dedicated loop counter for marauders
+def_var string out_sprite _ # Safe sprite buffer
+
 
 def_var float frame_delay 0.05 # Dynamic sleep timer
 def_var int logic_tmp 0
@@ -68,9 +73,9 @@ def_var int Cur_M 0
 def_var int Marauder_Y 0
 def_var int M_Right_Edge 0
 def_var int idx 0
+def_var string M_Sprite_A ▄▀█▀▄
+def_var string M_Sprite_B ▀▄█▄▀
 
-def_var string M_Sprite <o>
-def_var string M_ExSprite _
 def_var string M_Clear _
 def_var string win_msg _
 def_var string lose_msg _
@@ -84,6 +89,16 @@ def_var int Missile_X 0
 def_var int Missile_Y 0
 def_var int prev_Missile_Y 0
 def_var string aether _
+
+# --- Image Loading Vars ---
+def_array int splash_pixels 2048 0
+def_var string splash_file splash.bin
+def_var int splash_w 64
+def_var int splash_h 32
+def_var int x 0
+def_var int y 0
+def_var int p_val 0
+
 
 def_func main
   print_clear
@@ -113,12 +128,12 @@ def_func main
   call_func update_score
 
   # --- Main Game Loop ---
-  set_condexp M_Hit_Count < M_COUNT
-  loop_while Condexp
+  # We use TRUE to prevent the loop from exiting before the final explosion finishes
+  loop_while TRUE
     set_str inp
     poll_user OFF OFF inp
 
-    # Turret Movement
+    # --- Turret Movement ---
     set_var Turret_posn_change 0
     set_condexp inp == .
     do_if Condexp
@@ -130,11 +145,11 @@ def_func main
     enddo
     call_func move_turret if Turret_posn_change
 
-    # Quit Check
+    # --- Quit Check ---
     set_condexp inp == q
     goto end_game if Condexp
 
-    # Firing Logic (Player)
+    # --- Firing Logic (Player) ---
     set_condexp firing == FALSE
     do_if Condexp
       set_condexp inp == Space
@@ -153,35 +168,24 @@ def_func main
       set_var fleet_idx 0
       set_condexp fleet_idx < M_COUNT
       loop_while Condexp
-        # Calculate Y for THIS fleet_idx once
         set_var M_Local_Y Marauder_Y
         set_condexp fleet_idx > 1
         do_if Condexp
           add_var M_Local_Y M_Offset_Y
         enddo
 
-        # A. Erase living marauders
-        set_condexp M_Active[fleet_idx] == TRUE
-        do_if Condexp
-          print_cursor M_X[fleet_idx] M_Local_Y
-          print_value M_Clear 0
-        enddo
-
-        # B. NEW: Erase active explosions too!
-        set_condexp M_Explode_Timer[fleet_idx] > 0
-        do_if Condexp
-          print_cursor M_X[fleet_idx] M_Local_Y
-          print_value M_Clear 0
-        enddo
+        # Clear space for both living and exploding marauders during descent
+        print_cursor M_X[fleet_idx] M_Local_Y
+        print_value M_Clear 0
 
         add_var fleet_idx 1
         set_condexp fleet_idx < M_COUNT
       endloop
 
-
       add_var Marauder_Y -1
       set_var fleet_bounce 0
 
+      # Reverse directions
       set_var fleet_idx 0
       set_condexp fleet_idx < M_COUNT
       loop_while Condexp
@@ -190,106 +194,118 @@ def_func main
         set_condexp fleet_idx < M_COUNT
       endloop
     else
-    # --- 2. MARAUDER PROCESSING ---
-    set_var Cur_M 0
-    # Re-establish the main loop condition for safety
-    set_condexp Cur_M < M_COUNT
-    loop_while Condexp
-      # A. Calculate Y for this specific slot (Crucial for correct targeting)
-      set_var M_Local_Y Marauder_Y
-      set_condexp Cur_M > 1
-      do_if Condexp
-        add_var M_Local_Y M_Offset_Y
-      enddo
-
-      # B. Handle Living Marauders
-      set_condexp M_Active[Cur_M] == TRUE
-      do_if Condexp
-        set_condexp M_Local_Y <= 1
-        goto end_game if Condexp
-
-        call_func marauder_fire
-
-        # Erase old position
-        print_cursor M_X[Cur_M] M_Local_Y
-        print_value M_Clear 0
-
-        # Move
-        add_var M_X[Cur_M] M_Dir[Cur_M]
-
-        # Draw (Force Green Palette 28)
-        print_colour 28
-        print_cursor M_X[Cur_M] M_Local_Y
-        print_value M_Sprite 0
-
-        # Collision Check - check_collision uses global Cur_M
-        set_condexp firing == TRUE
+      # --- 2. MARAUDER PROCESSING ---
+      set_var m_loop 0
+      set_condexp m_loop < M_COUNT
+      loop_while Condexp
+        # Calculate Y for this slot
+        set_var M_Local_Y Marauder_Y
+        set_condexp m_loop > 1
         do_if Condexp
-          call_func check_collision
+          add_var M_Local_Y M_Offset_Y
         enddo
 
-        # Bounce Detection
-        set_var next_X M_X[Cur_M]
-        add_var next_X M_Dir[Cur_M]
-        set_condexp next_X > 55
+        # --- B. Handle Living Marauders ---
+        set_condexp M_Active[m_loop] == TRUE
         do_if Condexp
-          set_var fleet_bounce 1
-        enddo
-        set_condexp next_X < 2
-        do_if Condexp
-          set_var fleet_bounce 1
-        enddo
-      enddo
+          set_condexp M_Local_Y <= 1
+          goto end_game if Condexp
 
-      # C. Handle Explosion Strobe (Independent logic)
-      set_condexp M_Explode_Timer[Cur_M] > 0
-      do_if Condexp
-          # 1. ALWAYS ERASE at the CURRENT location first
-          # This ensures that even if we are moving, we don't leave trails
-          print_cursor M_X[Cur_M] M_Local_Y
+          set_var Cur_M m_loop
+
+          call_func marauder_fire
+          print_cursor M_X[m_loop] M_Local_Y
           print_value M_Clear 0
 
-          # 2. Toggle the flicker color
-          set_var flicker_tmp M_Explode_Timer[Cur_M]
-          math_var flicker_tmp imod 2
-          set_condexp flicker_tmp == 0
+          # Move the marauder
+          add_var M_X[m_loop] M_Dir[m_loop]
+
+          # --- ANIMATION LOGIC ---
+          # Toggle sprite based on current X position
+          set_var logic_tmp M_X[m_loop]
+          math_var logic_tmp imod 2
+          set_condexp logic_tmp == 0
           do_if Condexp
-              print_colour 224 # Red
+            set_var out_sprite M_Sprite_A
           else
-              print_colour 252 # Yellow
+            set_var out_sprite M_Sprite_B
           enddo
 
-          # 3. DRAW the strobe
-          print_cursor M_X[Cur_M] M_Local_Y
-          print_value M_ExSprite 0
+          # Draw the animated marauder
+          print_colour 28
+          print_cursor M_X[m_loop] M_Local_Y
+          print_value out_sprite 0
 
-          add_var M_Explode_Timer[Cur_M] -1
+          set_condexp firing == TRUE
+          call_func check_collision if Condexp
 
-          # 4. FINAL CLEANUP (When the timer hits zero)
-          set_condexp M_Explode_Timer[Cur_M] == 0
+          # Bounce Detection
+          set_var next_X M_X[m_loop]
+          add_var next_X M_Dir[m_loop]
+          set_condexp next_X > 55
           do_if Condexp
-              print_cursor M_X[Cur_M] M_Local_Y
-              print_value M_Clear 0
+            set_var fleet_bounce 1
           enddo
+          set_condexp next_X < 2
+          do_if Condexp
+            set_var fleet_bounce 1
+          enddo
+        enddo
 
-          print_colour 28 # Re-lock Green
-      enddo
 
-      add_var Cur_M 1
-      # Re-evaluate internal loop condition
-      set_condexp Cur_M < M_COUNT
-    endloop
+        # --- C. Handle Explosion Strobe ---
+        set_condexp M_Explode_Timer[m_loop] > 0
+        do_if Condexp
+            print_cursor M_X[m_loop] M_Local_Y
+            print_value M_Clear 0
 
-    enddo # End of the If/Else block
+            # 1. Color Strobe
+            set_var flicker_tmp M_Explode_Timer[m_loop]
+            math_var flicker_tmp imod 2
+            set_condexp flicker_tmp == 0
+            do_if Condexp
+                print_colour 224
+            else
+                print_colour 252
+            enddo
+
+            # 2. Update Stage every 3 frames
+            set_var logic_tmp M_Explode_Timer[m_loop]
+            math_var logic_tmp imod 3
+            set_condexp logic_tmp == 0
+            do_if Condexp
+                add_var M_Explode_Idx[m_loop] -1
+            enddo
+
+            # 3. Render (3-Wide centered explosion)
+            # We change the offset from 2 to 1 to accommodate the wider sprite
+            set_var logic_tmp M_X[m_loop]
+            add_var logic_tmp 1
+            print_cursor logic_tmp M_Local_Y
+
+            # Fetch the 3-character wide sprite from Ex_Stages
+            set_var idx M_Explode_Idx[m_loop]
+            set_var out_sprite Ex_Stages[idx]
+
+            # Print the safe copy
+            print_value out_sprite 0
+
+            add_var M_Explode_Timer[m_loop] -1
+            print_colour 28
+        enddo
+
+        add_var m_loop 1
+        set_condexp m_loop < M_COUNT
+      endloop
+    enddo # End of If/Else Descent block
+
 
     # --- 3. PROJECTILE UPDATES ---
-    # NEW: Update the falling V-Bombs
     call_func update_bombs
 
     # Player Missile Update
     set_condexp firing == TRUE
     do_if Condexp
-      # STOP before hitting the score line (DISP_Y_MAX)
       set_var logic_tmp DISP_Y_MAX
       add_var logic_tmp -1
       set_condexp Missile_Y >= logic_tmp
@@ -298,36 +314,30 @@ def_func main
         print_value Space 0
         set_var firing FALSE
       else
-
         add_var Missile_Y 1
-        # Shield Check
         set_condexp Missile_Y == S_Y
         do_if Condexp
           set_var Proj_X Missile_X
           call_func check_shield_hit
           do_if Proj_Hit
-            # Erase missile and stop it
             print_cursor Missile_X prev_Missile_Y
             print_value Space 0
             set_var firing FALSE
           enddo
         enddo
-        # Only render the missile if it didn't hit a shield
         set_condexp firing == TRUE
         call_func render_missile if Condexp
-
       enddo
     enddo
 
-    # 1. Timing and Speed
+    # --- 4. TIMING & WIN CONDITION ---
     set_var frame_delay 0.05
     set_var logic_sum M_Hit_Count
     mul_var logic_sum 0.01
     sub_var frame_delay logic_sum
     sleep frame_delay
 
-    # 2. THE WIN CONDITION CHECK
-    # Calculate if any explosions are still active
+    # WIN CHECK: Count active timers
     set_var end_timer_check 0
     set_var fleet_idx 0
     set_condexp fleet_idx < M_COUNT
@@ -337,19 +347,15 @@ def_func main
       set_condexp fleet_idx < M_COUNT
     endloop
 
-    # 3. SET THE FINAL LOOP EXIT FLAG
-    set_var logic_tmp TRUE         # Assume we keep looping
+    # Final Exit Evaluation
     set_condexp M_Hit_Count == M_COUNT
     do_if Condexp
        set_condexp end_timer_check == 0
        do_if Condexp
-          set_var logic_tmp FALSE  # Stop looping: We won!
+          goto win_game # Safe exit to victory screen
        enddo
     enddo
-
-    # CRITICAL: This MUST be the last set_condexp before the endloop
-    set_condexp logic_tmp == TRUE
-  endloop
+  endloop # Back to start of frame
 
   goto win_game
 return
@@ -384,25 +390,25 @@ def_func setup_sprites
   cat_str Turret[1] ███
   add_var Turret[1] Space
 
-  # Make M_Sprite 7 chars wide: " <o> "
-  set_str M_Sprite
-  add_var M_Sprite Space
-  cat_str M_Sprite <o>
-  add_var M_Sprite Space
-
-  set_str M_ExSprite
-  add_var M_ExSprite Space
-  cat_str M_ExSprite *X*
-  add_var M_ExSprite Space
-
+  # --- THE CLEARING STRING ---
   set_str M_Clear
   set_var idx 0
-  set_condexp idx < M_WIDTH
+  # Ensure this matches the width of M_Sprite (5 chars)
+  set_condexp idx < 5
   loop_while Condexp
     add_var M_Clear Space
     add_var idx 1
-    set_condexp idx < M_WIDTH
+    set_condexp idx < 5
   endloop
+
+  # --- THE EXPLOSION (Dissolving) ---
+  # --- THE EXPLOSION (3-Wide Dissolving) ---
+  # Every index must be explicitly dereferenced and 3 chars wide
+  set_var Ex_Stages[3] ███       # Stage 3: Solid Blast
+  set_var Ex_Stages[2] ▓▒▓       # Stage 2: Fragmenting
+  set_var Ex_Stages[1] ░*░       # Stage 1: Dissipating
+  set_var Ex_Stages[0] M_Clear   # Stage 0: Clean up
+
 return
 
 def_func setup_shields
@@ -414,26 +420,10 @@ def_func setup_shields
   set_var S_X[1] 28    # Shield 1
   set_var S_X[2] 44    # Shield 2
 
-  # --- 2. Build Sprite 3: [###] ---
-  set_str  S_Sprites[3] [
-  add_var  S_Sprites[3] Hache
-  add_var  S_Sprites[3] Hache
-  add_var  S_Sprites[3] Hache
-  cat_char S_Sprites[3] 93
-
-  # --- 3. Build Sprite 2: [ # ] ---
-  set_str  S_Sprites[2] [
-  add_var  S_Sprites[2] Space
-  add_var  S_Sprites[2] Hache
-  add_var  S_Sprites[2] Space
-  cat_char S_Sprites[2] 93
-
-  # --- 4. Build Sprite 1: [ . ] ---
-  set_str  S_Sprites[1] [
-  add_var  S_Sprites[1] Space
-  cat_char S_Sprites[1] 46
-  add_var  S_Sprites[1] Space
-  cat_char S_Sprites[1] 93
+  # Visual representation of health: 3=Solid, 2=Medium, 1=Light
+  set_str S_Sprites[3] █▓█▓█
+  set_str S_Sprites[2] ▓▒▓▒▓
+  set_str S_Sprites[1] ▒░▒░▒
 
   # --- 5. Build Sprite 0: Empty (5 spaces) ---
   set_str  S_Sprites[0]
@@ -501,14 +491,15 @@ def_func move_marauder
   # DRAW new position at current Y
   print_colour 0 255 0  # Bright Green
   print_cursor M_X[Cur_M] Marauder_Y
-  print_value M_Sprite 0
+
 return
 
 def_func check_collision
   set_condexp Missile_Y == M_Local_Y
   do_if Condexp
+    # Use a dedicated variable for the edge, NOT idx
     set_var M_Right_Edge M_X[Cur_M]
-    add_var M_Right_Edge M_WIDTH
+    add_var M_Right_Edge 5 # Match the 5-char width of ◤-o-◥
 
     set_condexp Missile_X >= M_X[Cur_M]
     do_if Condexp
@@ -517,14 +508,13 @@ def_func check_collision
         set_var M_Active[Cur_M] FALSE
         set_var firing FALSE
         add_var M_Hit_Count 1
-        set_var M_Explode_Timer[Cur_M] 10  # Start strobe
 
-        # Erase missile (foreground doesn't matter for space)
+        set_var M_Explode_Timer[Cur_M] 9
+        set_var M_Explode_Idx[Cur_M] 3
+
         print_cursor Missile_X prev_Missile_Y
         print_value Space 0
         call_func update_score
-
-        # FORCE Green back so the next marauder in the loop isn't Red
         print_colour 28
       enddo
     enddo
@@ -652,7 +642,7 @@ def_func update_bombs
         do_if Condexp
           # 4. DRAW new
           print_cursor B_X[Cur_B] B_Y[Cur_B]
-          print_value v 0
+          print_value ∇ 0
 
           # 5. COLLISION WITH TURRET
           set_condexp B_Y[Cur_B] <= 1
@@ -731,64 +721,101 @@ def_func check_shield_hit
 return
 
 def_func show_splash
-  # 1. GENERATE MULTI-DEPTH STARFIELD
-  set_var idx 0
-  set_condexp idx < 50
-  loop_while Condexp
-    call_func get_random
-    set_var logic_tmp Rnd_Val
-    math_var logic_tmp imod DISP_X_MAX
+  # 1. Attempt to load binary image into the array starting at index 0
+  fset_var splash_pixels[0] 0 splash_file
 
-    call_func get_random
-    set_var Cur_S Rnd_Val
-    math_var Cur_S imod DISP_Y_MAX
+  # 2. Check for failure (Missing or corrupt bin file)
+  set_condexp NReads < 0
+  do_if Condexp
+    # SILENT FALLBACK: Procedural Starfield
+    set_var idx 0
+    set_condexp idx < 100
+    loop_while Condexp
+      call_func get_random
+      set_var logic_tmp Rnd_Val
+      math_var logic_tmp imod DISP_X_MAX
 
-    call_func get_random
-    set_var flicker_tmp Rnd_Val
-    math_var flicker_tmp imod 3
+      call_func get_random
+      set_var Cur_S Rnd_Val
+      math_var Cur_S imod DISP_Y_MAX
 
-    # Use 24-bit mode for subtle depth variations
-    set_condexp flicker_tmp == 0
-    do_if Condexp
-      print_colour 80 80 100   # Distant blue-gray star
-    else
-      print_colour 200 200 250 # Bright near star
-    enddo
+      call_func get_random
+      set_var flicker_tmp Rnd_Val
+      math_var flicker_tmp imod 3
 
-    print_cursor logic_tmp Cur_S
-    print_value . 0
+      set_condexp flicker_tmp == 0
+      do_if Condexp
+        print_colour 80 80 100
+      else
+        print_colour 200 200 250
+      enddo
 
-    add_var idx 1
-    set_condexp idx < 50
-  endloop
+      print_cursor logic_tmp Cur_S
+      print_value * 0
 
-  # 2. RENDER THE VIBRANT LOGO
-  # Layered Cyan and Red
-  print_colour 0 255 255 # Bright Cyan
-  print_cursor 12 22
-  set_str title_msg INTERPLANETARY
-  print_value title_msg 0
+      add_var idx 1
+      set_condexp idx < 100
+    endloop
 
-  print_colour 255 50 50 # High-vibrance Red
-  print_cursor 20 20
-  set_str title_msg M A R A U D E R S
-  print_value title_msg 0
+    # 4. OVERLAY Title Text
+    print_colour 0 255 255     # Cyan
+    print_cursor 12 22
+    set_str title_msg INTERPLANETARY
+    print_value title_msg 0
 
-  # 3. PULSING START PROMPT
-  set_var idx FALSE
-  set_var flicker_tmp 0
-  set_condexp idx == FALSE
+    print_colour 255 50 50     # Red
+    print_cursor 20 20
+    set_str title_msg M A R A U D E R S
+    print_value title_msg 0
+
+  else
+    # 3. FILE FOUND: Render binary image pixels
+    print_value Space 2 # Needed to prevent offset by 1 space on the bottom row.
+    set_var y 0
+    set_condexp y < 32
+    loop_while Condexp
+      set_var x 0
+      set_condexp x < 64
+      loop_while Condexp
+        # Calculate linear array index: (y * width) + x
+        set_var idx y
+        mul_var idx 64
+        add_var idx x
+
+        set_var p_val splash_pixels[idx]
+        print_colour p_val
+        print_cursor x y
+        print_value █ 0
+
+        add_var x 1
+        set_condexp x < 64
+      endloop
+      add_var y 1
+      set_condexp y < 32
+    endloop
+    # 4. OVERLAY Title Text
+    print_colour 0 255 255     # Cyan
+    print_cursor 24 26
+    set_str title_msg INTERPLANETARY
+    print_value title_msg 0
+
+  enddo
+
+  # 5. PULSING START PROMPT
+  set_var idx 0              # Using idx as boolean (0=TRUE/Looping)
+  set_var flicker_tmp 0      # Toggle state
+  set_condexp idx == 0
   loop_while Condexp
     set_var logic_tmp flicker_tmp
     add_var flicker_tmp 1
     math_var logic_tmp imod 2
 
-    # Logic Check to toggle the pulse
+    # Pulse between White and Gray
     set_condexp logic_tmp == 0
     do_if Condexp
-      print_colour 255 255 255 # Full White
+      print_colour 255 255 255
     else
-      print_colour 100 100 100 # Dim Gray
+      print_colour 100 100 100
     enddo
 
     print_cursor 20 12
@@ -799,14 +826,14 @@ def_func show_splash
     poll_user OFF OFF inp
     set_condexp inp == s
     do_if Condexp
-      set_var idx TRUE
+      set_var idx 1          # Stop looping
     enddo
+
     sleep 0.2
-    set_condexp idx == FALSE
+    set_condexp idx == 0
   endloop
 
-  # 4. THE MASTER WIPE
-  # This will now 'Sanitise' the buffer via the C fix!
+  # 6. MASTER WIPE: Sanitise the buffer for the game start
   call_func setup_aether_grid
 return
 
@@ -874,6 +901,29 @@ exit
      "Variable Audit: Cross-reference existing 'def_var' lists before creating new logic-checks to avoid colliding with speed/timing variables like 'logic_sum'.",
      "Boundary Guarding: Stop projectiles 1 line early (DISP_Y_MAX - 1) to protect HUD/Score text from space-erasure."
    ]
+ }
+
+################################################################################
+# PCS AI INTERPRETER / CODING AGENT SCRATCHPAD                                 #
+# Project: Interplanetary Marauders - Graphical Refactor                       #
+# Language Version: 1.0 (Pardus PCS)                                           #
+################################################################################
+ {
+   "logic_patterns": {
+     "atomic_rendering": "Use 'Erase-Move-Draw' within the same frame. For high-speed entities, use padded sprites (leading/trailing spaces) to perform auto-erasure in a single 'print_value' call.",
+     "boolean_branching": "PCS lacks complex IFs. Use 'set_condexp' followed immediately by 'do_if' or 'call_func ... if Condexp'.",
+     "loop_hygiene": "Variables like 'idx' and 'Condexp' are global. Sub-functions WILL overwrite them. Use dedicated loop counters (e.g., m_loop, f_idx) for nested or sequential loops to prevent early termination."
+   },
+   "graphical_constraints": {
+     "gtk_buffer_behavior": "GtkTextView is flow-based. Pre-fill the buffer with a 64x32 'Aether' of spaces (ASCII 32) to ensure 'print_cursor' has valid coordinates to land on.",
+     "utf8_byte_sync": "UTF-8 characters (█, ◤) are multi-byte. The interpreter's 'strtok' parser may misalign if a line has trailing text. Always end 'print_value' lines with '0' and no trailing whitespace to prevent 'ghosting' of variable names.",
+     "rgb332_palette": "8-bit mode (1-argument print_colour) uses fixed RGB332: Bits 7-5 Red, 4-2 Green, 1-0 Blue. GIMP 'Optimized' palettes will look garbled; use Python to bit-shift 24-bit RGB into this 8-bit mapping.",
+     "binary_loading": "'fset_var' into an INT array triggers a 4-byte/pixel binary read. Filenames in 'string' variables may cause 'fopen failed (-1)'; literal filenames or absolute paths are more reliable."
+   },
+   "performance_notes": {
+     "math_overhead": "Avoid 'div_var' and 'math_var' (floor/ceil) inside the main loop. They cast to floats and are slow. Use 'imod' and 'add_var' with dedicated 'Stage' counters for animations like explosions.",
+     "gtk_tag_bottleneck": "'print_colour' creates a new GTK tag. In high-density rendering (like splash screens), it causes a 'scroll' effect. Only call 'print_colour' when the pixel color actually changes."
+   }
  }
 ################################################################################
 
