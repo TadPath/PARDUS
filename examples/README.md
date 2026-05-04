@@ -42,7 +42,23 @@ A script that demonstrated the use of the Millis system variable and millidurati
 ## hu_MIM_Test.pcs
 An example practical microscopy script for measuring minimum incremental motion (MIM) of the PUMA CNC stage.
 
+## hu_unicode_dashboard_1.pcs
+Demonstrates how to build simple graphical feedback controls in the scripe console.
+
+## ppinclude.pch
+An example of a practical PCS header file. This is required for my microscopy scripts here.
+
+## preview.pgm and preview.ppm
+These are test p2 and p3 iamges that you can use with ai_img_viewer.pcs
+
+## ReadMe_IPM.md
+A markdown manual for the interplanetary marauders game, written by and AI.
+
+## splash.bin
+A binary file containing the splash image for the interplanetary marauders game. For this to work it has to be placed in the directory where the pardclient interpreter program was run from.
 
 
 
-PJT 29.04.2026
+
+
+PJT 04.05.2026
