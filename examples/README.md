@@ -17,7 +17,7 @@ This demonstrates the use of arrays including auto-casting and the ability for r
 A classical bubble sort algorithm implemented in PCS to demonstrate recursion and the Turing complete nature of PCS.
 
 ## ai_img_viewer.pcs
-A program to display pgm P2 and ppm p3 images with PCS. Demonstrates getting interactive user input to get teh file name from the user as well as file input and display of greyscale and colour pixels to the script console.
+A program to read (from disk) and display pgm P2 and ppm p3 images with PCS. Demonstrates getting interactive user input to get the file name from the user as well as file input and display of greyscale and colour pixels to the script console. This can't parse comments in the files so if you make an image with a program that places comments in the header (like the gimp) then be sure to remove the comment lines before attempting to load the image). Two example images are provided here for testing: preview.ppm and preview.pgm
 
 ## ai_interp_marauders.pcs
 A fully playable video game that illustrates the general programming abilities of PCS. This includes interactive real time user input from the keyboard, animated UTF-8 colour graphics on the script console window, the use of PCS to make a pseudorandom number generator with its general maths commands, and the ability to read a custom image as a front splash screen.
