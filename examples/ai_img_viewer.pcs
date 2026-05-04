@@ -1,0 +1,188 @@
+Pardus pcs 1
+verbosity 1
+
+# ==============================================================================
+# PARDUS IMAGE VIEWER (P2/P3 ASCII)
+# Developed for the PARDUS Robotics DSL. 
+# Features: Dynamic filename entry, Format Detection, and Grayscale/Color support.
+# ==============================================================================
+
+# --- CONFIGURATION ---
+def_var string g_target_file _       # Stores user-inputted filename
+def_var int g_continue 1             # Master loop control
+def_var string g_dummy _             # Used for "Press Enter" pause logic
+
+# --- GLOBAL DATA SETUP ---
+# Pre-provisioned buffer for 64x64 RGB (12288 tokens).
+# Defined as string to ensure ASCII token scanning via fset_var.
+def_array string G_pixel_data 12288 0
+
+# Header fields (PNM standard: Magic, Width, Height, MaxVal)
+def_var string g_magic_num _
+def_var string g_img_w 0
+def_var string g_img_h 0
+def_var string g_max_val 0
+
+# Loop and Indexing variables (Declared globally to pass syntax checks)
+def_var int g_p_idx 0                # Pointer to current token in G_pixel_data
+def_var int g_x 0                    # Horizontal coordinate
+def_var int g_y 0                    # Vertical coordinate
+def_var int g_idx_r 0                # Calculated array index for Red
+def_var int g_idx_g 0                # Calculated array index for Green
+def_var int g_idx_b 0                # Calculated array index for Blue
+def_var string g_msg _               # Reusable string buffer for UI messages
+
+# --- MAIN ENGINE ---
+def_func main
+    set_var g_continue 1
+
+    set_condexp g_continue == 1
+    loop_while Condexp
+        print_clear
+        
+        # Build multi-word prompt (Keeping each word under the 31-char limit)
+        set_str g_msg Please enter filename or type exit to quit:
+        print_value g_msg 2
+
+        # Poll user: Wait=ON (pause), Return=ON (wait for enter key)
+        poll_user ON ON g_target_file
+
+        # Graceful Exit: Exit if user types 'exit' or provides empty input
+        set_condexp g_target_file == exit
+        do_if Condexp
+            set_var g_continue 0
+        else
+            set_condexp g_target_file == _
+            do_if Condexp
+                set_var g_continue 0
+            else
+                # Header Extraction: Each call reads 1 ASCII token
+                fset_var g_magic_num 0 g_target_file
+                fset_var g_img_w 1 g_target_file
+                fset_var g_img_h 2 g_target_file
+                fset_var g_max_val 3 g_target_file
+                
+                # Pixel Load: Brackets required for 'writable' array access.
+                # Starts at token 4 (immediately after the header).
+                fset_var G_pixel_data[0] 4 g_target_file
+
+                # Defensive Programming: Ensure file was accessible
+                set_condexp NReads < 0
+                do_if Condexp
+                    set_str g_msg Error: Could not read file:
+                    add_var g_msg Space
+                    add_var g_msg g_target_file
+                    print_value g_msg 2
+                else
+                    # Display metadata to console
+                    set_str g_msg Format:
+                    add_var g_msg Space
+                    add_var g_msg g_magic_num
+                    add_var g_msg Space
+                    add_var g_msg | Res:
+                    add_var g_msg Space
+                    add_var g_msg g_img_w
+                    add_var g_msg x
+                    add_var g_msg g_img_h
+                    print_value g_msg 2
+
+                    call_func Render_Image
+                    
+                    # Pause logic: Use poll_user to wait for user interaction
+                    set_str g_msg Press Enter to continue...
+                    print_value g_msg 2
+                    poll_user ON ON g_dummy
+                enddo
+            enddo
+        enddo
+
+        # Check loop condition to repeat or finish
+        set_condexp g_continue == 1
+    endloop
+
+    set_str g_msg Goodbye!
+    print_value g_msg 2
+return
+
+# --- RENDERING LOGIC ---
+def_func Render_Image
+    set_var g_p_idx 0
+    set_var g_y 0
+    print_size 6                     # Set font size for console blocks
+
+    # Vertical scanline loop
+    set_condexp g_y < g_img_h
+    loop_while Condexp
+        set_var g_x 0
+        set_condexp g_x < g_img_w
+        # Horizontal pixel loop
+        loop_while Condexp
+            
+            # FORMAT DETECTION
+            # P3: Color ASCII (Requires 3 tokens per pixel)
+            set_condexp g_magic_num == P3
+            do_if Condexp
+                set_var g_idx_r g_p_idx
+                set_var g_idx_g g_p_idx
+                add_var g_idx_g 1
+                set_var g_idx_b g_p_idx
+                add_var g_idx_b 2
+                
+                # Apply 24-bit True Colour Mode (3 arguments)
+                print_colour G_pixel_data[g_idx_r] G_pixel_data[g_idx_g] G_pixel_data[g_idx_b]
+                add_var g_p_idx 3
+            else
+                # P2: Grayscale ASCII (Requires 1 token per pixel)
+                set_var g_idx_r g_p_idx
+                # Map grayscale value to all 3 RGB channels
+                print_colour G_pixel_data[g_idx_r] G_pixel_data[g_idx_r] G_pixel_data[g_idx_r]
+                add_var g_p_idx 1
+            enddo
+            
+            # Print the actual pixel block (Unicode Full Block)
+            print_value █ 0
+            
+            add_var g_x 1
+            set_condexp g_x < g_img_w
+        endloop
+        
+        # Newline at end of scanline
+        print_value Space 2
+        add_var g_y 1
+        set_condexp g_y < g_img_h
+    endloop
+    
+    # Restore console to default white
+    print_colour 255 255 255
+return
+
+exit
+
+# --- AI SCRATCHPAD & PERSISTENT MEMORY ---
+# The interpreter ignores everything in this zone.
+# This data serves as a lesson-learnt audit for PCS programming.
+
+{
+  "script_metadata": {
+    "version": "1.1",
+    "description": "P2/P3 ASCII Image Viewer",
+    "compatibility": "PARDUS Robotics DSL"
+  },
+  "lessons_learnt": {
+    "syntax_verification": [
+      "Arrays MUST use bracket syntax [index] in fset_var to be flagged as writable.",
+      "Global variables must be defined at the top level; nested definitions cause re-definition errors on function re-entry.",
+      "Control blocks (do_if/loop_while) must be physically closed; an 'exit' command before 'enddo' breaks the verifier."
+    ],
+    "string_mechanics": [
+      "Argument limit is 31 bytes. Underscore-joining long strings leads to silent truncation.",
+      "Spaces are permitted in set_str/cat_str to build natural sentences safely.",
+      "set_condexp string comparison is strictly for whole-string equality; no implicit char-slicing."
+    ],
+    "io_behaviors": [
+      "fset_var type-casting is imperative: 'string' targets trigger ASCII token scanning, while 'int' targets trigger raw 32-bit binary reads.",
+      "Binary reads are 4-byte aligned; standard 1-byte P5/P6 PNM files require manual unpacking via imod/div_var logic (omitted in v1.1 for stability)."
+    ]
+  },
+  "operational_notes": "The viewer uses a 'Press Enter' poll_user gate to prevent print_clear from wiping the render before the human operator has inspected the frame."
+}
