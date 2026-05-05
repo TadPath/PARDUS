@@ -40,14 +40,14 @@ def_var string msg _
 
 # --- MAIN ENGINE ---
 def_func main
-    set_str msg ---_UNSORTED_DATA_---
+    set_str msg --- UNSORTED DATA ---
     print_value msg 2
     call_func Print_Data
 
     set_var i 0
     call_func Outer_Loop
 
-    set_str msg ---_SORTED_DATA_---
+    set_str msg --- SORTED DATA ---
     print_value msg 2
     call_func Print_Data
 return
