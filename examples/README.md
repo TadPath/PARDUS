@@ -19,6 +19,9 @@ A classical bubble sort algorithm implemented in PCS to demonstrate recursion an
 ## ai_img_viewer.pcs
 A program to read (from disk) and display pgm P2 and ppm p3 images with PCS. Demonstrates getting interactive user input to get the file name from the user as well as file input and display of greyscale and colour pixels to the script console. This can't parse comments in the files so if you make an image with a program that places comments in the header (like the gimp) then be sure to remove the comment lines before attempting to load the image). Two example images are provided here for testing: preview.ppm and preview.pgm
 
+## ai_img_viewer_v2.pcs
+This is a more advanced version of the ai_img_viewer program in that it shows how to use byte-precise file reading to enable the reading of p5 adn p6 binary PNM images as well as p2 adn p3 ASCII images. It also uses advaned character management so that it can detect and skip comments in the PNM headers. This program will read the two example images are provided here for testing the simpler image viewer: preview.ppm and preview.pgm; but, in addition, it will also read the two binary PNM images also provided here: preview_p5.pgm and preview_p6.ppm which also contain comments in the headers.
+
 ## ai_interp_marauders.pcs
 A fully playable video game that illustrates the general programming abilities of PCS. This includes interactive real time user input from the keyboard, animated UTF-8 colour graphics on the script console window, the use of PCS to make a pseudorandom number generator with its general maths commands, and the ability to read a custom image as a front splash screen.
 This is more of an AI - human collaboration than a fully AI generated program. I started the AI off by writing a simple 'turret commander program' that allows the user to move the turrent left and right and fire missiles. The AI then took hat code and added various features under my supervision to build the complete game. The AI wrote a dedicated readme guid to the game which you can find here labelled 'ReadMe_IPM.md'.
@@ -48,8 +51,8 @@ Demonstrates how to build simple graphical feedback controls in the scripe conso
 ## ppinclude.pch
 An example of a practical PCS header file. This is required for my microscopy scripts here.
 
-## preview.pgm and preview.ppm
-These are test p2 and p3 iamges that you can use with ai_img_viewer.pcs
+## preview.pgm, preview_p5.pgm, preview.ppm and preview_p6.ppm
+These are test PNM iamges for use with ai_img_viewer.pcs (will only read the p2 and p3 iamges) and ai_img_viewer_v2.pcs (will read all of them)
 
 ## ReadMe_IPM.md
 A markdown manual for the interplanetary marauders game, written by and AI.
