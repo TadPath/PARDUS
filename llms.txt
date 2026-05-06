@@ -87,11 +87,13 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `execute_daemon <progname> [<arg1> ...]` - Spawn a process to run on the client host computer (non-blocking execution).
 - `execute_system <progname> [<arg1> ...]` - Initiate a process to run on the client host computer (blocking execution)
 - `exit` - Terminates a script. Mandatory for any script or header file.
+- `fbyte_mode <varval>` - Sets whether file IO with integer variables is done 1 byte at a time (ON) or 4 bytes at a time (OFF).
 - `fput_var <varname> <append?> <file>` - Writes the values in a variable (or array) to a file.
 - `frame_number <number>` - Sets the value of the frame counter number for the file name the next captured image.
 - `frames_to_average <number>` - Sets the number of frames to average for image capture with grab_image.
 - `frames_to_skip <skip>` - Sets the number of frames to initially acquire and discard for each grab_image operation.
-- `fset_var <varname> <skip> <file>` - Sets the values in a variable or array from data in a file.
+- `fset_var <varname> <skip> <file>` - Sets the values in a variable (or array) from data in a file.
+- `fskip_size <nbytes>` - Sets the size of a 'data item' used in the initial skip phase of an fset_var process.
 - `get_actuators` - Get the name and index number of all extant actuators on the server.
 - `get_camsettings` - Ensures the client GUI is synchronised to the settings of the currently selected camera.
 - `get_preview <ON|OFF> <centre_x> <centre_y>` - Capture a preview image.
@@ -141,7 +143,7 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `select_camera <number>` - Set the current camera for all imaging operations.
 - `set_condexp <varval1> <condition> <varval2>` - Performs a conditional expression and save the result to the system variable Condexp
 - `set_str <STR_VAR> [[str1] [[str2] ...]]` - Set a string variable to contain up to 24 strings, each separated by a single space character
-- `set_var <varname> <varval>` - Set the value of a variable.
+- `set_var <varname> <varval> [charpos]` - Set the value of a variable.
 - `skip_frames <skip>` - Immediately capture and discard <skip> frames.
 - `sleep <value>` - Pause script execution for <value> seconds (which may be a fractional float number).
 - `sub_var <varname> <varval>` - Subtract a value from a variable.
