@@ -2,7 +2,7 @@ The PCS Programming Language
 
 by Dr. Paul J. Tadrous
 
-27.02.2020 - 02.05.2026
+27.02.2020 - 06.05.2026
 
 Table of Contents
 
@@ -184,159 +184,163 @@ Table of Contents
 
 [exit 72](#__RefHeading___Toc15066_2491002120)
 
-[ff_correction 72](#__RefHeading___Toc15068_2491002120)
+[fbyte_mode 72](#__RefHeading___Toc15074_2491002120_Copy_)
 
-[fput_var 73](#__RefHeading___Toc15074_2491002120_Copy_)
+[ff_correction 73](#__RefHeading___Toc15068_2491002120)
 
-[frame_number 74](#__RefHeading___Toc15070_2491002120)
+[fput_var 73](#__RefHeading___Toc15074_2491002120_Copy1)
+
+[frame_number 75](#__RefHeading___Toc15070_2491002120)
 
 [frames_to_average 75](#__RefHeading___Toc15072_2491002120)
 
 [frames_to_skip 75](#__RefHeading___Toc15074_2491002120)
 
-[fset_var 75](#__RefHeading___Toc15074_2491002120_Copy1)
+[fset_var 76](#__RefHeading___Toc15074_2491002120_Copy2)
 
-[get_actuators 77](#__RefHeading___Toc15076_2491002120)
+[fskip_size 79](#__RefHeading___Toc15074_2491002120_Copy3)
 
-[get_camsettings 78](#__RefHeading___Toc15078_2491002120)
+[get_actuators 79](#__RefHeading___Toc15076_2491002120)
 
-[get_preview 79](#__RefHeading___Toc15080_2491002120)
+[get_camsettings 81](#__RefHeading___Toc15078_2491002120)
 
-[get_preview_focus 79](#__RefHeading___Toc15082_2491002120)
+[get_preview 81](#__RefHeading___Toc15080_2491002120)
 
-[get_preview_stats 80](#__RefHeading___Toc15084_2491002120)
+[get_preview_focus 82](#__RefHeading___Toc15082_2491002120)
 
-[get_preview_tc 80](#__RefHeading___Toc15086_2491002120)
+[get_preview_stats 82](#__RefHeading___Toc15084_2491002120)
 
-[get_resolutions 81](#__RefHeading___Toc15088_2491002120)
+[get_preview_tc 82](#__RefHeading___Toc15086_2491002120)
 
-[goto 82](#__RefHeading___Toc15090_2491002120)
+[get_resolutions 83](#__RefHeading___Toc15088_2491002120)
 
-[grabber_predelay 85](#__RefHeading___Toc15092_2491002120)
+[goto 84](#__RefHeading___Toc15090_2491002120)
 
-[grabber_retries 85](#__RefHeading___Toc15094_2491002120)
+[grabber_predelay 87](#__RefHeading___Toc15092_2491002120)
 
-[grabber_timeout 86](#__RefHeading___Toc15096_2491002120)
+[grabber_retries 88](#__RefHeading___Toc15094_2491002120)
 
-[grab_image 86](#__RefHeading___Toc15098_2491002120)
+[grabber_timeout 88](#__RefHeading___Toc15096_2491002120)
 
-[jpeg_quality 86](#__RefHeading___Toc15100_2491002120)
+[grab_image 88](#__RefHeading___Toc15098_2491002120)
 
-[loop_while 86](#__RefHeading___Toc15102_2491002120)
+[jpeg_quality 88](#__RefHeading___Toc15100_2491002120)
 
-[math_var 87](#__RefHeading___Toc15104_2491002120)
+[loop_while 89](#__RefHeading___Toc15102_2491002120)
 
-[milliduration 89](#__RefHeading___Toc15104_2491002120_Copy_)
+[math_var 89](#__RefHeading___Toc15104_2491002120)
 
-[mul_var 91](#__RefHeading___Toc15106_2491002120)
+[milliduration 91](#__RefHeading___Toc15104_2491002120_Copy_)
 
-[poll_user 91](#__RefHeading___Toc15108_2491002120)
+[mul_var 93](#__RefHeading___Toc15106_2491002120)
 
-[preview_clear 92](#__RefHeading___Toc15110_2491002120)
+[poll_user 93](#__RefHeading___Toc15108_2491002120)
 
-[preview_file 92](#__RefHeading___Toc15112_2491002120)
+[preview_clear 94](#__RefHeading___Toc15110_2491002120)
 
-[preview_save 93](#__RefHeading___Toc15114_2491002120)
+[preview_file 95](#__RefHeading___Toc15112_2491002120)
 
-[preview_tile 93](#__RefHeading___Toc15116_2491002120)
+[preview_save 95](#__RefHeading___Toc15114_2491002120)
 
-[print_clear 94](#__RefHeading___Toc15118_2491002120)
+[preview_tile 95](#__RefHeading___Toc15116_2491002120)
 
-[print_colour 94](#__RefHeading___Toc15118_2491002120_Copy_)
+[print_clear 96](#__RefHeading___Toc15118_2491002120)
 
-[print_size 94](#__RefHeading___Toc15118_2491002120_Copy1)
+[print_colour 96](#__RefHeading___Toc15118_2491002120_Copy_)
 
-[print_cursor 94](#__RefHeading___Toc15120_2491002120)
+[print_size 96](#__RefHeading___Toc15118_2491002120_Copy1)
 
-[print_file 95](#__RefHeading___Toc15122_2491002120)
+[print_cursor 97](#__RefHeading___Toc15120_2491002120)
 
-[print_value 96](#__RefHeading___Toc15124_2491002120)
+[print_file 97](#__RefHeading___Toc15122_2491002120)
 
-[prv_cdf_use 97](#__RefHeading___Toc15126_2491002120)
+[print_value 98](#__RefHeading___Toc15124_2491002120)
 
-[prv_fc_posn 98](#__RefHeading___Toc15128_2491002120)
+[prv_cdf_use 99](#__RefHeading___Toc15126_2491002120)
 
-[prv_fc_show 98](#__RefHeading___Toc15130_2491002120)
+[prv_fc_posn 100](#__RefHeading___Toc15128_2491002120)
 
-[prv_hgm_posn 98](#__RefHeading___Toc15132_2491002120)
+[prv_fc_show 100](#__RefHeading___Toc15130_2491002120)
 
-[prv_hgm_satlim_l 99](#__RefHeading___Toc15134_2491002120)
+[prv_hgm_posn 101](#__RefHeading___Toc15132_2491002120)
 
-[prv_hgm_satlim_u 99](#__RefHeading___Toc15136_2491002120)
+[prv_hgm_satlim_l 101](#__RefHeading___Toc15134_2491002120)
 
-[prv_hgm_scales 100](#__RefHeading___Toc15138_2491002120)
+[prv_hgm_satlim_u 101](#__RefHeading___Toc15136_2491002120)
 
-[prv_lut 100](#__RefHeading___Toc15140_2491002120)
+[prv_hgm_scales 102](#__RefHeading___Toc15138_2491002120)
 
-[prv_mask_use 100](#__RefHeading___Toc15142_2491002120)
+[prv_lut 102](#__RefHeading___Toc15140_2491002120)
 
-[prv_m_bias 101](#__RefHeading___Toc15144_2491002120)
+[prv_mask_use 103](#__RefHeading___Toc15142_2491002120)
 
-[prv_mcor_eject 101](#__RefHeading___Toc15146_2491002120)
+[prv_m_bias 103](#__RefHeading___Toc15144_2491002120)
 
-[prv_mdf_set 101](#__RefHeading___Toc15148_2491002120)
+[prv_mcor_eject 104](#__RefHeading___Toc15146_2491002120)
 
-[prv_mff_set 102](#__RefHeading___Toc15150_2491002120)
+[prv_mdf_set 104](#__RefHeading___Toc15148_2491002120)
 
-[prv_m_integral 102](#__RefHeading___Toc15152_2491002120)
+[prv_mff_set 104](#__RefHeading___Toc15150_2491002120)
 
-[prv_size 103](#__RefHeading___Toc15154_2491002120)
+[prv_m_integral 105](#__RefHeading___Toc15152_2491002120)
 
-[prv_toggle 103](#__RefHeading___Toc15156_2491002120)
+[prv_size 105](#__RefHeading___Toc15154_2491002120)
 
-[return 106](#__RefHeading___Toc15158_2491002120)
+[prv_toggle 105](#__RefHeading___Toc15156_2491002120)
 
-[save_coords 106](#__RefHeading___Toc15160_2491002120)
+[return 108](#__RefHeading___Toc15158_2491002120)
 
-[save_doubles 106](#__RefHeading___Toc15162_2491002120)
+[save_coords 108](#__RefHeading___Toc15160_2491002120)
 
-[save_format 107](#__RefHeading___Toc15164_2491002120)
+[save_doubles 108](#__RefHeading___Toc15162_2491002120)
 
-[save_path 109](#__RefHeading___Toc15166_2491002120)
+[save_format 109](#__RefHeading___Toc15164_2491002120)
 
-[save_resolution 110](#__RefHeading___Toc15168_2491002120)
+[save_path 111](#__RefHeading___Toc15166_2491002120)
 
-[save_root 110](#__RefHeading___Toc15170_2491002120)
+[save_resolution 112](#__RefHeading___Toc15168_2491002120)
 
-[select_camera 111](#__RefHeading___Toc15172_2491002120)
+[save_root 112](#__RefHeading___Toc15170_2491002120)
 
-[set_condexp 111](#__RefHeading___Toc15174_2491002120)
+[select_camera 113](#__RefHeading___Toc15172_2491002120)
 
-[set_str 114](#__RefHeading___Toc15176_2491002120)
+[set_condexp 114](#__RefHeading___Toc15174_2491002120)
 
-[set_var 115](#__RefHeading___Toc15178_2491002120)
+[set_str 116](#__RefHeading___Toc15176_2491002120)
 
-[skip_frames 115](#__RefHeading___Toc15180_2491002120)
+[set_var 117](#__RefHeading___Toc15178_2491002120)
 
-[sleep 116](#__RefHeading___Toc15182_2491002120)
+[skip_frames 118](#__RefHeading___Toc15180_2491002120)
 
-[sub_var 116](#__RefHeading___Toc15184_2491002120)
+[sleep 118](#__RefHeading___Toc15182_2491002120)
 
-[tc_threshold 116](#__RefHeading___Toc15186_2491002120)
+[sub_var 119](#__RefHeading___Toc15184_2491002120)
 
-[tmc_chconf_parse 118](#__RefHeading___Toc15188_2491002120)
+[tc_threshold 119](#__RefHeading___Toc15186_2491002120)
 
-[tmc_status_parse 119](#__RefHeading___Toc15190_2491002120)
+[tmc_chconf_parse 120](#__RefHeading___Toc15188_2491002120)
 
-[undef_actuator 120](#__RefHeading___Toc15192_2491002120)
+[tmc_status_parse 121](#__RefHeading___Toc15190_2491002120)
 
-[update_gui_coords 121](#__RefHeading___Toc15194_2491002120)
+[undef_actuator 122](#__RefHeading___Toc15192_2491002120)
 
-[verbosity 121](#__RefHeading___Toc15196_2491002120)
+[update_gui_coords 123](#__RefHeading___Toc15194_2491002120)
 
-[xys_af_period 121](#__RefHeading___Toc15198_2491002120)
+[verbosity 123](#__RefHeading___Toc15196_2491002120)
 
-[xys_finish 121](#__RefHeading___Toc15200_2491002120)
+[xys_af_period 124](#__RefHeading___Toc15198_2491002120)
 
-[xys_process 122](#__RefHeading___Toc15202_2491002120)
+[xys_finish 124](#__RefHeading___Toc15200_2491002120)
 
-[xys_scan 122](#__RefHeading___Toc15204_2491002120)
+[xys_process 124](#__RefHeading___Toc15202_2491002120)
 
-[xys_start 122](#__RefHeading___Toc15206_2491002120)
+[xys_scan 124](#__RefHeading___Toc15204_2491002120)
 
-[yuyv_bias 122](#__RefHeading___Toc15208_2491002120)
+[xys_start 124](#__RefHeading___Toc15206_2491002120)
 
-[yuyv_gain 122](#__RefHeading___Toc15210_2491002120)
+[yuyv_bias 125](#__RefHeading___Toc15208_2491002120)
+
+[yuyv_gain 125](#__RefHeading___Toc15210_2491002120)
 
 # Introduction
 
@@ -742,7 +746,7 @@ Arguments:
 
 The main use is to allow the script writer to use human-meaningful words in their script where numerical values are required by the main PCS syntax. For example to use the word 'ACT_STEPPER' in place of the numerical value '1' by means of the preprocessor directive:
 
-```c
+```pcs
 #define ACT_STEPPER  1
 ```
 
@@ -838,6 +842,8 @@ These are a set of variables that always exist and the script writer has read-ac
 | CurrActType | int | This reports the actuator type number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
 | NReads | int | This reports the result of any call to the command fset_var. The default value at the start of any script is -4. |
 | NWrites | int | This reports the result of any call to the command fput_var. The default value at the start of any script is -4. |
+| NewLines | int | This reports the number of logical line endings encountered on the input stream immediately following a string-based fset_var operation. The default value is 0. |
+| NBytes | int | This reports the total number of raw bytes consumed from the file during the "reading phase" of the last fset_var command and the total number of bytes written to a file by the fput_var command. |
 | Millis | int | This is a rolling millisecond counter and is updated whenever it is used. Although it is an int (signed) it will never be negative because it rolls over to 0 after 2147483647 (about 24 days) so effectively acts as a 'uint31_t'. |
 | PMRep1 | float | The last known step count (in atomic steps) of the X axis stepper motor. |
 | PMRep2 | float | The last known step count (in atomic steps) of the Y axis stepper motor. |
@@ -2064,6 +2070,14 @@ exit
 
 This terminates the script. All scripts and header files must have an exit command to mark the end of coding lines. The script checker will reject the script or header file if it does not find one. An exit command must be present even in scripts that use formal functions where the return of the function main will effectively act as an exit point at run time.
 
+### fbyte_mode
+
+fbyte_mode <varval>
+
+This is a latching command. If this is set to ON/TRUE/non-zero then, when integer variables are being dealt with via fset_var (or fput_var), the file will be read (or written) 1 byte at a time and into (or from) the integer variable - each integer variable value will be treated as an unsigned char. In the case of fput_var the lowest 8 bits of the integer variable will be written to the file as an unsigned char. The default value for fbyte_mode at the start of any script run is 0 (OFF).
+
+<varval> - a binary choice varval.
+
 ### ff_correction
 
 ff_correction <OFF|ON|image_file>
@@ -2084,7 +2098,7 @@ This determines whether to load and use a flat field correction image in full fr
 
 fput_var <varname> <append?> <file>
 
-This reads data from the variable <varname> and writes it to a file. The PCS system variable NWrites is set to the number of data items written into the file from the variable or to a negative number if there was an error.
+This reads data from the variable <varname> and writes it to a file. The PCS system variable NWrites is set to the number of data items written into the file from the variable or to a negative number if there was an error. Note: The NBytes system variable reports the total number of raw bytes written to the file during the execution of fput_var. It is calculated as the difference between the file position before and after the writing phase.
 
 <varname> - the name of the variable to be read.
 
@@ -2115,13 +2129,13 @@ In the case of an file write error, the script will not terminate but the system
 
 **Note**: The data type and content of the file will be assumed to be the same as the data type of <varname> according to the following rules:
 
-<varname> is of type string: A 'data item' will be defined as a character string separated from any other data items by white space. Thus the file will be written as a text file of strings separated by white space. The last string to be written will have a space appended to it.
+<varname> is of type string: A 'data item' will be defined as a character string. Thus the file will be written as a text file of strings. Only the data in each string variable is output. If you wish your output to be separated by white space or have a new line character at the end then it is your responsibility to add that separator to the end of your string variable prior to calling the fput_var command or consider using the print_file and print_value commands for more managed (formatted) output of text to a file.
 
 <varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be written as a raw binary file.
 
-<varname> is of type int: A 'data item' will be defined an int32_t and the file will then be written as a raw binary file.
+<varname> is of type int: A 'data item' will be defined as an int32_t and the file will then be written as a raw binary file. The foregoing is the default behaviour that occurs at the start of any script run. However, the size of a 'data item' may be changed to a single byte by means of the fbyte_mode command. If byte mode is enabled, only the lowest 8 bits (the least significant byte) of each int are written to the file as an unsigned char. This allows for the creation of binary files with byte-level precision.
 
-**Note**: See also fset_var.
+**Note**: See also fset_var and fbyte_mode.
 
 ### frame_number
 
@@ -2151,11 +2165,11 @@ This sets the number of frames for the frame grabber to grab and discard prior t
 
 fset_var <varname> <skip> <file>
 
-This reads data from a file and puts the values it reads into the variable <varname>. The PCS system variable NReads is set to the number of data items read into the variable from the file or to a negative number if there was an error.
+This reads data from a file and puts the values it reads into the variable <varname>. The PCS system variable NReads is set to the number of data items read into the variable from the file or to a negative number if there was an error. The NBytes system variable is set to the number of bytes consumed from the file after the <skip> process. The NewLines system variable reports the number of logical line endings encountered on the input stream immediately following a string-based fset_var operation. See notes below for more details.
 
 <varname> - the name of the variable to be set.
 
-<skip> - an integer, >= 0, that specifies the number of data items to skip.
+<skip> - an integer, >= 0, that specifies the number of ***data items*** to skip.
 
 <file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be read. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
 
@@ -2183,13 +2197,48 @@ In the case of a file read error, the script will not terminate but the system v
 
 **Note**: The data type and content of the file will be assumed to be the same as the data type of <varname> according to the following rules:
 
-<varname> is of type string: A 'data item' will be defined as a character string separated from any other data items by white space. Thus the file will be scanned looking for strings separated by white space (not by any other delimiters) and each such string will count as 1 data item for the purposes of reading (and also for the purposes of skipping <skip> data items before assignments begin). During the <skip> phase, there is no limit on the size of strings skipped. During the reading phase there is a limit put on the size of each string read into each element of <varname> of 1023 non-white-space characters. If a string is encountered that is longer than this, then the first 1023 characters will be read into the current location in <varname> (i.e. it will read a truncated version of that string) and an error warning will be printed to the script console but the program will not terminate and NReads will not go negative. The rest of the truncated string will be ignored and the next data item in the file will be read to the next position in <varname> (if it is an array of of size > 1).
+<varname> is of type string: A 'data item' will be defined as a character string separated from any other data items by white space. Thus the file will be scanned looking for strings separated by white space (not by any other delimiters) and each such string will count as 1 data item for the purposes of reading (and also for the purposes of skipping <skip> data items before assignments begin). During the <skip> phase, there is no limit on the size of strings skipped. During the reading phase there is a limit put on the size of each string read into each element of <varname> of 1023 non-white-space characters. If a string is encountered that is longer than this, then the first 1023 characters will be read into the current location in <varname> (i.e. it will read a truncated version of that string) and an error warning will be printed to the script console but the program will not terminate and NReads will not go negative. The rest of the truncated string will be ignored and the next data item in the file will be read to the next position in <varname> (if it is an array of of size > 1). For <skip> purposes (but not reading purposes) the definition of a 'data item' can be modified by the fskip_size command. See below for details.
 
-<varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be treated as a raw binary file and read as such - each 64 bits of the file being read as a double.
+<varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be treated as a raw binary file and read as such - each 64 bits of the file being read as a double. For <skip> purposes (but not reading purposes) the definition of a 'data item' can be modified by the fskip_size command. See below for details.
 
-<varname> is of type int: A 'data item' will be defined an int32_t and the file will then be treated as a raw binary file and read as such - each 32 bits of the file being read as an int32_t.
+<varname> is of type int: A 'data item' will be defined an int32_t and the file will then be treated as a raw binary file and read as such - each 32 bits of the file being read as an int32_t. For <skip> purposes (but not reading purposes) the definition of a 'data item' can be modified by the fskip_size command. See below for details. For reading purposes the size of a 'data item' may be changed to a single byte by means of the fbyte_mode command. If byte mode is enabled, the file is read one byte at a time. Each byte is stored in an individual int variable slot as an unsigned char; the lower 8 bits represent the byte value, while the upper 24 bits are set to 0. This effectively treats each int as a single unsigned 8-bit value. This allows for the precise reading of binary files where the file data is not an exact multiple of 4 bytes.
 
-**Note**: See also fput_var.
+**Note**: The value of a 'data item' as described above will only pertain when the fskip_size is 0. If the value set by the command fskip_size is > 0 then the 'data item' will be measured in units of fskip_size bytes, regardless of the data type of the variables to be written to.
+
+**Note**: The NewLines system variable reports the number of logical line endings encountered on the input stream immediately following a string-based fset_var operation. It has the following behaviour:
+
+* *Trigger*: NewLines is reset to 0 at the start of any fset_var call targeting a string variable or array. It is updated only after the reading phase is complete and at least one item was successfully read (NReads > 0).
+* *Normalization*: The interpreter recognizes Unix (n), Windows (rn), and legacy Mac (r) line endings. Each represents a single count.
+* *Scope*: The count includes all line endings between the last string read and the very next non-whitespace character (the start of the next potential data item).
+* *Horizontal Whitespace*: Spaces and tabs encountered during this look-ahead are consumed but do not affect the NewLines count.
+* *Binary Safety*: The counting process stops immediately if a null character (0) or any non-whitespace data is encountered, ensuring that subsequent binary data is not accidentally consumed.
+
+**Note**: Use NewLines to detect structural breaks in files where whitespace is otherwise ignored. For example, in PNM (P2/P3) files, a NewLines value >= 1 after reading the header can indicate the end of a comment line or the transition to the pixel data block.
+
+*Caution (Binary Data)*: If a binary data block immediately follows a string block, ensure there are no trailing spaces or tabs before the binary data. The NewLines look-ahead logic consumes horizontal whitespace (Space/Tab) while searching for line endings. If the first byte of your binary data is value 32 or 9, it will be consumed and included in the NBytes count.
+
+**Note**: The NBytes system variable reports the total number of raw bytes consumed from the file during the "reading phase" of the last fset_var command. The behaviour is as follows:
+
+*What it counts:*
+
+* For Numeric Types (int/float): The total bytes read into the variable(s). For example, if fbyte_mode is ON, NBytes will equal NReads. If OFF, NBytes will be NReads * 4 (for ints).
+* For String Types: The total number of bytes consumed starting from the first character of the first string read, through to the last byte consumed by the NewLines look-ahead logic. The count includes all data characters, internal whitespace between tokens, and all trailing whitespace (spaces, tabs, r, n) consumed while the interpreter was updating the NewLines sytem variable.
+
+*What it ignores:*
+
+* NBytes does not include any bytes skipped during the <skip> phase of the fset_var command.
+
+**Note**: NBytes is the bridge between ASCII and Binary data. By adding NBytes to a tracking variable after reading a text header, you can determine the exact byte-offset where the binary data begins. This offset can then be used with fskip_size 1 to perform a byte-precise binary <skip> for the next fset_var call.
+
+**Note**: See also fput_var, fskip_size and fbyte_mode.
+
+### fskip_size
+
+fskip_size <nbytes>
+
+This is a latching command. If <nbytes> is > 0 then, whenever a fset_var command is issued, the <skip> value is measured in that number of bytes regardless of the data type of the variable to be set (in other words, the total bytes that will be skipped in <skip>*<nbytes>). Otherwise (if <nbytes> is 0 ) the <skip> value is measured in 'data items' as described in the description for fset_var. The default fskip_size value at the start of any script will be 0 meaning that 'data items' with be the unit of <skip>.
+
+<nbytes> - an integer varval that must be >= 0.
 
 ### get_actuators
 
@@ -3326,13 +3375,24 @@ This allows you to set a user-defined variable of string type to a string of up 
 
 ### set_var
 
-set_var <varname> <varval>
+set_var <varname> <varval> [charpos]
 
-This assigns a value to a user-defined variable. This is symbolically equivalent to 'varname = varval'.
+This assigns a value to a user-defined variable. This is symbolically equivalent to 'varname = varval'. The [charpos] option allows additional operations on string variables.
 
 <varname> - a character string constant representing the name of the variable whose value is to be set.
 
 <varval> - a varval and is the value that is to be assigned to the variable specified in <varname>.
+
+[charpos] - a integer varval specifying the position in a string to operate on (starting from 0) or a negative number if you want the string length to be evaluated. See notes for details.
+
+**Note**: The [charpos] optional argument is ignored and has no effect unless the data type of both <varname> and <varval> are also string.
+
+**Note**: When <varname> and <varval> are string data then, if [charpos] is supplied and:
+
+* [charpos] is >= 0 : The the set operation will only pertain to the single character in the the <varval> string that is the [charpos]th character in that string (the first character being at position 0) unless the value of [charpos] is >= the number of characters in the string of <varval> in which case no operation is performed (<varname> is left unaltered) but this will not result in an error - the script will silently continue.
+* [charpos] is < 0 : The string value of the variable <varname> will be assigned a numerical integer value (in ASCII form, as a string) which is the length of the string of <varval> as returned by the C function strlen.
+
+**Note**: Thus the optional [charpos] argument allows you to extract a specific single character from the string of <varval> or return the length of that string. It serves no function for for other data types.
 
 ### skip_frames
 
@@ -3390,7 +3450,7 @@ This sets lower and upper tissue content thresholds. See notes below for more in
 
 **Note**: The thresholding tests are implemented in the pardcap C source code according to the pseudocode logic shown below (tcval is the result of the TCA algorithm applied to the preview image):
 
-```pseudocode
+```c
 if (<lower> < 0.0) go_ahead_with_full_image_capture(); // No thresholding
 else {
   int score = 0;
