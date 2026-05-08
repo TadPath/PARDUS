@@ -2,7 +2,7 @@ The PCS Programming Language
 
 by Dr. Paul J. Tadrous
 
-27.02.2020 - 06.05.2026
+27.02.2020 - 08.05.2026
 
 Table of Contents
 
@@ -96,251 +96,251 @@ Table of Contents
 
 [2. Operator Abstraction (Dynamic Dispatch) 33](#__RefHeading___Toc14980_2491002120)
 
-[3. Transparent State Management 33](#__RefHeading___Toc14982_2491002120)
+[3. Transparent State Management 35](#__RefHeading___Toc14982_2491002120)
 
-[4. Vectorised Reasoning via Universal Arrays 34](#__RefHeading___Toc14984_2491002120)
+[4. Vectorised Reasoning via Universal Arrays 35](#__RefHeading___Toc14984_2491002120)
 
-[5. Explicit Data Casting 34](#__RefHeading___Toc14986_2491002120)
+[5. Explicit Data Casting 35](#__RefHeading___Toc14986_2491002120)
 
-[6. Minimalist Delimiter Logic 34](#__RefHeading___Toc14988_2491002120)
+[6. Minimalist Delimiter Logic 36](#__RefHeading___Toc14988_2491002120)
 
-[7. The Scratchpad zone 34](#__RefHeading___Toc14990_2491002120)
+[7. The Scratchpad zone 36](#__RefHeading___Toc14990_2491002120)
 
-[Guide for AI prompting 34](#__RefHeading___Toc14992_2491002120)
+[Guide for AI prompting 36](#__RefHeading___Toc14992_2491002120)
 
-[The "PCS Expert" Prompt 34](#__RefHeading___Toc14994_2491002120)
+[The "PCS Expert" Prompt 36](#__RefHeading___Toc14994_2491002120)
 
-[Guidelines for AI Code Generation 35](#__RefHeading___Toc14996_2491002120)
+[Guidelines for AI Code Generation 36](#__RefHeading___Toc14996_2491002120)
 
-[Avoid blind trust 35](#__RefHeading___Toc14998_2491002120)
+[Avoid blind trust 37](#__RefHeading___Toc14998_2491002120)
 
-[10 List of commands 36](#__RefHeading___Toc2241_1652509698)
+[10 List of commands 38](#__RefHeading___Toc2241_1652509698)
 
-[act_accel 36](#__RefHeading___Toc15000_2491002120)
+[act_accel 38](#__RefHeading___Toc15000_2491002120)
 
-[act_get 36](#__RefHeading___Toc15002_2491002120)
+[act_get 38](#__RefHeading___Toc15002_2491002120)
 
-[act_getid 44](#__RefHeading___Toc15004_2491002120)
+[act_getid 46](#__RefHeading___Toc15004_2491002120)
 
-[act_getname 44](#__RefHeading___Toc15006_2491002120)
+[act_getname 46](#__RefHeading___Toc15006_2491002120)
 
-[act_halt 45](#__RefHeading___Toc15008_2491002120)
+[act_halt 47](#__RefHeading___Toc15008_2491002120)
 
-[act_home 45](#__RefHeading___Toc15010_2491002120)
+[act_home 47](#__RefHeading___Toc15010_2491002120)
 
-[act_moveby 48](#__RefHeading___Toc15012_2491002120)
+[act_moveby 50](#__RefHeading___Toc15012_2491002120)
 
-[act_movereport 50](#__RefHeading___Toc15014_2491002120)
+[act_movereport 52](#__RefHeading___Toc15014_2491002120)
 
-[act_moveto 51](#__RefHeading___Toc15016_2491002120)
+[act_moveto 53](#__RefHeading___Toc15016_2491002120)
 
-[act_set 53](#__RefHeading___Toc15018_2491002120)
+[act_set 55](#__RefHeading___Toc15018_2491002120)
 
-[act_unit 55](#__RefHeading___Toc15020_2491002120)
+[act_unit 57](#__RefHeading___Toc15020_2491002120)
 
-[add_var 56](#__RefHeading___Toc15022_2491002120)
+[add_var 58](#__RefHeading___Toc15022_2491002120)
 
-[af_ccrit 57](#__RefHeading___Toc15024_2491002120)
+[af_ccrit 59](#__RefHeading___Toc15024_2491002120)
 
-[af_setup 58](#__RefHeading___Toc15026_2491002120)
+[af_setup 60](#__RefHeading___Toc15026_2491002120)
 
-[autofocus 59](#__RefHeading___Toc15028_2491002120)
+[autofocus 61](#__RefHeading___Toc15028_2491002120)
 
-[average_scale_means 59](#__RefHeading___Toc15030_2491002120)
+[average_scale_means 61](#__RefHeading___Toc15030_2491002120)
 
-[call_func 59](#__RefHeading___Toc15032_2491002120)
+[call_func 61](#__RefHeading___Toc15032_2491002120)
 
-[camera_set 60](#__RefHeading___Toc15034_2491002120)
+[camera_set 62](#__RefHeading___Toc15034_2491002120)
 
-[cat_char 60](#__RefHeading___Toc15036_2491002120)
+[cat_char 62](#__RefHeading___Toc15036_2491002120)
 
-[cat_str 61](#__RefHeading___Toc15038_2491002120)
+[cat_str 63](#__RefHeading___Toc15038_2491002120)
 
-[corrections_mask 62](#__RefHeading___Toc15040_2491002120)
+[corrections_mask 64](#__RefHeading___Toc15040_2491002120)
 
-[def_actuator 62](#__RefHeading___Toc15042_2491002120)
+[def_actuator 64](#__RefHeading___Toc15042_2491002120)
 
-[def_array 66](#__RefHeading___Toc15044_2491002120)
+[def_array 68](#__RefHeading___Toc15044_2491002120)
 
-[def_func 68](#__RefHeading___Toc15046_2491002120)
+[def_func 70](#__RefHeading___Toc15046_2491002120)
 
-[def_var 68](#__RefHeading___Toc15048_2491002120)
+[def_var 70](#__RefHeading___Toc15048_2491002120)
 
-[df_correction 69](#__RefHeading___Toc15050_2491002120)
+[df_correction 71](#__RefHeading___Toc15050_2491002120)
 
-[div_var 69](#__RefHeading___Toc15052_2491002120)
+[div_var 71](#__RefHeading___Toc15052_2491002120)
 
-[do_if 70](#__RefHeading___Toc15054_2491002120)
+[do_if 72](#__RefHeading___Toc15054_2491002120)
 
-[else 70](#__RefHeading___Toc15056_2491002120)
+[else 72](#__RefHeading___Toc15056_2491002120)
 
-[enddo 71](#__RefHeading___Toc15058_2491002120)
+[enddo 73](#__RefHeading___Toc15058_2491002120)
 
-[endloop 71](#__RefHeading___Toc15060_2491002120)
+[endloop 73](#__RefHeading___Toc15060_2491002120)
 
-[execute_daemon 71](#__RefHeading___Toc15062_2491002120)
+[execute_daemon 73](#__RefHeading___Toc15062_2491002120)
 
-[execute_system 72](#__RefHeading___Toc15064_2491002120)
+[execute_system 74](#__RefHeading___Toc15064_2491002120)
 
-[exit 72](#__RefHeading___Toc15066_2491002120)
+[exit 74](#__RefHeading___Toc15066_2491002120)
 
-[fbyte_mode 72](#__RefHeading___Toc15074_2491002120_Copy_)
+[fbyte_mode 74](#__RefHeading___Toc15074_2491002120_Copy_)
 
-[ff_correction 73](#__RefHeading___Toc15068_2491002120)
+[ff_correction 75](#__RefHeading___Toc15068_2491002120)
 
-[fput_var 73](#__RefHeading___Toc15074_2491002120_Copy1)
+[fput_var 75](#__RefHeading___Toc15074_2491002120_Copy1)
 
-[frame_number 75](#__RefHeading___Toc15070_2491002120)
+[frame_number 77](#__RefHeading___Toc15070_2491002120)
 
-[frames_to_average 75](#__RefHeading___Toc15072_2491002120)
+[frames_to_average 77](#__RefHeading___Toc15072_2491002120)
 
-[frames_to_skip 75](#__RefHeading___Toc15074_2491002120)
+[frames_to_skip 77](#__RefHeading___Toc15074_2491002120)
 
-[fset_var 76](#__RefHeading___Toc15074_2491002120_Copy2)
+[fset_var 78](#__RefHeading___Toc15074_2491002120_Copy2)
 
-[fskip_size 79](#__RefHeading___Toc15074_2491002120_Copy3)
+[fskip_size 81](#__RefHeading___Toc15074_2491002120_Copy3)
 
-[get_actuators 79](#__RefHeading___Toc15076_2491002120)
+[get_actuators 81](#__RefHeading___Toc15076_2491002120)
 
-[get_camsettings 81](#__RefHeading___Toc15078_2491002120)
+[get_camsettings 83](#__RefHeading___Toc15078_2491002120)
 
-[get_preview 81](#__RefHeading___Toc15080_2491002120)
+[get_preview 83](#__RefHeading___Toc15080_2491002120)
 
-[get_preview_focus 82](#__RefHeading___Toc15082_2491002120)
+[get_preview_focus 84](#__RefHeading___Toc15082_2491002120)
 
-[get_preview_stats 82](#__RefHeading___Toc15084_2491002120)
+[get_preview_stats 84](#__RefHeading___Toc15084_2491002120)
 
-[get_preview_tc 82](#__RefHeading___Toc15086_2491002120)
+[get_preview_tc 84](#__RefHeading___Toc15086_2491002120)
 
-[get_resolutions 83](#__RefHeading___Toc15088_2491002120)
+[get_resolutions 85](#__RefHeading___Toc15088_2491002120)
 
-[goto 84](#__RefHeading___Toc15090_2491002120)
+[goto 86](#__RefHeading___Toc15090_2491002120)
 
-[grabber_predelay 87](#__RefHeading___Toc15092_2491002120)
+[grabber_predelay 89](#__RefHeading___Toc15092_2491002120)
 
-[grabber_retries 88](#__RefHeading___Toc15094_2491002120)
+[grabber_retries 90](#__RefHeading___Toc15094_2491002120)
 
-[grabber_timeout 88](#__RefHeading___Toc15096_2491002120)
+[grabber_timeout 90](#__RefHeading___Toc15096_2491002120)
 
-[grab_image 88](#__RefHeading___Toc15098_2491002120)
+[grab_image 90](#__RefHeading___Toc15098_2491002120)
 
-[jpeg_quality 88](#__RefHeading___Toc15100_2491002120)
+[jpeg_quality 90](#__RefHeading___Toc15100_2491002120)
 
-[loop_while 89](#__RefHeading___Toc15102_2491002120)
+[loop_while 91](#__RefHeading___Toc15102_2491002120)
 
-[math_var 89](#__RefHeading___Toc15104_2491002120)
+[math_var 91](#__RefHeading___Toc15104_2491002120)
 
-[milliduration 91](#__RefHeading___Toc15104_2491002120_Copy_)
+[milliduration 93](#__RefHeading___Toc15104_2491002120_Copy_)
 
-[mul_var 93](#__RefHeading___Toc15106_2491002120)
+[mul_var 95](#__RefHeading___Toc15106_2491002120)
 
-[poll_user 93](#__RefHeading___Toc15108_2491002120)
+[poll_user 95](#__RefHeading___Toc15108_2491002120)
 
-[preview_clear 94](#__RefHeading___Toc15110_2491002120)
+[preview_clear 96](#__RefHeading___Toc15110_2491002120)
 
-[preview_file 95](#__RefHeading___Toc15112_2491002120)
+[preview_file 97](#__RefHeading___Toc15112_2491002120)
 
-[preview_save 95](#__RefHeading___Toc15114_2491002120)
+[preview_save 97](#__RefHeading___Toc15114_2491002120)
 
-[preview_tile 95](#__RefHeading___Toc15116_2491002120)
+[preview_tile 97](#__RefHeading___Toc15116_2491002120)
 
-[print_clear 96](#__RefHeading___Toc15118_2491002120)
+[print_clear 98](#__RefHeading___Toc15118_2491002120)
 
-[print_colour 96](#__RefHeading___Toc15118_2491002120_Copy_)
+[print_colour 98](#__RefHeading___Toc15118_2491002120_Copy_)
 
-[print_size 96](#__RefHeading___Toc15118_2491002120_Copy1)
+[print_size 98](#__RefHeading___Toc15118_2491002120_Copy1)
 
-[print_cursor 97](#__RefHeading___Toc15120_2491002120)
+[print_cursor 99](#__RefHeading___Toc15120_2491002120)
 
-[print_file 97](#__RefHeading___Toc15122_2491002120)
+[print_file 99](#__RefHeading___Toc15122_2491002120)
 
-[print_value 98](#__RefHeading___Toc15124_2491002120)
+[print_value 100](#__RefHeading___Toc15124_2491002120)
 
-[prv_cdf_use 99](#__RefHeading___Toc15126_2491002120)
+[prv_cdf_use 101](#__RefHeading___Toc15126_2491002120)
 
-[prv_fc_posn 100](#__RefHeading___Toc15128_2491002120)
+[prv_fc_posn 102](#__RefHeading___Toc15128_2491002120)
 
-[prv_fc_show 100](#__RefHeading___Toc15130_2491002120)
+[prv_fc_show 102](#__RefHeading___Toc15130_2491002120)
 
-[prv_hgm_posn 101](#__RefHeading___Toc15132_2491002120)
+[prv_hgm_posn 103](#__RefHeading___Toc15132_2491002120)
 
-[prv_hgm_satlim_l 101](#__RefHeading___Toc15134_2491002120)
+[prv_hgm_satlim_l 103](#__RefHeading___Toc15134_2491002120)
 
-[prv_hgm_satlim_u 101](#__RefHeading___Toc15136_2491002120)
+[prv_hgm_satlim_u 103](#__RefHeading___Toc15136_2491002120)
 
-[prv_hgm_scales 102](#__RefHeading___Toc15138_2491002120)
+[prv_hgm_scales 104](#__RefHeading___Toc15138_2491002120)
 
-[prv_lut 102](#__RefHeading___Toc15140_2491002120)
+[prv_lut 104](#__RefHeading___Toc15140_2491002120)
 
-[prv_mask_use 103](#__RefHeading___Toc15142_2491002120)
+[prv_mask_use 105](#__RefHeading___Toc15142_2491002120)
 
-[prv_m_bias 103](#__RefHeading___Toc15144_2491002120)
+[prv_m_bias 105](#__RefHeading___Toc15144_2491002120)
 
-[prv_mcor_eject 104](#__RefHeading___Toc15146_2491002120)
+[prv_mcor_eject 106](#__RefHeading___Toc15146_2491002120)
 
-[prv_mdf_set 104](#__RefHeading___Toc15148_2491002120)
+[prv_mdf_set 106](#__RefHeading___Toc15148_2491002120)
 
-[prv_mff_set 104](#__RefHeading___Toc15150_2491002120)
+[prv_mff_set 106](#__RefHeading___Toc15150_2491002120)
 
-[prv_m_integral 105](#__RefHeading___Toc15152_2491002120)
+[prv_m_integral 107](#__RefHeading___Toc15152_2491002120)
 
-[prv_size 105](#__RefHeading___Toc15154_2491002120)
+[prv_size 107](#__RefHeading___Toc15154_2491002120)
 
-[prv_toggle 105](#__RefHeading___Toc15156_2491002120)
+[prv_toggle 107](#__RefHeading___Toc15156_2491002120)
 
-[return 108](#__RefHeading___Toc15158_2491002120)
+[return 110](#__RefHeading___Toc15158_2491002120)
 
-[save_coords 108](#__RefHeading___Toc15160_2491002120)
+[save_coords 110](#__RefHeading___Toc15160_2491002120)
 
-[save_doubles 108](#__RefHeading___Toc15162_2491002120)
+[save_doubles 110](#__RefHeading___Toc15162_2491002120)
 
-[save_format 109](#__RefHeading___Toc15164_2491002120)
+[save_format 111](#__RefHeading___Toc15164_2491002120)
 
-[save_path 111](#__RefHeading___Toc15166_2491002120)
+[save_path 113](#__RefHeading___Toc15166_2491002120)
 
-[save_resolution 112](#__RefHeading___Toc15168_2491002120)
+[save_resolution 114](#__RefHeading___Toc15168_2491002120)
 
-[save_root 112](#__RefHeading___Toc15170_2491002120)
+[save_root 114](#__RefHeading___Toc15170_2491002120)
 
-[select_camera 113](#__RefHeading___Toc15172_2491002120)
+[select_camera 115](#__RefHeading___Toc15172_2491002120)
 
-[set_condexp 114](#__RefHeading___Toc15174_2491002120)
+[set_condexp 116](#__RefHeading___Toc15174_2491002120)
 
-[set_str 116](#__RefHeading___Toc15176_2491002120)
+[set_str 118](#__RefHeading___Toc15176_2491002120)
 
-[set_var 117](#__RefHeading___Toc15178_2491002120)
+[set_var 119](#__RefHeading___Toc15178_2491002120)
 
-[skip_frames 118](#__RefHeading___Toc15180_2491002120)
+[skip_frames 120](#__RefHeading___Toc15180_2491002120)
 
-[sleep 118](#__RefHeading___Toc15182_2491002120)
+[sleep 120](#__RefHeading___Toc15182_2491002120)
 
-[sub_var 119](#__RefHeading___Toc15184_2491002120)
+[sub_var 121](#__RefHeading___Toc15184_2491002120)
 
-[tc_threshold 119](#__RefHeading___Toc15186_2491002120)
+[tc_threshold 121](#__RefHeading___Toc15186_2491002120)
 
-[tmc_chconf_parse 120](#__RefHeading___Toc15188_2491002120)
+[tmc_chconf_parse 122](#__RefHeading___Toc15188_2491002120)
 
-[tmc_status_parse 121](#__RefHeading___Toc15190_2491002120)
+[tmc_status_parse 123](#__RefHeading___Toc15190_2491002120)
 
-[undef_actuator 122](#__RefHeading___Toc15192_2491002120)
+[undef_actuator 124](#__RefHeading___Toc15192_2491002120)
 
-[update_gui_coords 123](#__RefHeading___Toc15194_2491002120)
+[update_gui_coords 125](#__RefHeading___Toc15194_2491002120)
 
-[verbosity 123](#__RefHeading___Toc15196_2491002120)
+[verbosity 125](#__RefHeading___Toc15196_2491002120)
 
-[xys_af_period 124](#__RefHeading___Toc15198_2491002120)
+[xys_af_period 126](#__RefHeading___Toc15198_2491002120)
 
-[xys_finish 124](#__RefHeading___Toc15200_2491002120)
+[xys_finish 126](#__RefHeading___Toc15200_2491002120)
 
-[xys_process 124](#__RefHeading___Toc15202_2491002120)
+[xys_process 126](#__RefHeading___Toc15202_2491002120)
 
-[xys_scan 124](#__RefHeading___Toc15204_2491002120)
+[xys_scan 126](#__RefHeading___Toc15204_2491002120)
 
-[xys_start 124](#__RefHeading___Toc15206_2491002120)
+[xys_start 126](#__RefHeading___Toc15206_2491002120)
 
-[yuyv_bias 125](#__RefHeading___Toc15208_2491002120)
+[yuyv_bias 127](#__RefHeading___Toc15208_2491002120)
 
-[yuyv_gain 125](#__RefHeading___Toc15210_2491002120)
+[yuyv_gain 127](#__RefHeading___Toc15210_2491002120)
 
 # Introduction
 
@@ -470,6 +470,16 @@ The interpreter has a limit on the maximum size of any argument - with a few spe
 It is important to note that bytes do not necessarily equate to characters. While standard ASCII characters are 1 byte each, UTF-8 Unicode characters (such as box-drawing symbols or emojis) typically consume 3 or 4 bytes each. For example, the ═ symbol uses 3 bytes; therefore, a single argument can contain a maximum of 10 of these characters before exceeding the 31-byte limit.
 
 **Caution**: Exceeding MAX_ARGLEN with Unicode characters will result in malformed UTF-8 sequences. Because the interpreter truncates arguments at the byte level, a multi-byte character may be cut in half, causing the entire string to fail to render on the console.
+
+**Caution**: You may exceed MAX_ARGLEN with array indexing because indexed arrays must not have white space and so are treated as a single argument. This argument may become very long if the index also includes a variable or array name. For example this would get truncated and cause a syntax error or unexpected behaviour:
+
+MyArray1[MyIndexList[MyLongVarName]]]
+
+With a 31 char limit the interpreter will read this in as:
+
+MyArray1[MyIndexList[MyLongVarN
+
+and try to interpret it - this will fail.
 
 At each stage, the interpreter will attempt to perform the script action but will terminate the script if a fatal error is encountered and will print some information about the error and source line where the error occurred to aid debugging.
 
@@ -649,7 +659,7 @@ The actuator types are described below. In the very earliest versions of the PCS
 
 The following are 'actuator type' constants as defined in the interpreter source code:
 
-```c
+```pcs
 #define ACT_STEPPER  1
 #define ACT_BINARY   2
 #define ACT_MLEVEL   3
@@ -1039,6 +1049,47 @@ PCS avoids nested functional complexity (e.g., x = func1(func2(y))). Instead, it
 In PCS, logical and mathematical operators (like ==, >, sin, or pow) are often treated as data tokens or variables. An AI can store the argument of a goto command, a function name in a call_func command or a comparison symbol in a string variable (including an array of strings) and "decide" at runtime which operation to perform. This allows for highly compact, meta-programmable logic that bypasses the need for massive if/else trees.
 
 The use of this feature in the goto command as well as the call_func command means the AI agent is free from the restrictions of using only run-time string constants (a restriction found in many other languages like C). This enables '***first-class control flow***'. By treating control flow elements (labels, functions, and operators) as first-class variables, PCS allows AI agents to architect flexible, non-linear workflows. This removes the brittleness of hard-coded logic and empowers the script to adapt its own structure in response to environmental data. Such ***meta-programming*** allows for the use of a '***Jump Table***' approach that is more efficient for LLMs to manage than complex branching logic.
+
+Here is a skeleton template example for PCS meta-programming:
+
+```pcs
+Pardus pcs 1
+verbosity 1
+def_array string CompOp 6 ==
+def_var int CompIdx 0
+def_array string FuncName 100 func_1
+def_var int FnIdx 0
+def_array string GotoLabel 20 exit_label
+def_var int GtIdx 0
+def_var float fvar1 0.0
+def_var float fvar2 0.0
+def_var int ivar 0
+def_var int ivar 0
+def_func main
+  # Populate the comparison operations array
+  set_var CompOp[0] ==
+  set_var CompOp[1] !=
+  set_var CompOp[2] >=
+  set_var CompOp[3] >
+  set_var CompOp[4] <=
+  set_var CompOp[5] <
+  # Likewise populate the function name array and goto label array
+  # ... populating code here ...
+  # Other code, manipulating CompIdx, fvar1, fvar2, FnIdx, GtIdx, etc.
+  # Note that the 'if <varval>' component of call_func and goto are optional
+  # but, as an example, we could do something like this:
+  set_condexp fvar1 CompOp[CompIdx] fvar2
+  call_func FuncName[FnIdx] if Condexp
+  # Other code here ...
+  set_condexp ivar1 CompOp[CompIdx] ivar2
+  goto GotoLabel[GtIdx] if Condexp   # Also remember that a PCS goto is
+                                     # 'stack aware' and capable of non-local
+  # etc.                             # jumps.
+return
+# Other functions defined below here.
+exit_label:
+exit
+```
 
 ### 3. Transparent State Management
 
@@ -1527,7 +1578,7 @@ This moves an actuator to a specific position.
 
 [posn_z] - a float-capable value >= 0.0, as for <position> but pertaining to the Z axis when <act_id> is StageXYZ.
 
-**Note**: All position units are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps - that is, in (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply will be rounded to the nearest *onestep* value (see page 49 for the meaning of onestep). For example, if you set <position> to 15 (assuming we are using atomic steps and not calibrated units) and the motor is currently at position 30, then the difference between current position (30) and desired destination (15) will be calculated as 15 atomic steps. However, when maxmsdenom is 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) this 15 atomic steps will result in an effective motion of 0 (no move at all) because (uint32_t)(0.5 + (15.0 / 32.0)) = 0.
+**Note**: All position units are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps - that is, in (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply will be rounded to the nearest *onestep* value (see page 51 for the meaning of onestep). For example, if you set <position> to 15 (assuming we are using atomic steps and not calibrated units) and the motor is currently at position 30, then the difference between current position (30) and desired destination (15) will be calculated as 15 atomic steps. However, when maxmsdenom is 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) this 15 atomic steps will result in an effective motion of 0 (no move at all) because (uint32_t)(0.5 + (15.0 / 32.0)) = 0.
 
 However if you set <position> = 14 making the difference between current position (30) and destination (14) = 16 then the effective value will be 1 step in the current 1/8 step size (= 32 atomic steps) because (uint32_t)(0.5 + (16.0 / 32.0)) = 1. The motor will therefore try to move 32 atomic steps back towards home but it will not actually move because this would take it past 0. This is because the Arduino code has this check in it prior to taking any step:
 
@@ -1645,7 +1696,7 @@ This sets convergence criteria parameters for the autofocus command search algor
 
 <timeout> This is as an integer in milliseconds. If the AF search takes longer than this to complete it will fail. Use 0 if you do not want a timeout to be used.
 
-**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.49). For example, when using atomic steps, if you set <max_difference> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <max_difference> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <max_difference> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.51). For example, when using atomic steps, if you set <max_difference> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <max_difference> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <max_difference> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
 
 ### af_setup
 
@@ -1668,7 +1719,7 @@ This sets all but the convergence criteria parameters and focus function for the
 * ignore - this just carries on regardless - the last best value for focus will be used as best focal position and the program will continue. This can be perfectly legitimate if, for example, the auto-focus attempt took place over an area with no relevant object in the field of view of the camera (e.g. blank area of slide for microscopy).
 * exit - this will terminate the program immediately.
 
-**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.49). For example, when using atomic steps, if you set <initial_step_size> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <initial_step_size> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <initial_step_size> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.51). For example, when using atomic steps, if you set <initial_step_size> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <initial_step_size> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <initial_step_size> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
 
 **Note**: The focus function used for AF is selected using the frame grabber settings commands such as prv_toggle with the 'fc_...' (focusser statistic) options. See prv_toggle for details.
 
@@ -1941,7 +1992,7 @@ must be the first line of the actual function itself.
 
 **Note**: Every def_func command starts a code block that must be terminated with one - and only one - return command. In between the def_func line and its return line you may have any legitimate script text except that you cannot have another def_func command (this implies that functions cannot be nested inside other functions).
 
-**Note**: If a script contains any functions at all it must define a function call main before any other function is defined. When main returns, the script ends.
+**Note**: If a script contains any functions at all it must define a function called main before any other function is defined. When main returns, the script ends.
 
 ### def_var
 
@@ -2338,7 +2389,7 @@ This does one of two things in regards to tissue content (tc) measurements depen
 <ON|OFF> - a binary choice varval. If it evaluates to ON it calculates the tissue content value using the NDL (Normalised Differential Laplacian) on the 3x3 median filtered Y pixel data as:
 
 ```c
-tissue_content_ndl = (MALcurr / MALref) * log10(VARcurr / VARref)
+tissue_content_ndl = (MALcurr / MALref) * log10(VARcurr / VARref);
 ```
 
 where MAL = mean absolute Laplacian and VAR is the variance.
@@ -2407,7 +2458,7 @@ Jumping into the 'Else' portion: If a goto lands between an else and an enddo, t
 
 Safety Warning: Avoid jumping directly into the middle of a conditional block if that block relies on variables that were supposed to be set at the start of the do_if. The interpreter will manage the control flow, but it is the programmer's responsibility to ensure the global variable state is valid for the landing point.
 
-**Note**: If a script contains no formal functions (that is, functions defined by def_func) or only the main function then goto labels may be be placed anywhere. If you have more than just the main function defined in a script (even if that / those other functions are never called) then all goto labels must be defined within a function block (def_func ... return); that is to say, labels cannot exist in "No-Man's Land" (the space between function definitions). The script checker will flag these as syntax errors before the script runs.
+**Note**: If a script contains no formal functions (that is, functions defined by def_func) or only the main function then goto labels may be be placed anywhere. If you have more than just the main function defined in a script (even if that / those other functions are never called) then all goto labels must be placed either within a function block (def_func ... return) or between the very last return command and the exit command of the script. That is to say, labels cannot exist in "No-Man's Land" (the space between function definitions). The script checker will flag these as syntax errors before the script runs.
 
 **Note**: The fact that the goto command can accept a <label> argument that is a variable of the string data type and not just a string constant allows for the implementation of informal 'functions' (subroutines) that can be 'called' from anywhere in the code and that can be made to return either to whence they were called or to anywhere else. This is achieved by altering the string value of the 'return' goto's <label> argument just prior to calling the subroutine.
 
