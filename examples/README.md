@@ -2,7 +2,7 @@
 
 ![PCS_Examples](Images/pcs_demos.png)
 
-This directory contains sample programss written in the PCS programming language to help both human and AI coders learn its use.
+This directory contains sample programs written in the PCS programming language to help both human and AI coders learn its use.
 All the programs here have been checked and run successfully without errors.
 
 * Scripts beginning with 'ai_' were written by an AI coding agent.
