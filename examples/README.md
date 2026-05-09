@@ -66,7 +66,7 @@ These are test PNM iamges for use with ai_img_viewer.pcs (will only read the p2 
 A markdown manual for the interplanetary marauders game, written by an AI.
 
 ## splash.bin
-A binary file containing the splash image for the interplanetary marauders game. For this to work it has to be placed in the directory where the pardclient interpreter program was run from.
+A binary file containing the splash image for the interplanetary marauders game. For this to work it has to be placed in the directory where the pardclient interpreter program was run from (or you must edit the PCS script to include the path information of where this file is located).
 
 
 
