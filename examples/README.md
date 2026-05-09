@@ -60,7 +60,7 @@ Demonstrates how to build simple graphical feedback controls in the scripe conso
 An example of a practical PCS header file. This is required for my microscopy scripts here.
 
 ## preview.pgm, preview_p5.pgm, preview.ppm and preview_p6.ppm
-These are test PNM iamges for use with ai_img_viewer.pcs (will only read the p2 and p3 iamges) and ai_img_viewer_v2.pcs (will read all of them)
+These are test PNM iamges for use with ai_img_viewer.pcs (will only read the p2 and p3 images) and ai_img_viewer_v2.pcs (will read all of them)
 
 ## ReadMe_IPM.md
 A markdown manual for the interplanetary marauders game, written by an AI.
