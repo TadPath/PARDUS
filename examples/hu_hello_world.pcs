@@ -1,0 +1,35 @@
+Pardus pcs 1
+
+#############################################
+#    Print "Hello World!" in PCS            #
+#############################################
+
+verbosity 1 # Only show errors and intentional print output. Only log errors.
+
+def_var string msg _       # For holding the message string
+
+set_str msg Hello World!   # Note the lack of delimiters.
+print_value msg 2          # '2' means print a newline character at the end.
+
+exit
+
+--- Scratchpad ---
+
+Everything after 'exit' is ignored by the interpreter - so we can write notes in
+free text or any format we like (such as JSON) without having to use the comment
+'#' symbol. Here is what the output of the above program looks like:
+
+	Script: Begin execution ...
+	[  3]: verbosity 1
+Hello World!
+FYI: Finished at: Sat May  9 12:57:49 2026
+FYI: That took: 000:00:00:00
+
+The default verbosity level is 3 - this prints everything, including all comment
+stripped source lines as they are processed. That is why you see the verbosity
+line printed but then no other source lines after that. This is also why I made
+the verbosity reduction command the very first coding line. If you want to start
+with a 'clean slate' so that even the 'Script: Begin execution ...' and
+'[  3]: verbosity 1' do not show, then simply use the print_clear command after
+setting verbosit to 1. This clears the script console of all pre-existing text.
+
