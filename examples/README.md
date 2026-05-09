@@ -41,6 +41,9 @@ I gave AI the full listing for 'interplanetary marauders' and asked it to progra
 ## hu_bubblesort.pcs
 This is the AI bubble sort program that i edited to use the language more efficiently.
 
+## hu_hello_world.pcs
+Minimal working program in PCS - prints the string "Hello World!" to the script console. This demonstrates that you do not need to have any formal functions defined in PCS.
+
 ## hu_interactive_motion_af.pcs
 This is a script I use on the PUMA CNC stage to allow interactive motion of the stage and autofocus triggering. An example of a practical microscopy script.
 
