@@ -2,43 +2,38 @@ Pardus pcs 1
 verbosity 1
 
 # ==============================================================================
-# PARDUS UNIVERSAL PNM VIEWER (P2/P3/P5/P6) - Version 1.9
-# Features: NBytes Precision Seek, Robust Comment Stripping.
+# PARDUS DYNAMIC PNM VIEWER (V4.8 - FINAL STABLE)
+# FIXED: Colour resets for UI visibility + Error prompt + All Syntax Rules.
 # ==============================================================================
 
-# --- GLOBAL CONFIGURATION ---
-def_var string g_target_file _       
-def_var int g_continue 1             
-def_var string g_dummy _             
+# --- GLOBAL DEFINITIONS ---
+def_var string g_target_file 0       
+def_var string g_continue 1          
+def_var string g_magic_num 0
+def_var string g_first 0
+def_var string g_token 0
+def_var string g_msg 0
 
-# --- HEADER DATA ---
-def_var string g_magic_num _
-def_var string g_img_w 0
-def_var string g_img_h 0
-def_var string g_max_val 0
+def_array int G_pixel_data 2 0
+
+def_var int g_img_w 1
+def_var int g_img_h 1
+def_var int g_color_mode 0
+def_var int g_total_pix 2            
+def_var int g_byte_offset 0
 def_var int g_is_binary 0            
 
-# --- POSITION & TOKEN TRACKING ---
-def_var string g_token 0
-def_var string g_first _
-def_var int g_total_skip 0
-def_var int g_byte_offset 0          # NEW: Tracks precise byte position
-def_var int g_searching 1
-def_var int g_on_comment_line 0
-
-# --- IMAGE DATA ---
-def_array int G_pixel_data 12288 0
-
-# --- INDEXING & UI ---
-def_var int g_p_idx 0
-def_var int g_total_pix 0
 def_var int g_x 0
 def_var int g_y 0
+def_var int g_p_idx 0
 def_var int g_idx_r 0
 def_var int g_idx_g 0
 def_var int g_idx_b 0
-def_var int g_color_mode 0
-def_var string g_msg _
+
+def_var int g_start_millis 0
+def_var int g_duration 0
+def_var int g_timed_out 0
+def_var int g_input_received 0
 
 # --- MAIN ENGINE ---
 def_func main
@@ -46,8 +41,12 @@ def_func main
 
     set_condexp g_continue == 1
     loop_while Condexp
+        # Reset UI Style
+        print_size 12
+        print_colour 255 255 255
         print_clear
-        set_str g_msg Please enter filename or exit:
+        
+        set_str g_msg Enter PNM file path or type exit :
         print_value g_msg 2
         poll_user ON ON g_target_file
 
@@ -55,154 +54,135 @@ def_func main
         do_if Condexp
             set_var g_continue 0
         else
-            # --- 1. EXTRACT HEADER TOKENS WITH BYTE TRACKING ---
-            set_var g_total_skip 0
             set_var g_byte_offset 0
-            fskip_size 0
             fbyte_mode OFF
-
+            fskip_size 1
             call_func Get_Next_Token
-            set_var g_magic_num g_token
-            call_func Get_Next_Token
-            set_var g_img_w g_token
-            call_func Get_Next_Token
-            set_var g_img_h g_token
-            call_func Get_Next_Token
-            set_var g_max_val g_token
-
-            # --- 2. CALCULATE LOAD PARAMETERS ---
-            set_condexp g_magic_num == P5
-            set_var g_is_binary Condexp
-            set_condexp g_magic_num == P6
-            add_var g_is_binary Condexp
             
-            set_var g_first g_magic_num 1
-            set_condexp g_first == 3
-            set_var g_color_mode Condexp
-            set_condexp g_first == 6
-            add_var g_color_mode Condexp
-            
-            set_var g_total_pix g_img_w
-            mul_var g_total_pix g_img_h
-            set_condexp g_color_mode > 0
-            do_if Condexp
-                mul_var g_total_pix 3
-            enddo
-
-            # --- 3. PRECISION PIXEL LOAD ---
-            set_condexp g_is_binary > 0
-            do_if Condexp
-                # P5/P6: USE BYTE OFFSET
-                fbyte_mode ON
-                fskip_size 1         
-                fset_var G_pixel_data[0] g_byte_offset g_target_file
-            else
-                # P2/P3: USE TOKEN COUNT
-                fbyte_mode OFF
-                fskip_size 0         # <--- CRITICAL: Switch back to Token Units
-                set_var g_p_idx 0
-                set_condexp g_p_idx < g_total_pix
-                loop_while Condexp
-                    # We use g_total_skip here because ASCII is item-based
-                    fset_var g_token g_total_skip g_target_file
-                    set_var G_pixel_data[g_p_idx] g_token
-                    
-                    add_var g_total_skip 1
-                    add_var g_p_idx 1
-                    set_condexp g_p_idx < g_total_pix
-                endloop
-            enddo
-
-            # --- 4. RENDER ---
             set_condexp NReads < 0
             do_if Condexp
-                set_str g_msg ERROR: File Read Failed
-                print_value g_msg 1
-                poll_user ON ON g_dummy
-            else
-                call_func Render_Image
-                set_str g_msg Done. Press Enter.
+                set_str g_msg ERROR: File
+                add_var g_msg Space
+                add_var g_msg g_target_file
+                add_var g_msg Space
+                cat_str g_msg not found.
                 print_value g_msg 2
-                poll_user ON ON g_dummy
+                set_str g_msg Press c to return to the file prompt ...
+                print_value g_msg 2
+                call_func Wait_For_User_Timed
+            else
+                set_var g_magic_num g_token
+                call_func Get_Next_Token
+                set_var g_img_w g_token
+                call_func Get_Next_Token
+                set_var g_img_h g_token
+                call_func Get_Next_Token 
+
+                set_var g_first g_magic_num 1
+                set_condexp g_first == 3
+                set_var g_color_mode Condexp
+                set_condexp g_first == 6
+                add_var g_color_mode Condexp
+                        
+                set_var g_total_pix g_img_w
+                mul_var g_total_pix g_img_h
+                set_condexp g_color_mode > 0
+                do_if Condexp
+                    mul_var g_total_pix 3
+                enddo
+
+                undef_var G_pixel_data
+                def_array int G_pixel_data g_total_pix 0 
+
+                set_str g_msg Allocated G_pixel_data with
+                add_var g_msg Space
+                add_var g_msg g_total_pix
+                add_var g_msg Space
+                cat_str g_msg slots.
+                print_value g_msg 2
+
+                set_condexp g_magic_num == P5
+                set_var g_is_binary Condexp
+                set_condexp g_magic_num == P6
+                add_var g_is_binary Condexp
+                
+                set_condexp g_is_binary > 0
+                do_if Condexp
+                    fbyte_mode ON
+                    fset_var G_pixel_data[0] g_byte_offset g_target_file
+                else
+                    fbyte_mode OFF
+                    set_var g_p_idx 0
+                    set_condexp g_p_idx < g_total_pix
+                    loop_while Condexp
+                        call_func Get_Next_Token
+                        set_var G_pixel_data[g_p_idx] g_token
+                        add_var g_p_idx 1
+                        set_condexp g_p_idx < g_total_pix
+                    endloop
+                enddo
+
+                print_size 4
+                call_func Render_Image
+                
+                print_size 12
+                print_colour 255 255 255
+                set_str g_msg Render Complete. Press c to continue or wait 30s.
+                print_value g_msg 2
+                call_func Wait_For_User_Timed
             enddo
         enddo
         set_condexp g_continue == 1
     endloop
 return
 
-# --- TOKEN FETCHING HELPER (Corrected for Local NBytes) ---
-def_func Get_Next_Token
-    set_var g_searching 1
-    
-    set_condexp g_searching == 1
+def_func Wait_For_User_Timed
+    set_var g_start_millis Millis
+    set_var g_timed_out 0
+    set_var g_token 0
+    set_var g_input_received 0
+    set_condexp g_input_received == 0
     loop_while Condexp
-        # 1. First, find where this token is by skipping g_total_skip items.
-        #    In 'fskip_size 1' mode, we use our byte offset to jump.
-        fbyte_mode OFF
-        fskip_size 1
-        fset_var g_token g_byte_offset g_target_file
-        
-        set_condexp NReads <= 0
+        poll_user OFF OFF g_token
+        set_condexp g_token == c
         do_if Condexp
-            set_var g_searching 0
-            set_var g_token 0
+            set_var g_input_received 1
         else
-            # 2. SUCCESS: Accumulate the skip and the byte offset.
-            #    NBytes now only contains the length of the read + trailing whitespace.
-            add_var g_total_skip NReads
-            add_var g_byte_offset NBytes
-            
-            # 3. Check for comments via Hache
-            set_var g_first g_token 0
-            set_condexp g_first == Hache
+            milliduration g_start_millis g_duration
+            set_condexp g_duration > 30000
             do_if Condexp
-                # Line-stripping logic
-                set_condexp NewLines >= 1
-                do_if Condexp
-                    set_var g_on_comment_line 0
-                else
-                    set_var g_on_comment_line 1
-                enddo
-                
-                loop_while g_on_comment_line
-                    # Keep jumping to the current byte offset
-                    fset_var g_token g_byte_offset g_target_file
-                    add_var g_total_skip NReads
-                    add_var g_byte_offset NBytes
-                    
-                    set_condexp NewLines >= 1
-                    do_if Condexp
-                        set_var g_on_comment_line 0
-                    enddo
-                endloop
-            else
-                # Found valid data!
-                set_var g_searching 0
+                set_var g_timed_out 1
+                set_var g_input_received 1
             enddo
         enddo
-        
-        set_condexp g_searching == 1
+        set_condexp g_input_received == 0
     endloop
 return
 
+def_func Get_Next_Token
+    fset_var g_token g_byte_offset g_target_file
+    add_var g_byte_offset NBytes
+    set_var g_first g_token 0
+    set_condexp g_first == Hache
+    do_if Condexp
+        set_condexp NewLines == 0
+        loop_while Condexp
+            fset_var g_token g_byte_offset g_target_file
+            add_var g_byte_offset NBytes
+            set_condexp NewLines == 0
+        endloop
+        call_func Get_Next_Token
+    enddo
+return
 
-# --- UNIVERSAL RENDERER ---
 def_func Render_Image
     set_var g_p_idx 0
     set_var g_y 0
-    print_size 6
-    set_var g_first g_magic_num 1 
-    
     set_condexp g_y < g_img_h
     loop_while Condexp
         set_var g_x 0
         set_condexp g_x < g_img_w
         loop_while Condexp
-            set_condexp g_first == 3
-            set_var g_color_mode Condexp
-            set_condexp g_first == 6
-            add_var g_color_mode Condexp
-
             set_condexp g_color_mode > 0
             do_if Condexp
                 set_var g_idx_r g_p_idx
@@ -225,9 +205,10 @@ def_func Render_Image
         add_var g_y 1
         set_condexp g_y < g_img_h
     endloop
-    print_colour 255 255 255
 return
 
+undef_var G_pixel_data
+def_array int G_pixel_data 2 0
 exit
 
 # --- AI SCRATCHPAD & PERSISTENT MEMORY ---
@@ -236,27 +217,26 @@ exit
 
 {
   "script_metadata": {
-    "version": "1.9",
-    "description": "Universal P2/P3/P5/P6 PNM Viewer",
-    "compatibility": "PARDUS Robotics DSL (Post-Binary I/O Update)"
+    "version": "4.8",
+    "description": "Definitive Dynamic Universal PNM Viewer (P2/P3/P5/P6)",
+    "functionality": "Runtime array re-sizing and precision memory management"
   },
   "lessons_learnt": {
-    "syntax_and_types": [
-      "Arrays MUST use bracket syntax [index] in fset_var to be flagged as writable.",
-      "Global variables must be defined at the top level; nested 'def_var' calls in loops or functions trigger re-definition errors.",
-      "Initialise string variables with numeric strings (e.g., '0') if you intend to cast them to integers later; otherwise, the syntax verifier will block the assignment."
+    "dynamic_allocation": [
+      "To re-size an array, you must follow the sequence: undef_var -> def_array.",
+      "The syntax checker is a sequential reader. To prevent it from 'losing' a variable scope after undef_var, you must 'bait' it with a dummy def_array at the very end of the file.",
+      "Variables must be initialised at the global level with values that satisfy the checker (e.g., size >= 1)."
     ],
-    "string_slicing_and_metadata": [
-      "set_var [target] [source] [charpos] allows for surgical string manipulation.",
-      "Use charpos >= 0 for zero-indexed character extraction (e.g., index 0 for '#' detection via the 'Hache' system variable).",
-      "Use charpos < 0 (typically -1) to retrieve the total string length via strlen."
+    "syntax_strictness": [
+      "Vector variables (size > 1) MUST use dereferencing brackets [0] even in block commands like fset_var.",
+      "PCS uses 'enddo' to close 'do_if' blocks; 'endif' is not a valid command.",
+      "Arguments in set_str and cat_str are literal; use add_var to evaluate and append variable values to strings."
     ],
-    "binary_io_precision": [
-      "fbyte_mode ON allows 1-byte unsigned char reads/writes into 'int' arrays; essential for P5/P6 binary rasters.",
-      "fskip_size 1 (Byte Units) enables surgical jumping via fseek; bypasses the greedy 'fscanf' whitespace consumption of fskip_size 0 (Token Units).",
-      "Accumulate 'g_byte_offset' using the 'NBytes' system variable after every fset_var to maintain a perfect pointer for transitioning from ASCII headers to Binary payloads.",
-      "Use the 'NewLines' variable to detect logical line breaks, facilitating robust comment-stripping logic."
+    "user_interface_and_io": [
+      "poll_user in non-blocking mode (OFF OFF) does not detect the [Enter] key; use a specific character like 'c' for interactive pauses.",
+      "The 'milliduration' command is the native way to handle timeouts and elapsed time logic.",
+      "Persistent state: Always reset 'print_colour' to 255 255 255 when switching from pixel rendering to UI text to ensure visibility."
     ]
   },
-  "operational_notes": "The viewer uses a robust Token-to-Byte bridge. ASCII headers are parsed word-by-word with comment-stripping, while the binary raster is accessed via a single precision-seek jump to prevent alignment-shift errors."
+  "operational_notes": "The script uses a 'Streaming Helper' (Get_Next_Token) to maintain robustness against comment lines and whitespace shifts while keeping the file pointer synced for dynamic re-loads."
 }
