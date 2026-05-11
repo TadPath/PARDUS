@@ -151,6 +151,7 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `tmc_chconf_parse <chconf_info> <receptor>` - Extract a piece of information from the locally stored TMC stepper chop conf register.
 - `tmc_status_parse <status_info> <receptor>` - Extract a piece of information from the locally stored TMC stepper status register.
 - `undef_actuator <act_id>` - Free an actuator definition.
+- `undef_var <varname>` - Deletes a user-defined variable and all its data. May be used with arrays or single variables.
 - `update_gui_coords` - Update the GUI coordinate display with the most recent locally held values.
 - `verbosity <level>` - Sets how much output to show in the server console, script console and log file.
 - `xys_af_period <period>` - Set the frequency of autofocus activation during an XY scan.
