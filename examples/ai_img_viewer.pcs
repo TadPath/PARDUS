@@ -40,7 +40,7 @@ def_func main
     loop_while Condexp
         print_clear
         
-        # Build multi-word prompt (Keeping each word under the 31-char limit)
+        # Build multi-word prompt (Keeping each word under the 64-char limit)
         set_str g_msg Please enter filename or type exit to quit:
         print_value g_msg 2
 
@@ -175,7 +175,7 @@ exit
       "Control blocks (do_if/loop_while) must be physically closed; an 'exit' command before 'enddo' breaks the verifier."
     ],
     "string_mechanics": [
-      "Argument limit is 31 bytes. Underscore-joining long strings leads to silent truncation.",
+      "Argument limit is 64 bytes. Underscore-joining long strings leads to silent truncation.",
       "Spaces are permitted in set_str/cat_str to build natural sentences safely.",
       "set_condexp string comparison is strictly for whole-string equality; no implicit char-slicing."
     ],

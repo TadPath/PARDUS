@@ -450,7 +450,7 @@ exit
      "entry_point": "def_func main MUST be the first function declaration encountered.",
      "exit_directive": "The 'exit' command terminates ALL parsing. Place it at the absolute end of the active script.",
      "scoping": "Nested functions are forbidden; the interpreter expects a flat global sequence.",
-     "argument_limit": "Command arguments (literals/names) MUST be <31 bytes. Use variables for long strings."
+     "argument_limit": "Command arguments (literals/names) MUST be <=64 bytes. Use variables for long strings."
    },
    "patterns_implemented": {
      "vertical_priming": "Use 'print_value aether 2' in a setup loop to create 3D volume in the 1D console.",

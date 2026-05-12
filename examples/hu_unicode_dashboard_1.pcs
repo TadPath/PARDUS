@@ -23,7 +23,7 @@ def_func main
 
   # --- ROW 1: TOP BORDER ---
   set_str border            # Note that single arguments have a size limit of
-  cat_str border ╔═════════ # 31 bytes. That is bytes not 'characters' because
+  cat_str border ╔═════════ # 64 bytes. That is bytes not 'characters' because
   cat_str border ══════════ # These Unicode characters take up 3 bytes each.
   cat_str border ═════════╗ # That is why I could not simply set the whole
   print_value border 2      # pattern in one argument. For ASCII all that will

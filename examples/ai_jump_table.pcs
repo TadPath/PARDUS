@@ -35,10 +35,7 @@ panic_recovery:
     set_var CurrentState 2
     set_str msg Initiating Recovery Sequence
     print_value msg 2
-    set_str msg Recovery Complete Shutting Down  # Note 31 bytes is the maximum
-                                                 # size of any argument. If this
-                                                 # text were longer it would get
-                                                 # truncated.
+    set_str msg Recovery Complete Shutting Down  
     print_value msg 2
 
 end_program:

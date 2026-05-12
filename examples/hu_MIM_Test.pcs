@@ -118,6 +118,14 @@ set_var  cap_delay   4.0    # Time to settle before starting image capture.    #
 #                                                                              #
 ################################################################################
 
+# Calculate atomic steps for motion and reset depending on control status
+do_if controlexpt
+  set_var  teststeps   0.0    # No motion during a control run - measuring drift
+else
+  set_var  teststeps  shiftsteps   # Otherwise use shiftsteps
+enddo
+
+
 # Calculate the initial distance for the second leg of the reset
 set_var currpos teststeps        # Using currpos as a temporary work variable
 mul_var currpos reset_moves      # The second leg will travel the whole
@@ -126,13 +134,6 @@ sub_var rst2ndlegdist currpos    # reset_moves done at teststeps atomic steps
                                  # per move so we need to subtract 
                                  # (teststeps * reset_moves) from reset_dist
                                  # to get the initial move distance.
-
-# Calculate atomic steps for motion and reset depending on control status
-do_if controlexpt
-  set_var  teststeps   0.0    # No motion during a control run - measuring drift
-else
-  set_var  teststeps  shiftsteps   # Otherwise use shiftsteps
-enddo
 
 
 
