@@ -154,10 +154,12 @@ Note: All commands are case-sensitive and parameters are space-separated.
 - `undef_var <varname>` - Deletes a user-defined variable and all its data. May be used with arrays or single variables.
 - `update_gui_coords` - Update the GUI coordinate display with the most recent locally held values.
 - `verbosity <level>` - Sets how much output to show in the server console, script console and log file.
-- `xys_af_period <period>` - Set the frequency of autofocus activation during an XY scan.
-- `xys_finish [<coord_x> <coord_y>]` - Set the end-point coordinates of an XY scan.
-- `xys_process <progname> [<arg1> ...]` - Spawn an external non-blocking command during an XY scan.
-- `xys_scan` - Begin an XY scan.
-- `xys_start <coord_x> <coord_y> <coord_z>` - Set the start point coordinates for an XY scan.
+- `xyzs_af_period <period>` - Set the frequency of autofocus activation during an XY scan.
+- `xyzs_finish [<coord_x> <coord_y>]` - Set the end-point coordinates of an XY scan.
+- `xyzs_process <progname> [<arg1> ...]` - Spawn an external non-blocking command during an XY scan.
+- `xyzs_scan` - Begin an XY scan.
+- `xyzs_semino_z <slices> <coord_y> <coord_z>` - Set the number of focus plane slices in an XYZ scan.
+- `xyzs_start <coord_x> <coord_y> <coord_z>` - Set the start point coordinates for an XY scan.
+- `xyzs_stepsize <size_x> <size_y> <size_z>` - Set the size of each X, Y and Z movement step in an XYZ scan.
 - `yuyv_bias <value>` - Set the value of the bias constant used in the YUYV-to-RGB conversion.
 - `yuyv_gain <value>` - Set the value of the bias constant used in the YUYV-to-RGB conversion.
