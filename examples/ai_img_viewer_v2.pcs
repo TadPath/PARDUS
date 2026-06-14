@@ -163,7 +163,7 @@ def_func Get_Next_Token
     fset_var g_token g_byte_offset g_target_file
     add_var g_byte_offset NBytes
     set_var g_first g_token 0
-    set_condexp g_first == Hache
+    set_condexp g_first == Hash
     do_if Condexp
         set_condexp NewLines == 0
         loop_while Condexp
