@@ -2,7 +2,7 @@ The PCS Programming Language
 
 by Dr. Paul J. Tadrous
 
-27.02.2020 - 11.05.2026
+27.02.2020 - 14.06.2026
 
 Table of Contents
 
@@ -72,13 +72,13 @@ Table of Contents
 
 [Limitations imposed by the syntax checker on variable use 24](#__RefHeading___Toc18818_2701018812)
 
-[7 System variables 26](#__RefHeading___Toc14958_2491002120)
+[System variables 26](#__RefHeading___Toc14958_2491002120)
 
 [Arrays 29](#__RefHeading___Toc14960_2491002120)
 
 [Protected names 30](#__RefHeading___Toc14962_2491002120)
 
-[8 Functions 31](#__RefHeading___Toc2239_1652509698)
+[7 Functions 31](#__RefHeading___Toc2239_1652509698)
 
 [Defining a function: def_func and return 31](#__RefHeading___Toc14964_2491002120)
 
@@ -90,11 +90,11 @@ Table of Contents
 
 [main 33](#__RefHeading___Toc14972_2491002120)
 
-[9 Code blocks, loops and control of flow 34](#__RefHeading___Toc2192_1652509698)
+[8 Code blocks, loops and control of flow 34](#__RefHeading___Toc2192_1652509698)
 
 [Control of flow 34](#__RefHeading___Toc14974_2491002120)
 
-[10 PCS and AI Coding Agents 36](#__RefHeading___Toc13149_3782552218)
+[9 PCS and AI Coding Agents 36](#__RefHeading___Toc13149_3782552218)
 
 [The AI-friendly design principles of PCS 36](#__RefHeading___Toc14976_2491002120)
 
@@ -120,7 +120,7 @@ Table of Contents
 
 [Avoid blind trust 40](#__RefHeading___Toc14998_2491002120)
 
-[11 List of commands 41](#__RefHeading___Toc2241_1652509698)
+[10 List of commands 41](#__RefHeading___Toc2241_1652509698)
 
 [act_accel 41](#__RefHeading___Toc15000_2491002120)
 
@@ -146,9 +146,9 @@ Table of Contents
 
 [add_var 61](#__RefHeading___Toc15022_2491002120)
 
-[af_ccrit 61](#__RefHeading___Toc15024_2491002120)
+[af_ccrit 62](#__RefHeading___Toc15024_2491002120)
 
-[af_setup 62](#__RefHeading___Toc15026_2491002120)
+[af_setup 63](#__RefHeading___Toc15026_2491002120)
 
 [autofocus 64](#__RefHeading___Toc15028_2491002120)
 
@@ -164,7 +164,7 @@ Table of Contents
 
 [corrections_mask 67](#__RefHeading___Toc15040_2491002120)
 
-[def_actuator 67](#__RefHeading___Toc15042_2491002120)
+[def_actuator 68](#__RefHeading___Toc15042_2491002120)
 
 [def_array 71](#__RefHeading___Toc15044_2491002120)
 
@@ -172,49 +172,49 @@ Table of Contents
 
 [def_var 74](#__RefHeading___Toc15048_2491002120)
 
-[df_correction 75](#__RefHeading___Toc15050_2491002120)
+[df_correction 76](#__RefHeading___Toc15050_2491002120)
 
 [div_var 76](#__RefHeading___Toc15052_2491002120)
 
-[do_if 76](#__RefHeading___Toc15054_2491002120)
+[do_if 77](#__RefHeading___Toc15054_2491002120)
 
 [else 77](#__RefHeading___Toc15056_2491002120)
 
-[enddo 77](#__RefHeading___Toc15058_2491002120)
+[enddo 78](#__RefHeading___Toc15058_2491002120)
 
-[endloop 77](#__RefHeading___Toc15060_2491002120)
+[endloop 78](#__RefHeading___Toc15060_2491002120)
 
 [execute_daemon 78](#__RefHeading___Toc15062_2491002120)
 
-[execute_system 78](#__RefHeading___Toc15064_2491002120)
+[execute_system 79](#__RefHeading___Toc15064_2491002120)
 
 [exit 79](#__RefHeading___Toc15066_2491002120)
 
-[fbyte_mode 79](#__RefHeading___Toc15074_2491002120_Copy_)
+[fbyte_mode 80](#__RefHeading___Toc15074_2491002120_Copy_)
 
-[ff_correction 79](#__RefHeading___Toc15068_2491002120)
+[ff_correction 80](#__RefHeading___Toc15068_2491002120)
 
-[fput_var 80](#__RefHeading___Toc15074_2491002120_Copy1)
+[fput_var 81](#__RefHeading___Toc15074_2491002120_Copy1)
 
 [frame_number 82](#__RefHeading___Toc15070_2491002120)
 
 [frames_to_average 82](#__RefHeading___Toc15072_2491002120)
 
-[frames_to_skip 82](#__RefHeading___Toc15074_2491002120)
+[frames_to_skip 83](#__RefHeading___Toc15074_2491002120)
 
-[fset_var 82](#__RefHeading___Toc15074_2491002120_Copy2)
+[fset_var 83](#__RefHeading___Toc15074_2491002120_Copy2)
 
-[fskip_size 85](#__RefHeading___Toc15074_2491002120_Copy3)
+[fskip_size 86](#__RefHeading___Toc15074_2491002120_Copy3)
 
 [get_actuators 86](#__RefHeading___Toc15076_2491002120)
 
-[get_camsettings 87](#__RefHeading___Toc15078_2491002120)
+[get_camsettings 88](#__RefHeading___Toc15078_2491002120)
 
 [get_preview 88](#__RefHeading___Toc15080_2491002120)
 
-[get_preview_focus 88](#__RefHeading___Toc15082_2491002120)
+[get_preview_focus 89](#__RefHeading___Toc15082_2491002120)
 
-[get_preview_stats 88](#__RefHeading___Toc15084_2491002120)
+[get_preview_stats 89](#__RefHeading___Toc15084_2491002120)
 
 [get_preview_tc 89](#__RefHeading___Toc15086_2491002120)
 
@@ -224,131 +224,137 @@ Table of Contents
 
 [grabber_predelay 94](#__RefHeading___Toc15092_2491002120)
 
-[grabber_retries 94](#__RefHeading___Toc15094_2491002120)
+[grabber_retries 95](#__RefHeading___Toc15094_2491002120)
 
-[grabber_timeout 94](#__RefHeading___Toc15096_2491002120)
+[grabber_timeout 95](#__RefHeading___Toc15096_2491002120)
 
 [grab_image 95](#__RefHeading___Toc15098_2491002120)
 
 [jpeg_quality 95](#__RefHeading___Toc15100_2491002120)
 
-[loop_while 95](#__RefHeading___Toc15102_2491002120)
+[loop_while 96](#__RefHeading___Toc15102_2491002120)
 
-[math_var 95](#__RefHeading___Toc15104_2491002120)
+[math_var 96](#__RefHeading___Toc15104_2491002120)
 
-[milliduration 97](#__RefHeading___Toc15104_2491002120_Copy_)
+[max_daemons 98](#__RefHeading___Toc15062_2491002120_Copy_)
 
-[mul_var 99](#__RefHeading___Toc15106_2491002120)
+[milliduration 99](#__RefHeading___Toc15104_2491002120_Copy_)
 
-[poll_user 99](#__RefHeading___Toc15108_2491002120)
+[mul_var 100](#__RefHeading___Toc15106_2491002120)
 
-[preview_clear 101](#__RefHeading___Toc15110_2491002120)
+[poll_user 100](#__RefHeading___Toc15108_2491002120)
 
-[preview_file 101](#__RefHeading___Toc15112_2491002120)
+[preview_clear 102](#__RefHeading___Toc15110_2491002120)
 
-[preview_save 101](#__RefHeading___Toc15114_2491002120)
+[preview_file 102](#__RefHeading___Toc15112_2491002120)
 
-[preview_tile 102](#__RefHeading___Toc15116_2491002120)
+[preview_save 102](#__RefHeading___Toc15114_2491002120)
 
-[print_clear 102](#__RefHeading___Toc15118_2491002120)
+[preview_tile 103](#__RefHeading___Toc15116_2491002120)
 
-[print_colour 102](#__RefHeading___Toc15118_2491002120_Copy_)
+[print_clear 103](#__RefHeading___Toc15118_2491002120)
 
-[print_size 103](#__RefHeading___Toc15118_2491002120_Copy1)
+[print_colour 103](#__RefHeading___Toc15118_2491002120_Copy_)
 
-[print_cursor 103](#__RefHeading___Toc15120_2491002120)
+[print_size 104](#__RefHeading___Toc15118_2491002120_Copy1)
 
-[print_file 103](#__RefHeading___Toc15122_2491002120)
+[print_cursor 104](#__RefHeading___Toc15120_2491002120)
 
-[print_value 104](#__RefHeading___Toc15124_2491002120)
+[print_file 104](#__RefHeading___Toc15122_2491002120)
 
-[prv_cdf_use 106](#__RefHeading___Toc15126_2491002120)
+[print_value 105](#__RefHeading___Toc15124_2491002120)
 
-[prv_fc_posn 106](#__RefHeading___Toc15128_2491002120)
+[prv_cdf_use 107](#__RefHeading___Toc15126_2491002120)
 
-[prv_fc_show 106](#__RefHeading___Toc15130_2491002120)
+[prv_fc_posn 107](#__RefHeading___Toc15128_2491002120)
 
-[prv_hgm_posn 107](#__RefHeading___Toc15132_2491002120)
+[prv_fc_show 107](#__RefHeading___Toc15130_2491002120)
 
-[prv_hgm_satlim_l 107](#__RefHeading___Toc15134_2491002120)
+[prv_hgm_posn 108](#__RefHeading___Toc15132_2491002120)
 
-[prv_hgm_satlim_u 108](#__RefHeading___Toc15136_2491002120)
+[prv_hgm_satlim_l 108](#__RefHeading___Toc15134_2491002120)
 
-[prv_hgm_scales 108](#__RefHeading___Toc15138_2491002120)
+[prv_hgm_satlim_u 109](#__RefHeading___Toc15136_2491002120)
 
-[prv_lut 108](#__RefHeading___Toc15140_2491002120)
+[prv_hgm_scales 109](#__RefHeading___Toc15138_2491002120)
 
-[prv_mask_use 109](#__RefHeading___Toc15142_2491002120)
+[prv_lut 109](#__RefHeading___Toc15140_2491002120)
 
-[prv_m_bias 109](#__RefHeading___Toc15144_2491002120)
+[prv_mask_use 110](#__RefHeading___Toc15142_2491002120)
 
-[prv_mcor_eject 110](#__RefHeading___Toc15146_2491002120)
+[prv_m_bias 110](#__RefHeading___Toc15144_2491002120)
 
-[prv_mdf_set 110](#__RefHeading___Toc15148_2491002120)
+[prv_mcor_eject 111](#__RefHeading___Toc15146_2491002120)
 
-[prv_mff_set 110](#__RefHeading___Toc15150_2491002120)
+[prv_mdf_set 111](#__RefHeading___Toc15148_2491002120)
 
-[prv_m_integral 111](#__RefHeading___Toc15152_2491002120)
+[prv_mff_set 111](#__RefHeading___Toc15150_2491002120)
 
-[prv_size 111](#__RefHeading___Toc15154_2491002120)
+[prv_m_integral 112](#__RefHeading___Toc15152_2491002120)
 
-[prv_toggle 111](#__RefHeading___Toc15156_2491002120)
+[prv_size 112](#__RefHeading___Toc15154_2491002120)
 
-[return 114](#__RefHeading___Toc15158_2491002120)
+[prv_toggle 112](#__RefHeading___Toc15156_2491002120)
 
-[save_coords 114](#__RefHeading___Toc15160_2491002120)
+[return 115](#__RefHeading___Toc15158_2491002120)
 
-[save_doubles 114](#__RefHeading___Toc15162_2491002120)
+[save_coords 115](#__RefHeading___Toc15160_2491002120)
 
-[save_format 115](#__RefHeading___Toc15164_2491002120)
+[save_doubles 115](#__RefHeading___Toc15162_2491002120)
 
-[save_path 117](#__RefHeading___Toc15166_2491002120)
+[save_format 116](#__RefHeading___Toc15164_2491002120)
 
-[save_resolution 118](#__RefHeading___Toc15168_2491002120)
+[save_path 118](#__RefHeading___Toc15166_2491002120)
 
-[save_root 118](#__RefHeading___Toc15170_2491002120)
+[save_resolution 119](#__RefHeading___Toc15168_2491002120)
 
-[select_camera 119](#__RefHeading___Toc15172_2491002120)
+[save_root 119](#__RefHeading___Toc15170_2491002120)
 
-[set_condexp 119](#__RefHeading___Toc15174_2491002120)
+[select_camera 120](#__RefHeading___Toc15172_2491002120)
 
-[set_str 122](#__RefHeading___Toc15176_2491002120)
+[set_condexp 121](#__RefHeading___Toc15174_2491002120)
 
-[set_var 123](#__RefHeading___Toc15178_2491002120)
+[set_str 123](#__RefHeading___Toc15176_2491002120)
 
-[skip_frames 124](#__RefHeading___Toc15180_2491002120)
+[set_var 124](#__RefHeading___Toc15178_2491002120)
 
-[sleep 124](#__RefHeading___Toc15182_2491002120)
+[skip_frames 125](#__RefHeading___Toc15180_2491002120)
 
-[sub_var 125](#__RefHeading___Toc15184_2491002120)
+[sleep 126](#__RefHeading___Toc15182_2491002120)
 
-[tc_threshold 125](#__RefHeading___Toc15186_2491002120)
+[sub_var 126](#__RefHeading___Toc15184_2491002120)
 
-[tmc_chconf_parse 126](#__RefHeading___Toc15188_2491002120)
+[tc_threshold 126](#__RefHeading___Toc15186_2491002120)
 
-[tmc_status_parse 127](#__RefHeading___Toc15190_2491002120)
+[tmc_chconf_parse 127](#__RefHeading___Toc15188_2491002120)
 
-[undef_actuator 128](#__RefHeading___Toc15192_2491002120)
+[tmc_status_parse 129](#__RefHeading___Toc15190_2491002120)
 
-[undef_var 129](#__RefHeading___Toc15048_2491002120_Copy_)
+[undef_actuator 130](#__RefHeading___Toc15192_2491002120)
 
-[update_gui_coords 130](#__RefHeading___Toc15194_2491002120)
+[undef_var 130](#__RefHeading___Toc15048_2491002120_Copy_)
 
-[verbosity 130](#__RefHeading___Toc15196_2491002120)
+[update_gui_coords 131](#__RefHeading___Toc15194_2491002120)
 
-[xys_af_period 131](#__RefHeading___Toc15198_2491002120)
+[verbosity 132](#__RefHeading___Toc15196_2491002120)
 
-[xys_finish 131](#__RefHeading___Toc15200_2491002120)
+[xyzs_af_period 132](#__RefHeading___Toc15198_2491002120)
 
-[xys_process 131](#__RefHeading___Toc15202_2491002120)
+[xyzs_finish 133](#__RefHeading___Toc15200_2491002120)
 
-[xys_scan 131](#__RefHeading___Toc15204_2491002120)
+[xyzs_process 133](#__RefHeading___Toc15202_2491002120)
 
-[xys_start 131](#__RefHeading___Toc15206_2491002120)
+[xyzs_scan 134](#__RefHeading___Toc15204_2491002120)
 
-[yuyv_bias 131](#__RefHeading___Toc15208_2491002120)
+[xyzs_semino_z 134](#__RefHeading___Toc15206_2491002120_Copy_)
 
-[yuyv_gain 132](#__RefHeading___Toc15210_2491002120)
+[xyzs_start 135](#__RefHeading___Toc15206_2491002120)
+
+[xyzs_stepsize 136](#__RefHeading___Toc15206_2491002120_Copy1)
+
+[yuyv_bias 136](#__RefHeading___Toc15208_2491002120)
+
+[yuyv_gain 137](#__RefHeading___Toc15210_2491002120)
 
 # Introduction
 
@@ -378,7 +384,7 @@ In pardclient, prior to interpretation, the script undergoes pre-processing by a
 
 ### pardaemon
 
-This is a cross-platform background process that is closely linked to the interpreter and is run on the same computer as pardclient. It is not necessarily a true system OS-level daemon - despite the name. This allows for the PCS script writer to run certain processes on the host computer OS while the script continues to run - so it allows a kind of 'spawn' functionality.
+This is a cross-platform background process execution program. In the past this was a separate program written specifically for PARDUS. However, in the modern PARDUS implementation this functionality is provided by the GLib 'g_spawn_' set of functions and is therefore built into the pardclient software and so uses the OS' native background process execution systems.
 
 ### pardserver
 
@@ -535,7 +541,7 @@ When setting or defining a string variable with def_var and set_var you can only
 
 add_var mystring rhsstring
 
-To add a space the system variable Space is available. Also, to add a hash symbol '#' (which cannot be entered as an argument in a command because the script interpreter treats '#' as the beginning of a comment and so will not read it in as an argument) the system variable Hache is available. So if you wanted a space between the existing contents of mystring and rhsstring you can do it like this:
+To add a space the system variable Space is available. Also, to add a hash symbol '#' (which cannot be entered as an argument in a command because the script interpreter treats '#' as the beginning of a comment and so will not read it in as an argument) the system variable Hash is available. So if you wanted a space between the existing contents of mystring and rhsstring you can do it like this:
 
 ```pcs
 add_var mystring Space
@@ -545,8 +551,8 @@ add_var mystring rhsstring
 and if you wanted to have a hash between them you would do it like this:
 
 ```pcs
-add_var mystring Hache
- add_var mystring rhsstring
+add_var mystring Hash
+add_var mystring rhsstring
 ```
 
 This can be a cumbersome way of making larger multi-word strings so the set_str and cat_str commands are available for that (which see). However those commands do not allow any casting or variable evaluation into strings so a combination of all these commands can be useful for making complex strings.
@@ -605,20 +611,20 @@ For variable manipulations (e.g. addition, subtraction, multiplication and divis
 
 ```pcs
 def_var int ivar1 38000
-    mul_var ivar1 1.25
-    print_value ivar   # This will show a result of 38000
+mul_var ivar1 1.25
+print_value ivar   # This will show a result of 38000
 ```
 
 The correct way to do this is via casting using an intermediate variable of float type:
 
 ```pcs
 def_var int ivar1 38000
-    def_var float fvar1 ivar1   # If fvar1 was previously defined
-                                # then just use 'set_var fvar1
-                                # ivar1' to do the cast
-    mul_var fvar1 1.25
-    set_var ivar1 fvar1
-    print_value ivar   # This will show a result of  47500
+def_var float fvar1 ivar1   # If fvar1 was previously defined
+                            # then just use 'set_var fvar1
+                            # ivar1' to do the cast
+mul_var fvar1 1.25
+set_var ivar1 fvar1
+print_value ivar   # This will show a result of  47500
 ```
 
 ### *Rules for string casting*:
@@ -633,7 +639,7 @@ When you set a string variable with an int or a float then the string variable w
 
 ```pcs
 def_var float f1 5.431
- def_var string str1 f1
+def_var string str1 f1
 ```
 
 At the end of the above commands the variable str1 will contain "5.431" (without the quotes).
@@ -642,14 +648,14 @@ In the source code of the interpreter this 'casting a number to a string' is don
 
 ```pcs
 def_var string str1 5.431
- def_var float f1 str1
+def_var float f1 str1
 ```
 
 will make f1 have the actual numerical value of 5.431 because the string would have been converted to an actual float (double) in the interpreter program using C code like sscanf(str1,"%lg",&f1). However this means you will get the following behaviour which might not seem intuitive at first:
 
 ```pcs
 def_var string str1 5,431
- def_var float f1 str1
+def_var float f1 str1
 ```
 
 Note the use of the comma instead of a decimal point. At the end of these two commands, f1=5 (not 5431 or 5.431). This is because the interpreter's internal sscanf(str1,"%lg",&f1) code will convert the first number it comes to which is in the form of a standard float number. The comma here will act as a delimiter to separate 5 from 431.
@@ -677,7 +683,7 @@ The actuator types are described below. In the very earliest versions of the PCS
 
 The following are 'actuator type' constants as defined in the interpreter source code:
 
-```pcs
+```c
 #define ACT_STEPPER  1
 #define ACT_BINARY   2
 #define ACT_MLEVEL   3
@@ -875,7 +881,7 @@ These are a set of variables that always exist and the script writer has read-ac
 | --- | --- | --- |
 | **Name** | **Type** | **Description** |
 | Space | string | Contains a single space character ‘ ‘. It is for adding spaces to strings during concatenation with the add_var command or creation with the def_var or setting with set_var or comparison operations. |
-| Hache | string | Contains a single hash character ‘#’. It is for adding hashes to strings during concatenation with the add_var command or creation with the def_var or setting with set_var or comparison operations. |
+| Hash | string | Contains a single hash character ‘#’. It is for adding hashes to strings during concatenation with the add_var command or creation with the def_var or setting with set_var or comparison operations. |
 | DateTime | string | This is a string that is updated whenever it is evaluated and contains a time-date string up to the nearest second of the format: YearMonthDay_HourMinuteSecond for example 20260303_124911 |
 | Condexp | int | This value of 0 or 1. It is set to have a value of 0 by default at the start of execution of a script. The value of Condexp may be set or changed by means of issuing the 'set_condexp' command in a script (which see). There is no other way for a user to set the value of Condexp. The value of Condexp is retained throughout the running of a script until it is set or changed by a set_condexp command. If you want to use the current value of Condexp even after another set_condexp command is run then you must set a user-defined variable to the current value of Condexp before calling the next set_condexp command. |
 | Sysval | int | This may take on any integer value. This is set to have a value of 0 by default. It is potentially changed any time the 'int system(const char *command)' function is run because it takes the return value from this function (so may change whenever the command 'execute_system' is processed, for example). The user cannot alter this variable at will but can copy its current value to any varval that accepts integer values. |
@@ -1289,6 +1295,7 @@ This reads the value of the <info_ID> struct member of the actuator defined by <
 #define INFO_TMCMSCNT  43 // Ardu only    // Ask Ardu  // Read only
 #define INFO_TENSTEPS1 44                 // LG
 #define INFO_TENSTEPS2 45                 // LG
+#define INFO_UNIT_TYPE 46 // Server only  // LG        // Read only
 ```
 
 The items labelled 'Server only' are data only stored on the server for this actuator (they are not stored on the Arduino) so accessing these items does not require the server to communicate with the Arduino. Conversely the items labelled 'Ardu only' are only held on the Arduino so can only be accessed by means of the server communicating with the Arduino and that could cause a stutter or short delay in otherwise continuous actions (like motion) being performed by the Arduino.
@@ -1304,6 +1311,8 @@ INFO_NHS
 INFO_XYZCOORDS
 
 In the latter case the supplied <act_id> is overridden by the stepper actuator IDs of 0, 1 and 2 (the default XYZ motors of the stage) and this command will only be allowed if those three steppers are defined.
+
+Note: The <info_ID> of INFO_UNIT_TYPE is labelled as 'read only' because it can only be used with act_get but not act_set. However you can set this value on the server using the separate command act_unit (which see).
 
 **Note**: Here is an extract from the parddefs.h file that describes the actual stepper motor struct members the above info items relate to (as well as struct members the PCS script writer does not have direct access to):
 
@@ -1444,6 +1453,8 @@ and here are some of the relevant #defined constants with their explanations:
 
 **Note**: For guidance on whether to use float or int var arguments, see the entry on the command act_unit.
 
+**Note**: When getting coordinates or distances using INFO_XYZCOORDS, INFO_STEPCOUNT, INFO_SW_LIM1 and INFO_SW_LIM2, the value you will receive from the server using act_get will be in atomic units regardless of what you have set act_unit to be.
+
 **Note**: For the INFO_TMCSTATUS option, which only applies to steppers, your supplied <var> will be assigned an int32_t cast of the original uint32_t status register but the interpreter's private internal global TMC_Status_Reg variable will also be updated to the unaltered uint32_t register value. You cannot access this TMC_Status_Reg variable directly via the script but you can access the status information items it contains by means of the tmc_status_parse command, which see. However, the sign of the signed value you receive in your <var> here provides you with one piece of status information - if it is positive it means the driver's standstill status flag is unset and if it is negative it means that the flag is set.
 
 **Note**: For the INFO_TMCCHCONF option, which only applies to steppers, your supplied <var> will be assigned an int32_t cast of the original uint32_t chop conf register but the interpreter's internal private global TMC_ChopConf_Reg will also be updated to the unaltered uint32_t register value. You cannot access this TMC_ChopConf_Reg variable directly via the script but you can access the status information items it contains by means of the tmc_chconf_parse command, which see. However, the sign of the resulting value will reflect the state of the 'Short protection low side' feature in the register, with a positive value indicating this protection is ON and a negative value indicating this protection is OFF.
@@ -1561,7 +1572,7 @@ This moves the actuator identified by <act_id> by a certain distance from its cu
 
 <act_id> - See undef_actuator for a full description of this. In addition to the options described there, this command may also accept an <act_id> of StageXY or StageXYZ (case sensitive) which will attempt motion of 2 (X and Y) or 3 (X, Y and Z) axes of the stage. This means stepper actuators of ID 0 for X, 1 for Y and 2 for Z. In the case of <act_id> = StageXY you must supply one more argument, <dist_y>, which will apply to the Y axis motion (the X axis motion being governed by the <distance> argument). If you supply <act_id> = StageXYZ then you must supply the [dist_z] argument in addition to <distance> and <dist_y>. The motion will be done using the multidimensional Bressenham line algorithm to effect simultaneous coordinated motion for 2 or 3 motors. If you only want to move the X and Z motors then use <act_id> = StageXYZ and set the <dist_y> value as 0. You can use these StageXY and StageXYZ options for single motor activation (if all but 1 of the distance arguments are 0). In that case the PCS script interpreter will simply convert your multi-motor move command into a single motor move command in the program (because there are less overheads in doing single motor movements because they do not need Bressenham calculations). Also you can use these StageXY and StageXYZ options for no motion at all (all the distance arguments are 0) - the script will just do no motion in that case.
 
-<duration> - an integer which may be 0 or positive. If 0 it means you want the duration calculated automatically based on your choice of <prop_acc>, <isd_min> (from the act_accel command) and the total number of steps the movement will require (which will be calculated over on the server from your choice of microstep denominator and <distance> and <unit> (from the act_unit command). If it is positive then it represents the number of microseconds you want the whole motion to take. Your choice here may cause an acceleration curve to be impossible to satisfy resulting in failed calculation falling back to the default uniform motion - so use this manual option for <duration> with care.
+<duration> - an integer which may be 0 or positive. If 0 it means you want the duration calculated automatically based on your choice of <isd_min> (from the act_accel command) and the total number of steps the movement will require (which will be calculated over on the server from your choice of microstep denominator and <distance> and <unit> (from the act_unit command). If it is positive then it represents the number of microseconds you want the whole motion to take. Your choice here may cause an acceleration curve to be impossible to satisfy resulting in failed calculation falling back to the default uniform motion - so use this manual option for <duration> with care.
 
 <distance> - a float-capable value >= 0.0 specifying the number of distance units to move.
 
@@ -1703,15 +1714,15 @@ This sets the way distance and position values (as supplied in motion command ar
 
 1 - this means the distance or position values supplied in any subsequent stepper motion command are to be interpreted in terms of calibrated units and so the same distance or position value will result in a different number of steps being done by the motor depending on the current microstep denominator setting and values for maxmsdenom and maxcalibri.
 
-**Note**: The units you choose shall also apply to values you receive back from the server (for example in motor coordinate or 'stepcount' act_get requests).
+**Note**: To read the current value of <unit> from the server you use act_get with the info item INFO_UNIT_TYPE and submit an extant actuator of the <act_type> of interest (the specific actuator index does not matter for this act_get because only the actuator type is used for the look up on the server but the actuator must exists in order to pass the pre-command checks in the interpreter).
 
-**Note**: This is why coordinates (i.e. step 'counts') and distances are supplied and received in float variables instead of integers - because the same communication routes to and from the server may need to convey integer atomic steps or float-capable calibrated units (for example, a calibrated 'stepcount' may be something like 20156.832 and will be interpreted in the units you have calibrated the stage to e.g. microns).
+**Note**: The units you choose shall also apply to values you send to the server for setting using the act_set command but they do not apply to values you receive back from the server (for example in motor coordinate or 'stepcount' act_get requests). This is why coordinates (i.e. step 'counts') and distances are supplied via act_get in float variables instead of integers - because these may need to convey integer atomic steps or float-capable calibrated units (for example, a calibrated 'stepcount' may be something like 20156.832 and will be interpreted in the units you have calibrated the stage to e.g. microns). However, when you *receive* such distances and counts with an act_get you will always receive the value as a raw atomic integer so you should supply integer-capable receptacle variables to receive the result regardless of the act_unit status.
 
 **Note**: There are a few specific exceptions to these general rules:
 
-1. All nhs steps (used for both for null homing and limit switch homing) are always interpreted (supplied and received) as integer number of steps in the current msdenom step size, regardless of maxmsdenom or calibration factor.
+1. All nhs steps (used for both for null homing and limit switch homing) are always interpreted (supplied and received) as integer number of steps in the current microstep (msdenom) step size, regardless of maxmsdenom or calibration factor.
 2. maxcalibri will always be a float capable number. It does not have to be a whole number of atomic steps. However it must not be <1.0e-3.
-3. blsteps will always be interpreted as literal steps in the motor's current microstep size. This is read-only for client. It is calculated by the server as:
+3. blsteps will always be interpreted as literal steps in the motor's current microstep (msdenom) size. This is read-only for client. It is calculated by the server as:
 
 ```c
 Stepperlist[ui82]->blsteps = Stepperlist[ui82]->maxblsteps /
@@ -1719,7 +1730,7 @@ Stepperlist[ui82]->blsteps = Stepperlist[ui82]->maxblsteps /
 ```
 
 1. maxblsteps will always be interpreted as atomic steps.
-2. tensteps1 and tensteps2 will always be interpreted as atomic steps. The values held in the Arduino will be automatically converted to steps in the current msdenom (as was done for blsteps).
+2. tensteps1 and tensteps2 will always be interpreted as atomic steps. The values held in the Arduino will be automatically converted to steps in the current microstep (msdenom) step size as was done for blsteps.
 
 **Note**: The default unit type for stepper motors will be 0 (number of atomic steps) until you call act_unit for stepper motors at least once during a log in session and this choice will remain at what you set it till you log out (so it is not set back to default at the end or start of any script).
 
@@ -1843,7 +1854,7 @@ will add character 16 (hex 10) regardless of the value stored inside the variabl
 
 **Note**: You must not supply <char_as_int> as a string variable unless that string contains a number in the conventional decimal format (without 'U+' or '0x')
 
-**Note**: If you want to add a space or a hash character with this command you cannot use the system variables Space or Hache because those are strings, but you may use this command to the same effect by supplying <char_as_int> as 32 (for space) or 35 (for the hash character: #).
+**Note**: If you want to add a space or a hash character with this command you cannot use the system variables Space or Hash because those are strings, but you may use this command to the same effect by supplying <char_as_int> as 32 (for space) or 35 (for the hash character: #).
 
 ### cat_str
 
@@ -1871,7 +1882,7 @@ corrections_mask <OFF|ON|image_file>
 
 This determines whether to load and use a corrections mask for flat field and dark field correction during full frame image capture (separate commands exist for preview images).
 
-<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -2113,7 +2124,7 @@ df_correction <OFF|ON|image_file>
 
 This determines whether to load and use a dark field correction image for full frame image capture (separate commands exist for preview images).
 
-<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the dark field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the dark field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -2178,13 +2189,15 @@ This is a mandatory component of the PCS loop_while ... endloop code block. See 
 
 execute_daemon <progname> [<arg1> ...]
 
-This allows the user to execute a custom command on the client computer. This method allows the command to execute without the script waiting for the command to complete execution and so it allows for parallel processing (client PC gets on with the custom command while the script carries on running). It is implemented via the PARDUS daemon, which therefore needs to be running on the client computer for this command to take effect (and the script checker will test for this and throw an error if it does not detect the presence of a working PARDUS daemon).
+This allows the user to execute a custom command or external program on the client computer asynchronously. This method allows the command to execute without the script stalling or waiting for the command to complete execution, facilitating rapid parallel processing (the client computer processes the background task while the script carries on running).
 
-<programe> - a string which is the name of the executable file of the command to pass to the command processor
+It is managed natively by an internal, asynchronous process queue within the PARDUS interpreter engine. It limits the number of simultaneous parallel background tasks to the current value set by the max_daemons command (which see) to safeguard the CPU and memory from being overloaded. If the execution pool is full, extra commands are placed securely in a lightweight memory queue and execute automatically the microsecond an active background task finishes.
 
-[<arg1> ...] - an optional list of arguments for the program to be executed. If any of the arguments to be passed is the name of the most recently saved image then this must be specified within the argument list as '[img]' (without the quote marks) and the PARDUS script interpreter will replace that with the name of the last saved image (this will be the full path name). If tissue content thresholding is active and no image was captured due to lack of tissue content then the [img] symbol will be replaced with NoTissue so your external program should check for this specific string (if it is expecting an image file name) to decide what to do.
+<programe> - a string which is the name of the executable file of the command to pass to the operating system's process manager.
 
-**Note**: For example if the name of the last saved image was myframe_0342_rgb.bmp'in folder C:msys64homeparduser and you specify the execute_daemon command as this:
+[<arg1> ...] - an optional list of space-separated arguments for the program to be executed. If any of the arguments to be passed is the name of the most recently saved image, this must be specified within the argument list as [img] (case sensitive and including the square brackets). The PARDUS script interpreter will automatically replace [img] with the absolute, clean path name of the last saved image. If tissue content thresholding is active and no image was captured due to lack of tissue content, the [img] symbol will be replaced with the literal text NoTissue. Your external program should check for this specific string to handle tissue-less iterations gracefully.
+
+**Note**: For example if the name of the last saved image was myframe_0342_rgb.bmp in folder C:msys64homeparduser and you specify the execute_daemon command as this:
 
 execute_daemon myprog.exe -i [img] -o outfile.txt
 
@@ -2202,13 +2215,15 @@ myprog.exe -i NoTissue -o outfile.txt
 
 execute_system <progname> [<arg1> ...]
 
-This is similar to execute_daemon but, unlike execute_daemon, the execute_system command does ***not*** use the PARDUS daemon. Instead it attempts to execute the custom command directly using the standard C function int system(const char * command). This means that the script execution will be paused while the command executes and will only continue when the custom command has completed (either successfully or unsuccessfully). The script checker tests to see if a system command processor exists before allowing a script containing execute_system commands to run. No checks are made as to whether the custom command executes correctly or exits with an error. However the PCS system variable Sysval will be assigned to the value returned from int system(const char * command) so the script writer may read this to help figure out a way to test for success or failure or other state the command terminated with in a manner that is best suited to their needs.
+The execute_system command attempts to execute a custom command directly via the host operating system. Unlike execute_daemon, this command runs synchronously: script execution will pause while the target program executes, continuing only after the program terminates. No checks are made as to whether the custom command executes correctly or exits with an error. However, upon completion, the PCS system variable Sysval will be assigned the integer exit code returned by the executed program. Script authors can read Sysval to handle program success, failure, or custom termination states. If the program fails to start or crashes abruptly, Sysval will be assigned a value of -1.
 
 <programe> - a string which is the name of the executable file of the command to pass to the command processor
 
 [<arg1> ...] - an optional list of arguments for the program to be executed. The details are the same as for the command execute_daemon (which see).
 
 **Note**: On MS Windows (even when running from MSYS2 MINGW shell) do not use "./" i.e. NOT "./prog.exe", or any other *nix-style paths but use Windows style paths or just "prog.exe" if the program to execute is in the same directory as the PARDUS client program. Full paths to the executable must be specified in MS Windows style i.e. C:msys64homeparduserprog.exe
+
+**Note**: Unlike older legacy engines, this command executes binaries directly without spawning an intermediary shell processor (like /bin/sh or cmd.exe). This significantly increases execution speed and completely eliminates shell-injection vulnerabilities.
 
 ### exit
 
@@ -2230,7 +2245,7 @@ ff_correction <OFF|ON|image_file>
 
 This determines whether to load and use a flat field correction image in full frame image capture (separate commands exist for preview images).
 
-<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the flat field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the flat field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -2250,7 +2265,7 @@ This reads data from the variable <varname> and writes it to a file. The PCS sys
 
 <append?> - an binary choice varval that specifies whether the file to be written to should be created (and that will overwrite and pre-existing file with that name) or appended to. If the append option is selected and the file does not exist then the file will be created.
 
-<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be written to. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be written to. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to access them.
 
@@ -2289,7 +2304,7 @@ frame_number <number>
 
 This sets the value of the frame counter number for the file name of the next captured image. Each image captured by the frame grabber will have a number as part of its file name - this is the frame number.
 
-<number> - an integer which sets the frame number. The frame number in the name of a captured image file will start from this value and increment by one with each subsequent image captured (until and unless this value is changed by the using this command again). See the grab_image and xys_scan commands for more information on the names of captured image files.
+<number> - an integer which sets the frame number. The frame number in the name of a captured image file will start from this value and increment by one with each subsequent image captured (until and unless this value is changed by the using this command again). See the grab_image and xyzs_scan commands for more information on the names of captured image files.
 
 ### frames_to_average
 
@@ -2317,7 +2332,7 @@ This reads data from a file and puts the values it reads into the variable <varn
 
 <skip> - an integer, >= 0, that specifies the number of ***data items*** to skip.
 
-<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be read. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be read. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -2405,7 +2420,7 @@ Pardus pcs 1
 #include ppinclude.pch
 verbosity 1
 def_func main
-get_actuators    # Get info on all extant actuators on the server
+get_actuators     # Get info on all extant actuators on the server
 act_getid X_Axis  # act_getid will set  CurrActIdx to -1 if the specified
                   # actuator does not exist - a 'safe' way to check.
 set_condexp CurrActIdx >= 0
@@ -2479,12 +2494,12 @@ In both cases (ON or OFF) the preview image itself is not sent over to the clien
 
 get_preview_tc <ON|OFF>
 
-This does one of two things in regards to tissue content (tc) measurements depending on the argument. Regardless of the argument value it takes a new preview image without applying your chosen LUT, Laplacian or median filtering options. It does use other settings that were last used to take a preview e.g. zoomed or not and, if zoomed, the last XY coordinates used will be used again this time and it does carry out your choice of whether to invert intensities. However, regardless of your colour channel choices for the previous it uses the Y channel data. Using this Y preview image data it then performs one of the following two operations (only using pixels under any preview mask you supplied and only using pixels within the upper and lower histogram limits you previously set if you selected to only calculate variance within limits).
+This does one of two things in regards to tissue content (tc) measurements depending on the argument. Regardless of the argument value it takes a new preview image without applying your chosen LUT, Laplacian or median filtering options. It does, however, use other settings that were last used to take a preview e.g. zoomed or not and, if zoomed, the last XY coordinates used will be used again this time and it does carry out your choice of whether to invert intensities. However, regardless of your colour channel choices for the previous it uses the Y channel data. Using this Y preview image data it then performs one of the following two operations (only using pixels under any preview mask you supplied and only using pixels within the upper and lower histogram limits you previously set if you selected to only calculate variance within limits).
 
 <ON|OFF> - a binary choice varval. If it evaluates to ON it calculates the tissue content value using the NDL (Normalised Differential Laplacian) on the 3x3 median filtered Y pixel data as:
 
-```c
-tissue_content_ndl = (MALcurr / MALref) * log10(VARcurr / VARref);
+```
+tissue_content_ndl = (MALcurr / MALref) * log10(VARcurr / VARref)
 ```
 
 where MAL = mean absolute Laplacian and VAR is the variance.
@@ -2633,7 +2648,7 @@ grab_image
 
 This activates the camera frame grabber with the intent of capturing a full-size image.
 
-This command takes no arguments but the user must have previously prepared the parameters of image capture using these commands: save_format, save_resolution, save_root, frames_to_skip, frame_number and frames_to_average. While the former settings are mandatory before calling grab_image there are many other optional settings as well as described elsewhere in this manual.
+This command takes no arguments but the user must have previously prepared the parameters of image capture using these commands: save_format, save_resolution, save_root, frames_to_skip, frame_number and frames_to_average. While the former settings are mandatory before calling grab_image there are many other optional settings as well as described elsewhere in this manual. For example, the use of correction images (dark field, flat field, corrections mask) and your choice for tissue content thresholding (tc_threshold) and whether or not to also save a coordinates text file with the image (save_coords).
 
 ### jpeg_quality
 
@@ -2728,6 +2743,20 @@ fmod
 **Note**: If using string variables an automatic cast to a numerical value will be done for you provided the string variable contains a string that is consistent with a numerical value. String variables used here must initially contain a numerical string at the time of definition otherwise the script checker will reject it because the script checker will not perform any set_str commands in the script.
 
 For example, if you define a string like this: 'def_var string str1 _' and then go on later to do this 'set_str str1 -1.3' before using it in a math_var, the script checker will only have the original defined string value to work with (that is '_') and so this is not a valid number and so it will raise an error. Even though you did a set_str to make it a number, that set_str will only be executed during run-time, not check-time, so the checker will only see '_'. To avoid this, define any string variable that may, at any time, be used as a numerical argument as a number at definition - for example like this: 'def_var string str1 0.0' - then the script checker will not complain.
+
+### max_daemons
+
+max_daemons <number>
+
+This sets the maximum number of asynchronous background commands (invoked via execute_daemon or xyzs_process - which see) that are allowed to execute simultaneously on the client host computer. This command serves as a dynamic throttle to protect system memory and CPU cores from thrashing during high-density operations like automated XY scans or tight loops in scripts.
+
+<number> - a varval of type int that evaluates to between 1 and 100 (inclusive) specifying the parallel process ceiling.
+
+**Note**: If a script does not explicitly invoke this command, the interpreter defaults to a value of 1. This forces background commands to run in an orderly, sequential, one-by-one queue.
+
+**Note**: This parameter can be modified dynamically at any point within a script. If max_daemons is increased, the internal queue manager will instantly pump and fire extra pending background tasks to fill the newly opened processing slots. If max_daemons is decreased below the number of currently executing processes, running tasks are permitted to finish safely without corruption, but the queue will halt spawning new tasks until the active count drops below the newly defined threshold.
+
+**Note**: It is advisable to keep the max_daemons number to just below your total number of CPU cores so you don't over-work the CPU and end up slowing down the whole system.
 
 ### milliduration
 
@@ -2836,7 +2865,7 @@ preview_file <file_path>
 
 Sets the file path and file name which will be used to save preview images with the command preview_save (which see).
 
-<file_path> - a string varval. This must evaluate the name of the file (optionally with full path) to be saved. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<file_path> - a string varval. This must evaluate the name of the file (optionally with full path) to be saved. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -2980,7 +3009,7 @@ prv_cdf_use <ON|OFF|image_file>
 
 Whether or not to apply subtraction of a custom preview colour dark field image. This is not the same as the dark field image used for the full resolution image dark field subtraction.
 
-<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the colour dark field image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the colour dark field image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -3091,7 +3120,7 @@ prv_mask_use <ON|OFF|image_file>
 
 Whether or not to apply a custom preview mask to the calculation of preview stats. This is not the same as whether or not to display that mask over the preview image - for that see the command prv_toggle.
 
-<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -3121,7 +3150,7 @@ prv_mdf_set <image_file>
 
 This loads the supplied dark field corrections image and sets it as active for use with monochrome previewing.
 
-<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -3135,7 +3164,7 @@ prv_mff_set <image_file>
 
 This loads the supplied flat field corrections file and sets it as active for use with monochrome previewing.
 
-<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -3279,9 +3308,13 @@ This closes a function definition code block - that is, a block which is opened 
 
 save_coords <ON|OFF>
 
+This allows you to determine whether each captured image is accompanied by a text file containing the coordinates of all 3 stage axes the time that image was taken. This is a latch setting.
+
 <ON|OFF> - a binary choice varval.
 
-[PENDING PORTING]
+**Note**: The coordinate information will be saved in a plain text file with the same name as the image but with the image file name extension replaced with '_coords.txt'.
+
+**Note**: The coordinates will always be in atomic step units. It is up to you to make separate arrangements to record any scale factors if you need to convert these to calibrated units at any time.
 
 ### save_doubles
 
@@ -3362,7 +3395,7 @@ save_path <image_full_save_path>
 
 This sets the absolute path name (the directory) for saving images and any files associated with them.
 
-<image_full_save_path> - a string varval specifying a directory path. It must not contain white space and must not include the file name - only the directory path. This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<image_full_save_path> - a string varval specifying a directory path. It must not contain white space and must not include the file name - only the directory path. This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: Any argument longer than SCNFNAME_MAX bytes will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -3372,7 +3405,7 @@ This sets the absolute path name (the directory) for saving images and any files
 
 save_resolution <width> <height>
 
-This allows you to specify the dimensions of any images saved to disk using the grab_image or xys_scan commands (which see).
+This allows you to specify the dimensions of any images saved to disk using the grab_image or xyzs_scan commands (which see).
 
 <width> - the image width in pixels supplied as a varval of type int >= 1.
 
@@ -3388,7 +3421,7 @@ save_root <image_name_root>
 
 This allows you to input the string used to construct the common part of file names generated when you grab an image with grab_image.
 
-<image_name_root> is a string varval specifying a string without white space which will be used to construct the file name of the saved image and any associated file (like an external header file for saving in raw doubles format). This string argument may be up to SCNFNAME_MAX bytes long (currently set at 259 bytes).
+<image_name_root> is a string varval specifying a string without white space which will be used to construct the file name of the saved image and any associated file (like an external header file for saving in raw doubles format). This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
 
 **Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
 
@@ -3505,7 +3538,7 @@ This allows you to set a user-defined variable of string type to a string of up 
 **Note**: Up to 24 string arguments may be used in one command. The limitations on what arguments are permitted are as follows:
 
 1. Each string argument in the list of words cannot contain white space and each argument must have no more than MAX_ARGLEN bytes (see Note and Caution below).
-2. Each string argument cannot contain the hash character (#) anywhere in it - as soon as a hash character is encountered the word will be truncated to that point and any characters or words after the hash will be ignored. You can add hash characters to a string if you need to by using the add_var command with the Hache system variable or the cat_char command with an argument of value 35.
+2. Each string argument cannot contain the hash character (#) anywhere in it - as soon as a hash character is encountered the word will be truncated to that point and any characters or words after the hash will be ignored. You can add hash characters to a string if you need to by using the add_var command with the Hash system variable or the cat_char command with an argument of value 35.
 3. Only one plain space character (ASCII value 32) will be printed between each string argument - multiple spaces are ignored. You can add more spaces to a string if you need to using the separate add_var command with the Space system variable or the add_var command with an argument of value 32.
 4. If any of the string arguments are the names of user-defined or system variables they will be added verbatim without conversion to their current value. Use the set_var or add_var commands if you need that functionality.
 5. Standard formatting / control / escape characters like 'n' will be printed verbatim and will not have their intended special effect.
@@ -3586,7 +3619,7 @@ This sets lower and upper tissue content thresholds. See notes below for more in
 
 <upper> - a varval of type float. It must not be less than <lower> (unless <upper> is negative - which is permitted but which also disables the use of this upper limit value as described below).
 
-**Note**: Tissue content thresholding is an optional test to determine whether a captured image is discarded or saved.
+**Note**: Tissue content thresholding is an optional test to determine whether a captured image is discarded or saved. Even if an image is discarded due to not passing the tissue content threshold test you may still request a coordinates file by setting the save_coords value to ON (see save_coords).
 
 **Note**: If the <lower> value supplied here as negative then tissue content thresholding will not be used at all and any image capture request (if the capture succeeds without error) will result in an image to be saved. If only the <upper> value supplied here is negative (when the <lower> is non-negative) then tissue content thresholding will be done but without an upper limit imposed in the thresholding process.
 
@@ -3750,9 +3783,17 @@ This destroys a user-defined variable (including an array) and deletes any infor
 
 ### update_gui_coords
 
-update_gui_coords
+update_gui_coords <server_sync?>
 
-This is a local command that calls the pardclient function update_axis_positions_gui(); to update the GUI coordinate display. The script writer can use this if they want the GUI to show the latest values of the global PMRep variables for the stage position. This command does not send to the server to get the PMRep variables. It displays the coordinate values based on the PMRep variables' most current values.
+This updates the client side values and display on the GUI controls of the current XYZ stage coordinates and calibration information.
+
+<server_sync?> - is a binary choice varval. If it evaluates to non-zero then the command queries the server to get the latest values of the stage XYZ coordinates, calibration factors, calibration units name and currently used unit type (as set by act_unit) and updates the local client side copies of these variables. If this evaluates to zero then the GUI coordinate values are updated with whatever coordinates are currently held on the client.
+
+**Note**: The reason that making a syncing call to the server is optional is that most 'normal' motion commands that wait for a PARDUS movement report (PMR) will already have the very latest coordinates held locally in the client once the motion has ended and so there is no need to query the server again, only to update the GUI widgets with those values using the pardclient function update_axis_positions_gui(); (which this command will ultimately call regardless of the value of <server_sync?> ). However, there are occasions when these coordinate values might change on the server and Arduino without the latest values coming over to the client (such as after an act_set command using the INFO_STEPCOUNT info item) in which case using a <server_sync?> value of TRUE (or similar) will allow full syncing to what is current on the server.
+
+**Note**: Using act_get with an info item of INFO_STEPCOUNT or INFO_XYZCOORDS will only update script variables with the latest coordinate values but will not change the client local PMRep globals. Only using this update_gui_coords command will do that.
+
+**Note**: This command will not work unless all 3 stage axis stepper motors are defined (X, Y and Z).
 
 ### verbosity
 
@@ -3774,45 +3815,104 @@ This sets how much output to show in the server console, script console and log 
 
 **Note**: The default value is 3 and this is reset to 3 before and after every script run.
 
-### xys_af_period
+### xyzs_af_period
 
-xys_af_period <period>
+xyzs_af_period <period>
 
-Set the frequency of autofocus activation during an XY scan.
+This command sets the period of performing an autofocus attempt during an XY-scan performed by the command xyzs_scan (which see).
 
-[PENDING PORTING]
+<period> - a varval of type int that must evaluate to >= 0. It is the period (in terms of number of scan moves) at which autofocus is triggered during an XY scan.
 
-### xys_finish
+**Note**: If <period> is 0 then no autofocus will be performed throughout the whole scan. Otherwise an autofocus procedure will be attempted every <period> moves the scan takes. Use a value of 1 to perform autofocus at every step. If tissue content thresholding is on, scan positions will only be counted towards this period if there is tissue detected in the field, so the actual period will only relate to the number of tissue-containing positions in the scan.
 
-xys_finish [<coord_x> <coord_y>]
+Note: If <period> is >= 1 then the pre-requisite commands for the PCS command autofocus to function must have been called at some point before calling xyzs_scan. See autofocus for details.
 
-Set the end-point coordinates of an XY scan.
+### xyzs_finish
 
-[PENDING PORTING]
+xyzs_finish <coord_x> <coord_y>
 
-### xys_process
+Set the end-point coordinates of an XY scan performed by the command xyzs_scan (which see).
 
-xys_process <progname> [<arg1> ...]
+<coord_x> - a varval of type float and must be non-negative (>= 0.0). It is the X coordinate for the end of the scan.
 
-Spawn an external non-blocking command during an XY scan.
+<coord_y> - a varval of type float and must be non-negative (>= 0.0). It is the Y coordinate for the end of the scan.
 
-[PENDING PORTING]
+**Note**: All coordinates are expected to be supplied in either calibrated units (if you set act_unit to > 0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.54). For example, when using atomic steps, if you set <coord_x> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <coord_x> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <coord_x> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
 
-### xys_scan
+### xyzs_process
 
-xys_scan
+xyzs_process <progname> [<arg1> ...]
 
-Begin an XY scan.
+Spawn an external non-blocking command during an XY scan. This is similar to execute_daemon but is run at every step of an automated XY scan run by the command xyzs_scan. You must issue this command at least once before issuing xyzs_scan but it you do not want any processes to run on the scanned images you may use NULL (case sensitive) as your <progrname> argument.
 
-[PENDING PORTING]
+<programe> - a string which is the name of the executable file of the command to pass to the command processor. Alternatively supply NULL if you do not want any process to run on your scanned images.
 
-### xys_start
+[<arg1> ...] - an optional list of arguments for the program to be executed. If any of the arguments to be passed is the name of the most recently saved image then this must be specified within the argument list as '[img]' (without the quote marks) and the PARDUS script interpreter will replace that with the name of the last scanned image (this will be the full path name). If tissue content thresholding is active and no image was captured due to lack of tissue content then the [img] symbol will be replaced with NoTissue so your external program should check for this specific string (if it is expecting an image file name) to decide what to do.
 
-xys_start <coord_x> <coord_y> <coord_z>
+**Note**: For more details on the rules see execute_daemon.
 
-Set the start point coordinates for an XY scan.
+### xyzs_scan
 
-[PENDING PORTING]
+xyzs_scan
+
+Begin an XY scan of moves in a snake pattern from a start position to an end position with various options pre-set using other commands. This has no arguments but for this command to work without an error certain pre-requisite commands must have been successfully issued before calling it. These commands are listed below but see their individual entries in the manual for detail:
+
+* All the commands required for grab_image to work (see grab_image for the list).
+* xyzs_start - sets the (x,y,z) start position of the scan.
+* xyzs_finish - sets the (x,y) end position of the scan.
+* xyzs_process - sets what external process to run on each image of the scan.
+* xyzs_stepsize - sets the width and height and depth of each move in the scan pattern.
+* xyzs_af_period - sets how often to perform autofocus during the scan. If this is set to anything more than 0 then you must also have called the pre-conditional commands required for autofocus to work (see the section on autofocus for the list).
+
+**Note**: For a scan to work a pardcap server must be connected with a valid camera available and all three stage axes (X, Y and Z) must be extant, mature and homed.
+
+**Note**: A text file will be opened at the start of the scan to record scan parameters and also to record the positions of each image (stage coordinates) and whether they had tissue or not (if tissue thresholding is used). The name of this file will be constructed from your image capture path and root file name settings and have the name ending in "_xys.xys". This text file output must succeed for the scan to complete successfully - any file IO errors will terminate the scan. This file is also used to load a scan into the GUI for the pardclient scan view feature.
+
+**Note**: At the end of a scan, the preview image will be attempted to be saved to disc with a file name beginning with your image capture path and root file name settings and have the name ending in "_preview.ppm" (it is saved in p6 ppm format).
+
+### xyzs_semino_z
+
+xyzs_semino_z <slices>
+
+Set the number of focus plane slices in a scan performed by the command xyzs_scan (which see).
+
+<slices> - a varval of type int and must be non-negative (>= 0). It is the number of slices to be captured at each XY position of the scan both below and above the current Z position (hence 'semi').
+
+**Note**: For a scan involving Z slices (i.e. if <slices> is > 0) then you must also have previously called the commands af_setup successfully even if you have no intention of using autofocus in your scan. The reason for this is that a call to af_setup ensures that the Z motor motion is well characterised and, in particular, the client ensures it knows which direction is 'up' and which is 'down' because these are needed to perform Z stacks.
+
+**Note**: The way this works is that, at each XY scan position, if xyzs_semino_z is >0, the Z motor will move to the current 'best focus' Z position (if it is not there already) and then move a total distance of ( <slices> x <size_z> ) distance units in Z in the 'down' direction (where <size_z> is the value supplied in the command xyzs_stepsize). It then takes a picture and moves <size_z> up. If <slices> is > 1 this 'picture-then-move-up' process is repeated for a total of <slices> times. At the end of this first phase the Z stage will be at the position it started from. The process is continued for another <slices> times at which point the Z stage returns to its original starting point and the XY scan process continues. Thus at each XY position there will be acquired a Z-stack of a total of <slices>+1 images.
+
+### xyzs_start
+
+xyzs_start <coord_x> <coord_y> <coord_z>
+
+Set the start point coordinates for an XY scan performed by the command xyzs_scan (which see).
+
+<coord_x> - a varval of type float and must be non-negative (>= 0.0). It is the X coordinate for the end of the scan.
+
+<coord_y> - a varval of type float and must be non-negative (>= 0.0). It is the Y coordinate for the end of the scan.
+
+<coord_z> - a varval of type float and must be non-negative (>= 0.0). It is the Z coordinate for the end of the scan.
+
+**Note**: All coordinates are expected to be supplied in either calibrated units (if you set act_unit to > 0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.54). For example, when using atomic steps, if you set <coord_x> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <coord_x> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <coord_x> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+
+### xyzs_stepsize
+
+xyzs_stepsize <size_x> <size_y> <size_z>
+
+Set the width and height for each move in an XY scan performed by the command xyzs_scan (which see).
+
+<size_x> - a varval of type float and must be non-negative (>= 1.0e-3). It is the search step distance for each X motion in the scan.
+
+<size_y> - a varval of type float and must be non-negative (>= 1.0e-3). It is the search step distance for each Y motion in the scan.
+
+<size_z> - a varval of type float and must be non-negative (>= 1.0e-3). It is the search step distance for each Z motion in the scan.
+
+**Note**: The term 'step' in xyzs_stepsize refers to each step in the scan pattern, not the microstep size of the motors. If you set the <size_x> and <size_y> values so that the stage moves exactly one camera frame width in X and one camera frame height in Y for each scan move then your XY scan images will not overlap. If you set them to smaller values then your scan images will have overlap at the boundaries of each image (which may be useful for 'stitching' the images together into a larger image after the scan is complete.
+
+**Note**: The value you set for all of these arguments must be >= 1.0e-3 to satisfy the syntax checker even if you do not intend to scan along a particular axis. For example, the value you supply for <size_z> will never be used if you are not doing any Z slices above and below the current Z position (see the command xyzs_semino_z).
+
+**Note**: All step size distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.54). For example, when using atomic steps, if you set <size_x> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <size_x> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <size_x> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
 
 ### yuyv_bias
 
