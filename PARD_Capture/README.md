@@ -1,6 +1,16 @@
 # PARD Capture
 Scientific image acquisition software for Linux, FLOSS GPL v3
 
+---
+
+# 🚨 PROJECT MIGRATED TO CODEBERG 🚨
+
+**This project has moved away from GitHub. Please find the active repository, latest releases, and documentation at our new permanent home:**
+
+👉 **[https://codeberg.org/TadPath/PARDUS](https://codeberg.org/TadPath/PARDUS)**
+
+---
+
 
 ![PARD Capture Title](Images/Fig1.png)
 ![PARD Capture Title](Images/Fig2.png)
