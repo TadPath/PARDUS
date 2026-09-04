@@ -1,4 +1,13 @@
 # Example PCS Programs
+---
+
+# 🚨 PROJECT MIGRATED TO CODEBERG 🚨
+
+**This project has moved away from GitHub. Please find the active repository, latest releases, and documentation at our new permanent home:**
+
+👉 **[https://codeberg.org/TadPath/PARDUS](https://codeberg.org/TadPath/PARDUS)**
+
+---
 
 ![PCS_Examples](Images/pcs_demos.png)
 
