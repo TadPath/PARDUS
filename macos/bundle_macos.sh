@@ -75,27 +75,31 @@ for bin in pardclient pcs-cli pardserver pardcap; do
 done
 
 echo "==> 4. Bundling GTK 4 GSettings schemas and GdkPixbuf loaders..."
-GLIB_PREFIX=$(pkg-config --variable=prefix glib-2.0)
+BREW_PREFIX="$(brew --prefix)"
 PIXBUF_VER=$(pkg-config --variable=gdk_pixbuf_binary_version gdk-pixbuf-2.0)
-PIXBUF_PREFIX=$(pkg-config --variable=prefix gdk-pixbuf-2.0)
 
 mkdir -p "$RESOURCES/share/glib-2.0/schemas"
-cp -R "$GLIB_PREFIX/share/glib-2.0/schemas/"* "$RESOURCES/share/glib-2.0/schemas/"
-glib-compile-schemas "$RESOURCES/share/glib-2.0/schemas"
+if [ -d "$BREW_PREFIX/share/glib-2.0/schemas" ]; then
+    cp -RL "$BREW_PREFIX/share/glib-2.0/schemas/"* "$RESOURCES/share/glib-2.0/schemas/" || true
+    glib-compile-schemas "$RESOURCES/share/glib-2.0/schemas" || true
+fi
 
 mkdir -p "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders"
-cp "$PIXBUF_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"
-for loader in "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so; do
-    dylibbundler -of -b \
-        -x "$loader" \
-        -d "$FRAMEWORKS" \
-        -p "@executable_path/../Frameworks" >/dev/null 2>&1 || true
-done
-GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" \
-    gdk-pixbuf-query-loaders > "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
-# Rewrite absolute loader paths inside loaders.cache to relative bundle paths
-sed -i '' "s|$RESOURCES/|@executable_path/../Resources/|g" \
-    "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
+if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
+    cp -L "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"
+    for loader in "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so; do
+        dylibbundler -of -od -b \
+            -s "$BREW_LIB" \
+            -x "$loader" \
+            -d "$FRAMEWORKS" \
+            -p "@executable_path/../Frameworks" </dev/null || true
+    done
+    GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" \
+        gdk-pixbuf-query-loaders > "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
+    sed -i '' "s|$RESOURCES/|@executable_path/../Resources/|g" \
+        "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
+fi
+
 
 echo "==> 5. Copying Manuals, AI Guides, PCS Samples, and Default Configs..."
 cp "$ROOT_DIR/macos/Info.plist" "$CONTENTS/Info.plist"
