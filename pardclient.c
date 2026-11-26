@@ -28320,53 +28320,142 @@ int is_pixel_in_sector(int32_t dx, int32_t dy, int32_t start_deg, int32_t end_de
 }
 
 
+static inline void pb_plot_pixel(int32_t x, int32_t y)
+{
+    if (x < 0 || x >= 640 || y < 0 || y >= 480) return;
+
+    int offset = (x * 3) + (y * PreviewWd_stride);
+    PreviewBuffer[offset]     = PB_colour[0]; // R
+    PreviewBuffer[offset + 1] = PB_colour[1]; // G
+    PreviewBuffer[offset + 2] = PB_colour[2]; // B
+
+    if (!PB_has_data) {
+        PB_first_row = y;
+        PB_last_row  = y;
+        PB_has_data  = 1;
+    } else {
+        if (y < PB_first_row) PB_first_row = y;
+        if (y > PB_last_row)  PB_last_row  = y;
+    }
+}
+
+static inline void pb_plot_thick_pixel(int32_t x, int32_t y)
+{
+    int32_t start_offset = -(PB_lwidth - 1) / 2;
+    int32_t end_offset = PB_lwidth / 2;
+
+    for (int32_t dy = start_offset; dy <= end_offset; dy++) {
+        for (int32_t dx = start_offset; dx <= end_offset; dx++) {
+            pb_plot_pixel(x + dx, y + dy);
+        }
+    }
+}
+
+static inline void pb_draw_rounded_corner_points(
+    void (*plot_fn)(int32_t, int32_t),
+    int32_t cx_left, int32_t cx_right, int32_t cy_top, int32_t cy_bot,
+    int32_t px, int32_t py, int32_t filled)
+{
+    if (filled) {
+        for (int32_t i = cx_left - px; i <= cx_right + px; i++) {
+            plot_fn(i, cy_top - py);
+            plot_fn(i, cy_bot + py);
+        }
+    } else {
+        plot_fn(cx_right + px, cy_bot + py);
+        plot_fn(cx_left  - px, cy_bot + py);
+        plot_fn(cx_right + px, cy_top  - py);
+        plot_fn(cx_left  - px, cy_top  - py);
+    }
+}
+
+static inline void pb_draw_ellipse_points(
+    void (*plot_fn)(int32_t, int32_t),
+    int32_t cx, int32_t cy, int32_t px, int32_t py, int32_t filled_flag)
+{
+    if (filled_flag) {
+        for (int32_t i = cx - px; i <= cx + px; i++) {
+            plot_fn(i, cy + py);
+            plot_fn(i, cy - py);
+        }
+    } else {
+        plot_fn(cx + px, cy + py);
+        plot_fn(cx - px, cy + py);
+        plot_fn(cx + px, cy - py);
+        plot_fn(cx - px, cy - py);
+    }
+}
+
+static inline int pb_in_sector(
+    int32_t dx, int32_t dy, int32_t rx, int32_t ry,
+    int32_t start_angle, int32_t end_angle)
+{
+    int dy_flipped = -dy;
+    double angle = atan2((double)dy_flipped * rx, (double)dx * ry) * 180.0 / 3.141592653589793;
+    if (angle < 0.0) angle += 360.0;
+    int32_t deg = (int32_t)(angle + 0.5) % 360;
+    return (start_angle <= end_angle) ? (deg >= start_angle && deg <= end_angle)
+                                      : (deg >= start_angle || deg <= end_angle);
+}
+
+static inline void pb_draw_pie_line(
+    void (*plot_fn)(int32_t, int32_t),
+    int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+{
+    int32_t cx = x0, cy = y0;
+    int32_t dx = abs(x1 - cx), sx = cx < x1 ? 1 : -1;
+    int32_t dy = -abs(y1 - cy), sy = cy < y1 ? 1 : -1;
+    int32_t err = dx + dy, e2;
+    while (1) {
+        plot_fn(cx, cy);
+        if (cx == x1 && cy == y1) break;
+        if (abs(cx - x1) <= 1 && abs(cy - y1) <= 1) { plot_fn(x1, y1); break; }
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; cx += sx; }
+        if (e2 <= dx) { err += dx; cy += sy; }
+    }
+}
+
+static inline void pb_draw_partial_ellipse_points(
+    void (*plot_fn)(int32_t, int32_t),
+    int32_t x0, int32_t y0, int32_t px, int32_t py,
+    int32_t rx, int32_t ry, int32_t start_angle, int32_t end_angle, int32_t filled)
+{
+    if (filled) {
+        for (int32_t i = -px; i <= px; i++) {
+            if (pb_in_sector(i, py, rx, ry, start_angle, end_angle))  plot_fn(x0 + i, y0 + py);
+            if (pb_in_sector(i, -py, rx, ry, start_angle, end_angle)) plot_fn(x0 + i, y0 - py);
+        }
+    } else {
+        if (pb_in_sector(px, py, rx, ry, start_angle, end_angle))   plot_fn(x0 + px, y0 + py);
+        if (pb_in_sector(-px, py, rx, ry, start_angle, end_angle))  plot_fn(x0 - px, y0 + py);
+        if (pb_in_sector(px, -py, rx, ry, start_angle, end_angle))  plot_fn(x0 + px, y0 - py);
+        if (pb_in_sector(-px, -py, rx, ry, start_angle, end_angle)) plot_fn(x0 - px, y0 - py);
+    }
+}
+
 // Updated function signature to accept the filled flag parameter
 void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t yrdest)
 {
-    // Fetch cursor coordinates from your PB_cursor tracking array
-    int32_t x0 = PB_cursor[0]; 
+    int32_t x0 = PB_cursor[0];
     int32_t y0 = PB_cursor[1];
-
-    // Inline safe pixel plotting function (macro-like performance)
-    // Automatically clips coordinates out of bounds to guard against SegFaults
-    void plot_pixel(int32_t x, int32_t y) {
-        if (x < 0 || x >= 640 || y < 0 || y >= 480) return;
-
-        // Calculate direct memory offset for the RGB chunk
-        int offset = (x * 3) + (y * PreviewWd_stride);
-        PreviewBuffer[offset]     = PB_colour[0]; // R
-        PreviewBuffer[offset + 1] = PB_colour[1]; // G
-        PreviewBuffer[offset + 2] = PB_colour[2]; // B
-
-        // Dynamically maintain your horizontal slice render boundaries
-        if (!PB_has_data) {
-            PB_first_row = y;
-            PB_last_row  = y;
-            PB_has_data  = 1;
-        } else {
-            if (y < PB_first_row) PB_first_row = y;
-            if (y > PB_last_row)  PB_last_row  = y;
-        }
-    }
 
     switch (type) {
         case PDS_PIXEL: {
-            plot_pixel(x0, y0);
+            pb_plot_pixel(x0, y0);
             break;
         }
 
         case PDS_LINE: {
-            // Calculate absolute target coordinates based on PB_desttype
             int32_t x1 = (PB_desttype) ? (x0 + x_rdest) : x_rdest;
             int32_t y1 = (PB_desttype) ? (y0 + yrdest)  : yrdest;
 
-            // Bresenham's Line Algorithm (Uses fast integer additions)
             int32_t dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
             int32_t dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
             int32_t err = dx + dy, e2;
 
             while (1) {
-                plot_pixel(x0, y0);
+                pb_plot_pixel(x0, y0);
                 if (x0 == x1 && y0 == y1) break;
                 e2 = 2 * err;
                 if (e2 >= dy) { err += dy; x0 += sx; }
@@ -28376,11 +28465,9 @@ void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t y
         }
 
         case PDS_RECT: {
-            // Calculate absolute target coordinates based on PB_desttype
             int32_t x1 = (PB_desttype) ? (x0 + x_rdest) : x_rdest;
             int32_t y1 = (PB_desttype) ? (y0 + yrdest)  : yrdest;
-            
-            // Normalize box boundaries so it draws cleanly in any direction
+
             int32_t min_x = x0 < x1 ? x0 : x1;
             int32_t max_x = x0 > x1 ? x0 : x1;
             int32_t min_y = y0 < y1 ? y0 : y1;
@@ -28389,57 +28476,34 @@ void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t y
             if (PB_chamfer) {
                 int32_t w = max_x - min_x;
                 int32_t h = max_y - min_y;
-                
-                // Clamp chamfer to ensure it never exceeds half the shortest side
+
                 int32_t r = PB_chamfer;
                 int32_t max_r = (w < h ? w : h) / 2;
                 if (r > max_r) r = max_r;
 
-                // 1. Draw the straight edges/body core
                 if (filled) {
-                    // Efficient scanline filling for central core body rows
                     for (int32_t y = min_y + r; y <= max_y - r; y++) {
                         for (int32_t x = min_x; x <= max_x; x++) {
-                            plot_pixel(x, y);
+                            pb_plot_pixel(x, y);
                         }
                     }
                 } else {
-                    // Draw perimeter wireframe lines (shortened by radius 'r')
-                    for (int32_t x = min_x + r; x <= max_x - r; x++) { plot_pixel(x, min_y); plot_pixel(x, max_y); }
-                    for (int32_t y = min_y + r; y <= max_y - r; y++) { plot_pixel(min_x, y); plot_pixel(max_x, y); }
+                    for (int32_t x = min_x + r; x <= max_x - r; x++) { pb_plot_pixel(x, min_y); pb_plot_pixel(x, max_y); }
+                    for (int32_t y = min_y + r; y <= max_y - r; y++) { pb_plot_pixel(min_x, y); pb_plot_pixel(max_x, y); }
                 }
 
-                // 2. Midpoint Ellipse (Circle) Arc Engine for the 4 corners
                 int32_t x = 0, y = r;
                 long r2 = (long)r * r;
                 long p = r2 - (r2 * r) + (0.25 * r2);
 
-                // Calculate the 4 internal corner pivot center points
                 int32_t cx_left  = min_x + r;
                 int32_t cx_right = max_x - r;
                 int32_t cy_top   = min_y + r;
                 int32_t cy_bot   = max_y - r;
 
-                // Symmetrical corner plotter helper
-                void draw_rounded_corner_points(int32_t px, int32_t py) {
-                    if (filled) {
-                        // Fill horizontal scanlines for the top and bottom rounded caps
-                        for (int32_t i = cx_left - px; i <= cx_right + px; i++) {
-                            plot_pixel(i, cy_top - py); // Top cap line
-                            plot_pixel(i, cy_bot + py); // Bottom cap line
-                        }
-                    } else {
-                        // Map the 4 symmetrical corner arcs
-                        plot_pixel(cx_right + px, cy_bot + py);  // Bottom-Right
-                        plot_pixel(cx_left  - px, cy_bot + py);  // Bottom-Left
-                        plot_pixel(cx_right + px, cy_top  - py);  // Top-Right
-                        plot_pixel(cx_left  - px, cy_top  - py);  // Top-Left
-                    }
-                }
-
                 while (x <= y) {
-                    draw_rounded_corner_points(x, y);
-                    draw_rounded_corner_points(y, x); // Symmetrical reflection
+                    pb_draw_rounded_corner_points(pb_plot_pixel, cx_left, cx_right, cy_top, cy_bot, x, y, filled);
+                    pb_draw_rounded_corner_points(pb_plot_pixel, cx_left, cx_right, cy_top, cy_bot, y, x, filled);
                     if (p < 0) {
                         x++;
                         p += 2 * r2 * x + r2;
@@ -28449,16 +28513,15 @@ void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t y
                     }
                 }
             } else {
-                // Standard sharp rectangle path
                 if (filled) {
                     for (int32_t y = min_y; y <= max_y; y++) {
                         for (int32_t x = min_x; x <= max_x; x++) {
-                            plot_pixel(x, y);
+                            pb_plot_pixel(x, y);
                         }
                     }
                 } else {
-                    for (int32_t x = min_x; x <= max_x; x++) { plot_pixel(x, min_y); plot_pixel(x, max_y); }
-                    for (int32_t y = min_y; y <= max_y; y++) { plot_pixel(min_x, y); plot_pixel(max_x, y); }
+                    for (int32_t x = min_x; x <= max_x; x++) { pb_plot_pixel(x, min_y); pb_plot_pixel(x, max_y); }
+                    for (int32_t y = min_y; y <= max_y; y++) { pb_plot_pixel(min_x, y); pb_plot_pixel(max_x, y); }
                 }
             }
             break;
@@ -28470,87 +28533,36 @@ void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t y
             if (rx <= 0 || ry <= 0) break;
 
             if (PB_angle1 >= 360) {
-                // ... (Keep your standard fast 360 loop completely untouched) ...
                 int32_t x = 0, y = ry;
                 long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
-                long p;
-                void draw_ellipse_points(int32_t cx, int32_t cy, int32_t px, int32_t py, int filled_flag) {
-                    if (filled_flag) {
-                        for (int32_t i = cx - px; i <= cx + px; i++) { plot_pixel(i, cy + py); plot_pixel(i, cy - py); }
-                    } else {
-                        plot_pixel(cx + px, cy + py); plot_pixel(cx - px, cy + py);
-                        plot_pixel(cx + px, cy - py); plot_pixel(cx - px, cy - py);
-                    }
-                }
-                p = ry2 - (rx2 * ry) + (0.25 * rx2);
+                long p = ry2 - (rx2 * ry) + (0.25 * rx2);
                 while ((2 * ry2 * x) <= (2 * rx2 * y)) {
-                    draw_ellipse_points(x0, y0, x, y, filled);
+                    pb_draw_ellipse_points(pb_plot_pixel, x0, y0, x, y, filled);
                     if (p < 0) { x++; p += 2 * ry2 * x + ry2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + ry2; }
                 }
                 p = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
                 while (y >= 0) {
-                    draw_ellipse_points(x0, y0, x, y, filled);
+                    pb_draw_ellipse_points(pb_plot_pixel, x0, y0, x, y, filled);
                     if (p > 0) { y--; p -= 2 * rx2 * y + rx2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + ry2; }
                 }
-            } 
-            else {
+            } else {
                 int32_t start_angle = PB_angle2 % 360;
                 int32_t end_angle = (PB_angle2 + PB_angle1) % 360;
-
-                // CRITICAL FIXED HELPER: Parametric Sector Angle Matcher
-                int in_sector(int32_t dx, int32_t dy) {
-                    int dy_flipped = -dy;
-                    // Multiplying by rx and ry maps the pixel coordinate space back to a perfect circle projection
-                    double angle = atan2((double)dy_flipped * rx, (double)dx * ry) * 180.0 / 3.141592653589793;
-                    if (angle < 0.0) angle += 360.0;
-                    int32_t deg = (int32_t)(angle + 0.5) % 360;
-                    return (start_angle <= end_angle) ? (deg >= start_angle && deg <= end_angle) 
-                                                      : (deg >= start_angle || deg <= end_angle);
-                }
-
-                void draw_pie_line(int32_t x1, int32_t y1) {
-                    int32_t cx = x0, cy = y0;
-                    int32_t dx = abs(x1 - cx), sx = cx < x1 ? 1 : -1;
-                    int32_t dy = -abs(y1 - cy), sy = cy < y1 ? 1 : -1;
-                    int32_t err = dx + dy, e2;
-                    while (1) {
-                        plot_pixel(cx, cy);
-                        if (cx == x1 && cy == y1) break;
-                        if (abs(cx - x1) <= 1 && abs(cy - y1) <= 1) { plot_pixel(x1, y1); break; }
-                        e2 = 2 * err;
-                        if (e2 >= dy) { err += dy; cx += sx; }
-                        if (e2 <= dx) { err += dx; cy += sy; }
-                    }
-                }
-
-                void draw_partial_ellipse_points(int32_t px, int32_t py) {
-                    if (filled) {
-                        for (int32_t i = -px; i <= px; i++) {
-                            if (in_sector(i, py)) plot_pixel(x0 + i, y0 + py);
-                            if (in_sector(i, -py)) plot_pixel(x0 + i, y0 - py);
-                        }
-                    } else {
-                        if (in_sector(px, py))   plot_pixel(x0 + px, y0 + py);
-                        if (in_sector(-px, py))  plot_pixel(x0 - px, y0 + py);
-                        if (in_sector(px, -py))  plot_pixel(x0 + px, y0 - py);
-                        if (in_sector(-px, -py)) plot_pixel(x0 - px, y0 - py);
-                    }
-                }
 
                 int32_t x = 0, y = ry;
                 long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
                 long p = ry2 - (rx2 * ry) + (0.25 * rx2);
 
                 while ((2 * ry2 * x) <= (2 * rx2 * y)) {
-                    draw_partial_ellipse_points(x, y);
+                    pb_draw_partial_ellipse_points(pb_plot_pixel, x0, y0, x, y, rx, ry, start_angle, end_angle, filled);
                     if (p < 0) { x++; p += 2 * ry2 * x + ry2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + ry2; }
                 }
                 p = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
                 while (y >= 0) {
-                    draw_partial_ellipse_points(x, y);
+                    pb_draw_partial_ellipse_points(pb_plot_pixel, x0, y0, x, y, rx, ry, start_angle, end_angle, filled);
                     if (p > 0) { y--; p -= 2 * rx2 * y + rx2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + rx2; }
                 }
@@ -28563,8 +28575,8 @@ void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t y
                     int32_t ex2 = (int32_t)(rx * cos(r2) + (cos(r2) >= 0 ? 0.5 : -0.5));
                     int32_t ey2 = (int32_t)(ry * sin(r2) + (sin(r2) >= 0 ? 0.5 : -0.5));
 
-                    draw_pie_line(x0 + ex1, y0 - ey1);
-                    draw_pie_line(x0 + ex2, y0 - ey2);
+                    pb_draw_pie_line(pb_plot_pixel, x0, y0, x0 + ex1, y0 - ey1);
+                    pb_draw_pie_line(pb_plot_pixel, x0, y0, x0 + ex2, y0 - ey2);
                 }
             }
             break;
@@ -28574,45 +28586,15 @@ void preview_draw_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t y
 
 void preview_draw_thick_shape(int32_t type, int32_t filled, int32_t x_rdest, int32_t yrdest)
 {
-    int32_t x0 = PB_cursor[0]; 
-    int32_t y0 = PB_cursor[1];
-
-    void plot_pixel(int32_t x, int32_t y) {
-        if (x < 0 || x >= 640 || y < 0 || y >= 480) return;
-
-        int offset = (x * 3) + (y * PreviewWd_stride);
-        PreviewBuffer[offset]     = PB_colour[0]; // R
-        PreviewBuffer[offset + 1] = PB_colour[1]; // G
-        PreviewBuffer[offset + 2] = PB_colour[2]; // B
-
-        if (!PB_has_data) {
-            PB_first_row = y;
-            PB_last_row  = y;
-            PB_has_data  = 1;
-        } else {
-            if (y < PB_first_row) PB_first_row = y;
-            if (y > PB_last_row)  PB_last_row  = y;
-        }
-    }
-
-    void plot_thick_pixel(int32_t x, int32_t y) {
-        int32_t start_offset = -(PB_lwidth - 1) / 2;
-        int32_t end_offset = PB_lwidth / 2;
-
-        for (int32_t dy = start_offset; dy <= end_offset; dy++) {
-            for (int32_t dx = start_offset; dx <= end_offset; dx++) {
-                plot_pixel(x + dx, y + dy);
-            }
-        }
-    }
+ int32_t x0 = PB_cursor[0];
+ int32_t y0 = PB_cursor[1];
 
     switch (type) {
         case PDS_PIXEL: {
-            plot_thick_pixel(x0, y0);
+            pb_plot_thick_pixel(x0, y0);
             break;
         }
         case PDS_LINE: {
-            // Calculate absolute target coordinates based on PB_desttype
             int32_t x1 = (PB_desttype) ? (x0 + x_rdest) : x_rdest;
             int32_t y1 = (PB_desttype) ? (y0 + yrdest)  : yrdest;
             int32_t dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
@@ -28620,7 +28602,7 @@ void preview_draw_thick_shape(int32_t type, int32_t filled, int32_t x_rdest, int
             int32_t err = dx + dy, e2;
 
             while (1) {
-                plot_thick_pixel(x0, y0);
+                pb_plot_thick_pixel(x0, y0);
                 if (x0 == x1 && y0 == y1) break;
                 e2 = 2 * err;
                 if (e2 >= dy) { err += dy; x0 += sx; }
@@ -28629,7 +28611,6 @@ void preview_draw_thick_shape(int32_t type, int32_t filled, int32_t x_rdest, int
             break;
         }
         case PDS_RECT: {
-            // Calculate absolute target coordinates based on PB_desttype
             int32_t x1 = (PB_desttype) ? (x0 + x_rdest) : x_rdest;
             int32_t y1 = (PB_desttype) ? (y0 + yrdest)  : yrdest;
             int32_t min_x = x0 < x1 ? x0 : x1;
@@ -28637,50 +28618,36 @@ void preview_draw_thick_shape(int32_t type, int32_t filled, int32_t x_rdest, int
             int32_t min_y = y0 < y1 ? y0 : y1;
             int32_t max_y = y0 > y1 ? y0 : y1;
 
-            // Filled checks are removed because routing handles it!
-            if(PB_chamfer){
-               int32_t w = max_x - min_x;
-               int32_t h = max_y - min_y;
-   
-               // Clamp chamfer to ensure it never exceeds half the shortest side
-               int32_t r = PB_chamfer;
-               int32_t max_r = (w < h ? w : h) / 2;
-               if (r > max_r) r = max_r;
-               // Thick Corner Arc Generator
-               int32_t x = 0, y = r;
-               long r2 = (long)r * r;
-               long p = r2 - (r2 * r) + (0.25 * r2);
+            if (PB_chamfer) {
+                int32_t w = max_x - min_x;
+                int32_t h = max_y - min_y;
 
-               int32_t cx_left  = min_x + r;
-               int32_t cx_right = max_x - r;
-               int32_t cy_top   = min_y + r;
-               int32_t cy_bot   = max_y - r;
+                int32_t r = PB_chamfer;
+                int32_t max_r = (w < h ? w : h) / 2;
+                if (r > max_r) r = max_r;
 
-               // Thick straight edge segments
-               for (int32_t x = min_x + r; x <= max_x - r; x++) { plot_thick_pixel(x, min_y); plot_thick_pixel(x, max_y); }
-               for (int32_t y = min_y + r; y <= max_y - r; y++) { plot_thick_pixel(min_x, y); plot_thick_pixel(max_x, y); }
+                int32_t x = 0, y = r;
+                long r2 = (long)r * r;
+                long p = r2 - (r2 * r) + (0.25 * r2);
 
+                int32_t cx_left  = min_x + r;
+                int32_t cx_right = max_x - r;
+                int32_t cy_top   = min_y + r;
+                int32_t cy_bot   = max_y - r;
 
-               void draw_thick_corner_points(int32_t px, int32_t py) {
-                   plot_thick_pixel(cx_right + px, cy_bot + py);
-                   plot_thick_pixel(cx_left  - px, cy_bot + py);
-                   plot_thick_pixel(cx_right + px, cy_top  - py);
-                   plot_thick_pixel(cx_left  - px, cy_top  - py);
-               }
+                for (int32_t sx = min_x + r; sx <= max_x - r; sx++) { pb_plot_thick_pixel(sx, min_y); pb_plot_thick_pixel(sx, max_y); }
+                for (int32_t sy = min_y + r; sy <= max_y - r; sy++) { pb_plot_thick_pixel(min_x, sy); pb_plot_thick_pixel(max_x, sy); }
 
-               while (x <= y) {
-                   draw_thick_corner_points(x, y);
-                   draw_thick_corner_points(y, x);
-                   if (p < 0) { x++; p += 2 * r2 * x + r2; }
-                   else { x++; y--; p += 2 * r2 * x - 2 * r2 * y + r2; }
-               }
-
+                while (x <= y) {
+                    pb_draw_rounded_corner_points(pb_plot_thick_pixel, cx_left, cx_right, cy_top, cy_bot, x, y, 0);
+                    pb_draw_rounded_corner_points(pb_plot_thick_pixel, cx_left, cx_right, cy_top, cy_bot, y, x, 0);
+                    if (p < 0) { x++; p += 2 * r2 * x + r2; }
+                    else { x++; y--; p += 2 * r2 * x - 2 * r2 * y + r2; }
+                }
             } else {
-             for (int32_t x = min_x; x <= max_x; x++) { plot_thick_pixel(x, min_y); plot_thick_pixel(x, max_y); }
-             for (int32_t y = min_y; y <= max_y; y++) { plot_thick_pixel(min_x, y); plot_thick_pixel(max_x, y); }
+                for (int32_t x = min_x; x <= max_x; x++) { pb_plot_thick_pixel(x, min_y); pb_plot_thick_pixel(x, max_y); }
+                for (int32_t y = min_y; y <= max_y; y++) { pb_plot_thick_pixel(min_x, y); pb_plot_thick_pixel(max_x, y); }
             }
-
-
             break;
         }
         case PDS_ELLIPSE: {
@@ -28689,75 +28656,36 @@ void preview_draw_thick_shape(int32_t type, int32_t filled, int32_t x_rdest, int
             if (rx <= 0 || ry <= 0) break;
 
             if (PB_angle1 >= 360) {
-                // ... (Keep your standard fast thick 360 loop completely untouched) ...
                 int32_t x = 0, y = ry;
                 long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
-                long p;
-                void draw_ellipse_thick_points(int32_t cx, int32_t cy, int32_t px, int32_t py) {
-                    plot_thick_pixel(cx + px, cy + py); plot_thick_pixel(cx - px, cy + py);
-                    plot_thick_pixel(cx + px, cy - py); plot_thick_pixel(cx - px, cy - py);
-                }
-                p = ry2 - (rx2 * ry) + (0.25 * rx2);
+                long p = ry2 - (rx2 * ry) + (0.25 * rx2);
                 while ((2 * ry2 * x) <= (2 * rx2 * y)) {
-                    draw_ellipse_thick_points(x0, y0, x, y);
+                    pb_draw_ellipse_points(pb_plot_thick_pixel, x0, y0, x, y, 0);
                     if (p < 0) { x++; p += 2 * ry2 * x + ry2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + ry2; }
                 }
                 p = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
                 while (y >= 0) {
-                    draw_ellipse_thick_points(x0, y0, x, y);
+                    pb_draw_ellipse_points(pb_plot_thick_pixel, x0, y0, x, y, 0);
                     if (p > 0) { y--; p -= 2 * rx2 * y + rx2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + rx2; }
                 }
-            } 
-            else {
+            } else {
                 int32_t start_angle = PB_angle2 % 360;
                 int32_t end_angle = (PB_angle2 + PB_angle1) % 360;
-
-                // CRITICAL FIXED HELPER: Parametric Sector Angle Matcher (Thick Variant)
-                int in_sector(int32_t dx, int32_t dy) {
-                    int dy_flipped = -dy;
-                    double angle = atan2((double)dy_flipped * rx, (double)dx * ry) * 180.0 / 3.141592653589793;
-                    if (angle < 0.0) angle += 360.0;
-                    int32_t deg = (int32_t)(angle + 0.5) % 360;
-                    return (start_angle <= end_angle) ? (deg >= start_angle && deg <= end_angle) 
-                                                      : (deg >= start_angle || deg <= end_angle);
-                }
-
-                void draw_thick_pie_line(int32_t x1, int32_t y1) {
-                    int32_t cx = x0, cy = y0;
-                    int32_t dx = abs(x1 - cx), sx = cx < x1 ? 1 : -1;
-                    int32_t dy = -abs(y1 - cy), sy = cy < y1 ? 1 : -1;
-                    int32_t err = dx + dy, e2;
-                    while (1) {
-                        plot_thick_pixel(cx, cy);
-                        if (cx == x1 && cy == y1) break;
-                        if (abs(cx - x1) <= 1 && abs(cy - y1) <= 1) { plot_thick_pixel(x1, y1); break; }
-                        e2 = 2 * err;
-                        if (e2 >= dy) { err += dy; cx += sx; }
-                        if (e2 <= dx) { err += dx; cy += sy; }
-                    }
-                }
-
-                void draw_partial_ellipse_thick_points(int32_t px, int32_t py) {
-                    if (in_sector(px, py))   plot_thick_pixel(x0 + px, y0 + py);
-                    if (in_sector(-px, py))  plot_thick_pixel(x0 - px, y0 + py);
-                    if (in_sector(px, -py))  plot_thick_pixel(x0 + px, y0 - py);
-                    if (in_sector(-px, -py)) plot_thick_pixel(x0 - px, y0 - py);
-                }
 
                 int32_t x = 0, y = ry;
                 long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
                 long p = ry2 - (rx2 * ry) + (0.25 * rx2);
 
                 while ((2 * ry2 * x) <= (2 * rx2 * y)) {
-                    draw_partial_ellipse_thick_points(x, y);
+                    pb_draw_partial_ellipse_points(pb_plot_thick_pixel, x0, y0, x, y, rx, ry, start_angle, end_angle, 0);
                     if (p < 0) { x++; p += 2 * ry2 * x + ry2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + ry2; }
                 }
                 p = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
                 while (y >= 0) {
-                    draw_partial_ellipse_thick_points(x, y);
+                    pb_draw_partial_ellipse_points(pb_plot_thick_pixel, x0, y0, x, y, rx, ry, start_angle, end_angle, 0);
                     if (p > 0) { y--; p -= 2 * rx2 * y + rx2; }
                     else { x++; y--; p += 2 * ry2 * x - 2 * rx2 * y + rx2; }
                 }
@@ -28769,8 +28697,8 @@ void preview_draw_thick_shape(int32_t type, int32_t filled, int32_t x_rdest, int
                 int32_t ex2 = (int32_t)(rx * cos(r2) + (cos(r2) >= 0 ? 0.5 : -0.5));
                 int32_t ey2 = (int32_t)(ry * sin(r2) + (sin(r2) >= 0 ? 0.5 : -0.5));
 
-                draw_thick_pie_line(x0 + ex1, y0 - ey1);
-                draw_thick_pie_line(x0 + ex2, y0 - ey2);
+                pb_draw_pie_line(pb_plot_thick_pixel, x0, y0, x0 + ex1, y0 - ey1);
+                pb_draw_pie_line(pb_plot_thick_pixel, x0, y0, x0 + ex2, y0 - ey2);
             }
             break;
         }
@@ -49997,6 +49925,7 @@ static void main_gui_activate(GtkApplication* app, gpointer user_data)
      // because on Windows and Linux is forces the GNOME-style header to be
      // used so it kind of has the opposite effect.
 #ifdef __APPLE__
+     GtkWidget *header_bar;
      header_bar = gtk_header_bar_new ();
      gtk_header_bar_set_use_native_controls (GTK_HEADER_BAR (header_bar), TRUE);
      gtk_window_set_titlebar (GTK_WINDOW (Win_main), header_bar);

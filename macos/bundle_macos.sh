@@ -24,14 +24,13 @@ MEDIA_LIBS=$(pkg-config --libs gtk4 libpng libjpeg fontconfig)
 ZMQ_CFLAGS=$(pkg-config --cflags libzmq libsodium)
 ZMQ_LIBS=$(pkg-config --libs libzmq libsodium)
 
-GNU_GCC=$(ls "$(brew --prefix)/bin/gcc-"[0-9]* | head -n 1)
 
-"$GNU_GCC" -O2 $GTK_CFLAGS $ZMQ_CFLAGS -Wall -Wno-format-truncation \
+cc -O2 $GTK_CFLAGS $ZMQ_CFLAGS -Wall -Wno-format-truncation \
    resources.c pardclient.c -o "$MACOS_BIN/pardclient" \
    $GTK_LIBS $ZMQ_LIBS -lm -lpng -ljpeg -lfontconfig \
    -framework AudioToolbox -framework CoreFoundation
 
-"$GNU_GCC" -O2 -w $GTK_CFLAGS $ZMQ_CFLAGS \
+cc -O2 -w $GTK_CFLAGS $ZMQ_CFLAGS \
    resources.c pcs-cli.c -o "$MACOS_BIN/pcs-cli" \
    $GTK_LIBS $ZMQ_LIBS -lm -lpng -ljpeg -lfontconfig \
    -framework AudioToolbox -framework CoreFoundation
