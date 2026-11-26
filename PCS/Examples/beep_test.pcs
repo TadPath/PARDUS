@@ -1,0 +1,52 @@
+Pardus pcs 1
+
+verbosity 1
+
+################################
+# beep test                    #
+################################
+
+def_func main
+
+ def_var float f1 50
+ def_var int idx 100
+ def_var float dsecs 0.1
+
+ sleep 0.5 # Give MS Windows a chance to load whatever it needs to load. I found
+           # that without this Windows tends to rush or miss the first note(s).
+
+ # Test individual notes:
+ set_condexp idx < 500
+ loop_while Condexp
+   beep idx f1
+   sleep dsecs
+   add_var idx 50
+   add_var f1 100
+   add_var dsecs 0.05
+   set_condexp idx < 500
+ endloop
+
+ sleep 1
+
+ # Test polyphony with a C-Major chord (C4 - E4 - G4 - C5) - quiet 20%:
+ beep 1200 261.63 20
+ beep 1200 329.63 20
+ beep 1200 392.00 20
+ beep 1200 523.25 20
+
+ sleep 2
+
+ # Test polyphony with a C-Major chord (C4 - E4 - G4 - C5) - full volume 20%:
+ beep 1200 261.63 100
+ beep 1200 329.63 100
+ beep 1200 392.00 100
+ beep 1200 523.25 100
+
+
+
+ # Hold open briefly so the chord finishes ringing before script exit
+ sleep 1.3
+
+return
+
+exit

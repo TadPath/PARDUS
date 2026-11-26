@@ -1,0 +1,6482 @@
+The PCS Programming Language
+
+by Dr. Paul J. Tadrous
+
+27.02.2020 - 25.11.2026
+
+# Introduction
+
+PARDUS is the **P**rogrammable **A**ffordable **R**emote-controlled **D**rive **U**tility **S**tandard – an open source system of rules, communications protocols and hardware specifications that may be implemented to allow certain types of robotic systems with sensor feedback to be controlled, locally or over a network connection. It was designed with robotic microscopy in mind as a primary use-case but it can be used for other types of robot as well with an emphasis on laboratory automation.
+
+***This document is the reference manual for the PARDUS Command Script (PCS) programming language.*** PCS provides the means to program robotic systems that use the PARDUS hardware and software standards.
+
+In speech, PCS is pronounced either as the distinct letters 'P-C-S' or as the word 'Peace'.
+
+The source code for programs written in PCS called ‘scripts’ and they are written in plain text files which are conventionally given the extension .pcs. This extension is not a strict requirement of the language specification but programs that use pcs files (such as pardclient, discussed below) may have file load filters that only look for, or allow the drag-drop loading of, files with a .pcs extension. The use of the .pcs extension here is context specific and should not be confused with other kinds of '.pcs' files such as those used for embroidery machines or video games.
+
+PCS is a compiled language. The source code is first compiled into a binary executable form by the cross-platform pardclient program before it runs the program. This allows programs to run at high speed compared to an interpreted language. These compiled executable versions of PCS source code programs can be saved to disc as ***D***irect ***O***bject ***V***alue ***E***xecutable files which are given the extension .dove to differentiate them from the .pcs source code files. The pardclient program can read .dove files and execute them directly without having to check and compile them first (since dove programs, as they are called, have already been checked and compiled prior to saving) and so it is quicker to load and run dove programs than the native .pcs source files they were originally compiled from. Also, dove files are complete static builds meaning any library or header file information in baked into them so you can run a .dove file without having to worry about whether you have the required header files or library files available or on your path, making .dove files the ultimate portable PCS format. Unlike the platform-specific executables of Windows, Linux or macOS, PCS dove programs are also cross-platform compatible because they are run by the pardclient and not directly by the OS. There is another type of compiled file - the .pcl file for libraries - but these will be discussed in a dedicated section of this manual.
+
+Tasks for the robot and its sensors may be written directly into a .pcs text file by a human programmer. However, it is envisioned that intermediate computer programs might also create properly formatted .pcs files to facilitate more complex tasks by presenting the user with an intuitive graphical interface or a higher level scripting language. This includes, but is not limited to, the use of AI coding agents. At the time of writing the only such non-AI ‘PCS-helper’ tools that exist are those incorporated into the pardclient program and they translate GUI actions into PCS commands to provide a partial GUI interface to control a PARDUS robot. However the language was designed to have several 'AI-friendly' features to enable AI coding agents to efficiently learn and code in PCS. See the dedicated chapter in this manual for a summary of those features (PCS and AI Coding Agents).
+
+## The PARDUS system of programs
+
+PCS is put into effect by programs following the PARDUS standards such as my current implementation which is composed of the following programs:
+
+* pardclient
+* pcs-cli
+* pardaemon
+* pardserver
+* parduino
+* pardcap
+
+### pardclient
+
+This is a cross-platform GTK4 C program it can be run on can be run on Linux, MS Windows and macOS. pardclient is the main graphical user interface for PARDUS robotics control. pardclient is the program that reads in PCS scripts, checks and parses the code, puts the code into effect (either locally for local commands or via communication with the other programs) and displays output back to the user. Currently pardclient, has no script editing facility so PCS programmers must compose and edit their scripts in a text editor or IDE like Geany, Kate, NotePad, etc.
+
+In pardclient, prior to compilation and running, a PCS source file script undergoes pre-processing by a preprocessor function and checking for syntax and value range errors by a script checker function. The script checker cannot detect all possible errors that may arise during run-time. For example the values in variables used as arguments for commands may go out of the legal range of those arguments as a consequence of operations that occur during run time. Also, hardware errors may cause an otherwise 'syntax-correct' script to fail with an error at run-time. So the script checker function of the interpreter is only a first line of defence.
+
+### pcs-cli
+
+This is a headless program to process and run PCS files, .dove files and library files from the command line. In this manual when a node refers to 'CLI mode' it means running a PCS program via pcs-cli as opposed to running it in the pardclient GUI. You should be able to use this even if no GUI desktop is loaded or active on your system.
+
+This program is also cross-platform but has no GUI - it is a command line interface (CLI) only. This can be used to run most pcs scripts and dove programs direct from the command line. It also can use the standard terminal emulator of your PC (like lxterminal on Linux or the Windows cmd.exe or PowerShell or the terminal on macOS) as a UTF-8 graphics-enabled display so that most of the print and UNICODE graphics facilities of PCS can still be run even without the pardclient GUI script terminal. Some PCS features are not available when PCS programs are run in this CLI mode such as the print_size command that varies font size - this has no effect when run in CLI mode with pcs-cli. However, PCS commands that use the VGA display area of pardclient can still be used in CLI mode if you set a save path for the preview image with cli_path command. This will allow the preview image to be saved to disc as a p6 ppm image whenever the preview image gets updated and so you can use an external image view to see the current preview image even when running in CLI mode. An image viewer that automatically updates itself whenever the image on disc updates will give you a live view of the preview just as if you were using the pardclient GUI. An example of such a viewer is feh or fim on Linux and similar programs on MS Windows or macOS - see the table below:
+
+|  |  |  |  |  |
+| --- | --- | --- | --- | --- |
+| **OS** | **Best Lightweight Viewer** | **Supports .ppm** | **Auto-Reloads on Atomic Swap** | **Launch Command** |
+| **Linux** | feh (or imv) | Yes | Yes (--reload 0.02 / inotify) | feh --reload 0.02 --auto-zoom file.ppm |
+| **Windows** | IrfanView / BandiView | Yes | Yes (file-change watch) | i_view64.exe file.ppm |
+| **macOS** | Preview.app (or imv) | Yes | Yes (built-in / kqueue) | open -a Preview file.ppm |
+
+External image view tools that can be used to see live preview updates from PCS programs run in CLI mode with pcs-cli.
+
+pcs-cli can be used as the vehicle for executing PCS programs via the double-click route but you will need to associate .pcs and/or .dove programs with pcs-cli on your OS desktop for this to work. This may be done automatically with some installers for PARDUS.
+
+pcs-cli allows login to the pardserver via the command line, it also allows for both compilation of PCS source files into .dove files and .pcl compiled libraries as well as de-compilation of compiled files back into PCS source code (pardclient also has these abilities). However, pcs-cli also has some analysis tools to study PCS files that the pardclient GUI program does not have. See the pcs-cli user manual for more information.
+
+### pardaemon
+
+This is a cross-platform background process execution program. In the past this was a separate program written specifically for PARDUS. However, in the modern PARDUS implementation this functionality is provided by the GLib 'g_spawn_' set of functions and is therefore built into the pardclient software and so uses the OS' native background process execution systems.
+
+### pardserver
+
+This is a Linux program that is the 'behind the scenes' workhorse and coordinator of the PARDUS robotics control system. It does not need to be run on the same computer as pardclient. A user will use pardclient to log in to the pardserver. Only after successful connection to a pardserver will the full functionality of PCS be available. However you can run PCS scripts that use only locally implemented functions on the client even if you are not logged in to a pardserver. The pardserver connects to the robotics control breakout board and also (optionally) to one or more pardcap servers. The pardserver acts as a 'go between' linking the user at their pardclient station with the robotic actuators and sensors (via the breakout board) and any cameras attached to the system (via the pardcap server(s)).
+
+### parduino
+
+This is the software running on the robotics actuator and sensor controlling breakout board which, in the current implementation of PARDUS, is an Arduino Mega 2560 hence the name of the program (the sketch is called parduino.ino). The breakout board communicates with the pardserver via USB serial comms.
+
+### pardcap
+
+This is a Linux GTK4 C program otherwise known as PARD capture. Each pardcap instance communicates with an imaging device via v4l2 protocols. While pardcap may be run in full GUI stand alone mode it may also be run in a completely headless server mode and that is the mode we are considering in this document. More than one instance of pardcap can run on the same Linux computer. However, pardcap communicates with the pardserver via TCP/IP where pardcap takes on the role of server and pardserver is client. Thus the pardserver may connect to may pardcap servers such as to provide multi-camera support to the pardclient. The various pardcap servers may be running on physically separate Linux PCs to the one the pardserver is running on.
+
+## Why PARDUS and not some other software?
+
+Some have asked me why did I write the PARDUS system with a whole new programming language (PCS) instead of simply using pre-existing tools and languages to control my robotic microscope, like G-code, either on its own or via software like GRBL, Linux CNC or Klipper.
+
+The answer is that G-code suffers from the limitations of being a mostly ‘one-way’ language with very limited facilities for interactivity and feedback control. G-code is OK to create a pre-programmed path for a tool to follow then ‘send and forget’ those instructions to the robot (usually a CNC machine or 3D printer) to execute.
+
+However, robotic microscopy involves the possibility or interactive control, video feedback and video and other sensor cybernetic feedback to modify the motion of the stage and other actuators in real time. It is also useful to have customised graphical and text-based feedback and the ability to run custom external processes in response to feedback which, in turn, may influence the current motion path of the microscope and other actuators of the robot. G-code simply does not have those abilities. For example G-code can’t run one or more camera systems, process images from those cameras and alter the stage motion path according to analysis results of those images from those cameras. PCS can.
+
+In addition, ***PCS is a Turing complete, fully fledged programming language*** while G-code is not - it is fundamentally just a command language. With PCS you may implement complex computational algorithms closely linked to the robot's actions and sensors in cybernetic feedback loops (e.g. Kalman filters, machine vision and so forth), either entirely coded in PCS or with PCS enlisting the processing power of the host PC by means of its ability to spawn external processes.
+
+At the other extreme are general robotics operating systems like ROS and ROS2. While these can do all those things I just described, they are very general-purpose systems which go way beyond the needs of many robotic microscopy experiments. They *can* be used for microscopy but PCS was *designed* for microscopy and so is more targetted and lean in that respect.
+
+Also, PCS can be used as a general programming language to perform general programming tasks - not necessarily related to microscopy or robotics at all.
+
+Finally some readers familiar with research microscopy might be wondering about the possible use of the MicroManager open source software. MicroManager, however, is a front end interface. It has no intrinsic driver control ability for microscopes. It might be possible to make a MicroManager ‘device adapter’ module that interfaces with PARDUS robotic systems, but even if such an adapter were to be written, it would still be the PCS level driver that actually controls the microscope stage, cameras, etc.
+
+## Sensors in the PARDUS system
+
+PARDUS allows for limit switch feedback and multi-camera feedback. PARDUS can also read DIAG pin and register information from the TMC2209 stepper drivers and it allows for analogue read of the 4th wire (the angular feedback position voltage) of 4-wire servos. PCS also allows for any free analogue or digital pin on the breakout board (e.g. Arduino) to be accessed as a stand-alone 'sensor actuator' for your custom sensing needs.
+
+# General specifications
+
+A script written in PCS is a plain text file (ASCII or UTF-8 encoded).
+
+Each script line must be either a properly formatted coding line or a permitted non-coding line.
+
+Permitted non-coding lines are of one of two types:
+
+1. A blank line containing only white-space characters (this include a line containing only solitary newline character). These will be skipped by the compiler and run-time engine.
+2. A line beginning with a # (hash) that is not immediately followed by a preprocessor directive. These lines may be used for comments and may contain arbitrary text after the # (with the exception of preprocessor directives). These lines will also be skipped by the compiler and run-time engine.
+
+## Comments
+
+Comments are preceded by the hash character (#). Any text after a hash on any line will be ignored by the pre-processor, compiler and run-time engine unless the characters immediately after the # form a recognised preprocessor directive.
+
+A comment hash may appear as the first non-white space character on a line (in which case the whole line will be skipped) or it may appear after a command on the same line as the command (in which case the pre-processor stops reading that line from the hash onwards). This implies that you cannot have any interpretable code *after* a hash symbol until a newline character is encountered (i.e. comments can occur *after* a command but not *within* or *before* a command on the same line).
+
+The comment-defining hash may be inside a word - it does not have to be at the beginning of a word. So if you attempt a coding line like this:
+
+def_var string myvar#iable _
+
+The pre-processor will discard '#iable _' and cause a syntax check error because the compiler and run-time engine will only see this:
+
+def_var string myvar
+
+and it will not see the obligatory initialisation argument (intended to be '_' in this case)
+
+There is currently no facility to comment off a whole block of code with opening and closing comment block symbols (equivalent to the /* and */ of the C programming language).
+
+## Coding lines
+
+Items on a coding line are separated by white space that is composed of one or more space and/or tab characters. White space preceding any coding text on a line is ignored. Comments after any coding text on a line are ignored. The total number of coding text words on a line is MAX_ARGC which is currently set at 31. This total include the prime command word (so you may have the command followed but up to 30 parameter argument words).
+
+PCS code is case sensitive.
+
+The very first coding line in a PCS file must have three coding text items on it (and no more) in the following order:
+
+1. The word Pardus spelt with an initial capital P and the remainder lower case
+2. The letters pcs
+3. The version number as a single integer.
+
+So, for version 1 pcs files the first coding line must read:
+
+Pardus pcs 1
+
+Each coding line after the first must begin with a command or preprocessor directive (optionally preceded by white space).
+
+The command may then be followed by a number of additional coding symbols separated by white space (the term 'coding symbol' refers to any interpretable non-white space word, number or character). The exact syntax and number of any additional coding symbols will be determined by the initial command on that line (this is sometimes called the ***prime command***) according to the defined permitted usage of that command and the syntax rules of the PCS programming language, all of which will be described in detail below.
+
+Only one prime command per line is permitted. One or more secondary commands may be permitted for certain prime commands in which case those secondary commands must be included in the correct sequence on the same line as the prime command. Details will be given of such cases in the detailed description of the prime commands later in this manual. For example, this is legal:
+
+```pcs
+set_condexp idx > 20    # Correct - single conditional expression command
+loop_while Condexp      # Correct - single loop_while evaluation command
+goto mylabel if Condexp # Correct - goto permits a secondary 'if' command
+```
+
+but this is illegal:
+
+```pcs
+loop_while idx > 20      # Wrong! Attempt to combine 2 commands in one line.
+goto mylabel if idx > 20 # Wrong! Attempt to combine 3 commands in one line
+                         # when only 2 are permitted.
+```
+
+(Note that Condexp is a 'system variable' - these will be discussed in more detail later).
+
+The prime command exit signifies the end of the script. Any additional code or text in any subsequent lines after the first use of this prime command will be ignored by the compiler and run-time engine as well as the preprocessor. Thus you may add any free text annotation to your scripts below this line without concern for PCS-compatible rules or formatting. Use the area below exit for persistent memory, scratchpad logic, or storing JSON metadata that doesn't need to be parsed by the PCS compiler and run-time engine.
+
+Line numbers are not used for programming in a PCS script but the compiler and run-time engine will keep track of which line number each script interpretable line is on so errors can be reported with reference to the source line. Goto targets are defined by line labels, which the user sets (as detailed in the definitions of command usage below), and not by line numbers.
+
+The general rules for white space in a script are these:
+
+* The amount of white space that precedes the first non-white-space character on a line is irrelevant (i.e. indentation position of the command and alignment are irrelevant).
+* The amount of white space that follows a command is also irrelevant as long as it does not overflow the read buffer before a newline character is encountered (at the time of writing the line buffer is MAX_CMDLEN = 2048 characters).
+* The amount of white space between arguments is also irrelevant. For example if you separate command arguments by 5 spaces or 1 space it makes not difference. This is particularly relevant to specifying words to add to a string variable - you can't just add more spaces between words by simply separating those words by more spaces in the command. See specific string handling commands for details.
+
+### Argument Length and Unicode Limits
+
+The compiler and run-time engine enforces a limit on the maximum size of any single argument. This is governed by the MAX_ARGLEN value in the source code, which is currently 64 bytes.
+
+Certain commands (such as #include or preview_file) that handle file names or directory paths allow for longer arguments up to SCNFNAME_MAX bytes. The value of SCNFNAME_MAX is determined by the Operating System's maximum path length at the time of compilation of the pardclient program. On MS Windows, this is typically 259 bytes. On Linux/Unix systems, this is typically 4095 bytes. See specific commands for when these exceptional limits apply.
+
+**Note**: When trying to keep within the MAX_ARGLEN limit, it is important to distinguish between bytes and characters. While standard ASCII characters are 1 byte each, UTF-8 Unicode characters (like emojis or box-drawing symbols) typically consume 3 to 4 bytes each. Example: The "═" symbol uses 3 bytes. A single 64-byte argument can contain a maximum of 21 of these characters before truncation.
+
+**Caution**: Because the script source parsing functions truncates at the byte level, exceeding the limit with Unicode characters will result in a malformed UTF-8 sequence. This may cause the string to fail to render or appear as "garbage" text in the console.
+
+**Note**: Just because an argument is generally limited to MAX_ARGLEN bytes, does not mean that every argument can be that long. For example some arguments that specify the name of an actuator (using def_actuator) or the custom name of a limit switch (act_set) may be limited to fewer characters (31 printable bytes in the two examples mentioned) so be guided by the details of the command descriptions in this manual.
+
+**Note**: Because indexed arrays must not contain white space, they are treated as a single argument. This allows for powerful nested dereferencing, such as:
+
+MyArray[MyIndexList[MyIndex]]
+
+With the current 64-byte limit, the entire construction (Base Name + Brackets + Nested Indexes) must not exceed 64 bytes. If the combined length of the names and brackets exceeds this limit, the compiler and run-time engine will truncate the string. Example: If you try to write this:
+
+Very_Long_Array_Variable_Name[Long_Inner_Array_Name[Long_Index_Variable]]
+
+it will be trunctated to this:
+
+Very_Long_Array_Variable_Name[Long_Inner_Array_Name[Long_Index_V
+
+and this will result in a Syntax Error because the closing brackets were lost during the read.
+
+**Note**: At each stage, the run-time engine will attempt to perform the script action. If a fatal error is encountered (such as a syntax error caused by truncation), the run-time engine will terminate execution and print the error type and source line number to aid debugging.
+
+# Data types, the ‘varval’ and casting
+
+There are 3 data types in PCS:
+
+1. integer number – referred to as **int**
+2. floating point number – referred to as **float**
+3. general charter string – referred to as **string**
+
+## int
+
+This is a 32 bit signed integer. There is no unsigned integer data type for user-created variables in PCS but some *system variables* which the PCS programmer has read-only access to (see later for the definition of a 'system variable') may be of unsigned int type.
+
+When using integer constants in PCS code these are parsed with the C library function strtol and you may use binary, octal, hexadecimal and decimal forms. A word in a script, or the contents of a string variable that is to be cast to an integer is rejected as an integer and treated as a general string if it is out of range of an int32_t. Thus you may use integer notations in the following inclusive ranges and they will be interpreted as having the integer numerical value they depict:
+
+|  |  |  |
+| --- | --- | --- |
+|  | Maximum Negative | Maximum Positive |
+| Binary | -0b10000000000000000000000000000000 | 0b01111111111111111111111111111111 |
+| Octal | -020000000000 | 017777777777 |
+| Hexadecimal | -0x80000000 | 0x7FFFFFFF |
+| Decimal | -2147483648 | 2147483647 |
+
+There is one command (only) that will also accept integers in the U+ form of the UTF Unicode system and that is cat_char (which see).
+
+Any white space before or after a number is ignored but if a number is followed by any non-white space character (even if there is intervening white space after the number and before the non-white space character) then that string is rejected as a number and treated as a general string.
+
+## float
+
+This is a double-precision floating-point value (a C double in the source code of pardclient): about 15 to 17 significant decimal digits, and magnitudes from about 2.2e-308 to 1.8e308 (2.2 × 10 to the power −308 to 1.8 × 10 to the power 308).
+
+PCS uses the C library function strtod to interpret constants present in script lines to assess if they can be legally treated as float numbers. A word in a script, or the contents of a string variable that is to be cast to a number, is a float when it has the form of a decimal floating-point constant, the same form that C, Python and most other programming languages accept:
+
+* an optional sign, + or - (the ordinary hyphen-minus);
+* digits, with or without a decimal point, which must be a full stop (.), never a comma; at least one digit must be present, before or after the point;
+* optionally, an exponent: the letter e or E, an optional sign, and at least one digit.
+
+Any white space before or after a number is ignored but if a number is followed by any non-white space character (even if there is intervening white space after the number and before the non-white space character) then that string is rejected as a number and treated as a general string.
+
+**Note**: The decimal point is a full stop on every computer, whatever language the computer is set to.
+
+**Note**: because a word of the form above is a number, it cannot be the name of a variable: def_var refuses a name such as 1e3, 2E10 or 007, exactly as it refuses 42. (Words such as 1.2. or 5e+ are not numbers and so are, strictly, permitted names; it is good practice to begin every variable name with a letter.)
+
+## string
+
+This is a general character string.
+
+Strings may include UTF-8 Unicode characters.
+
+Strings are not defined between delimiters of any kind (like single or double quotes). If you use delimiters in specifying a string then the delimiter characters will literally be incorporated into the string. There is no concept of an 'escape character' in PCS.
+
+For example, in the following code, the variable msg will end up containing 4 characters like this: ["][3]["][0] and not simply [3][0]:
+
+set_str msg "3"
+
+This is important to understand, not just for printing text but because the autocasting algorithm will fail to cast ["][3]["][0] to an int when such a cast is intended and required by the script writer because the included quote marks are considered non-numerical characters. However, the autocasting algorithm will succeed in casting [3][0] to an integer.
+
+When setting or defining a string variable with def_var and set_var you can only use one PCS argument for the value to set into the string variable. So, when using a literal string constant as RHS-value[[1]](#footnote-2) this is limited to a single command line argument of length MAX_ARGLEN (currently 64 printable bytes) with no white spaces. However, you can build up bigger strings with the add_var command like this:
+
+add_var mystring rhsstring
+
+To add a space the system variable Space is available. Also, to add a hash symbol '#' (which cannot be entered as an argument in a command because the script text parser treats '#' as the beginning of a comment and so will not read it in as an argument) the system variable Hash is available. So if you wanted a space between the existing contents of mystring and rhsstring you can do it like this:
+
+```pcs
+add_var mystring Space
+add_var mystring rhsstring
+```
+
+and if you wanted to have a hash between them you would do it like this:
+
+```pcs
+add_var mystring Hash
+ add_var mystring rhsstring
+```
+
+This can be a cumbersome way of making larger multi-word strings so the set_str and cat_str commands are available for that (which see). However those commands do not allow any casting or variable evaluation into strings so a combination of all these commands can be useful for making complex strings.
+
+Permitted operations with strings are set_var, add_var, set_str and cat_str and valid comparisons between strings are == and !=. Other comparisons and operations are not permitted with string varvals when both the LHS-value and RHS-value are a string variable.
+
+String variables can be used as an argent to the goto command in lieu of a string constant label so the control of flow can be more dynamic (dependent on how a string variable contents are manipulated) than in other programming languages that only use constant unchangeable line numbers or string constants for goto labels. This can also make analysing the control of flow of the code more difficult in advance of execution.
+
+See below for automatic casting rules and strings. More detail about string handling will be supplied in the sections on the string handling commands and system variables.
+
+## varval
+
+The term 'varval' is used in this manual when describing command arguments to mean an argument that may be either a ***var***iable or a constant ***val***ue. A varval is not a data type.
+
+For example the command print_value has the following structure:
+
+print_value <varval> [format_options]
+
+This means if you want to print the character '3', for example, and you have defined a variable called myint that currently holds the value 3, you can either supply the name myint or a literal 3 as the <varval> argument and it will have the same effect.
+
+The use of <varval> for an argument distinguishes it from arguments that require exclusively either a constant value or a variable. For example there are some commands where a literal value will not be allowed, such as those commands that need a receptacle to place some result value in - a value cannot be placed in a literal constant value but only in a writeable variable of the a compatible data type. That receptacle argument therefore cannot be described as a 'varval'.
+
+## The binary choice varval
+
+You will see multiple occasions where a command argument is described as '***a binary choice varval***'. This means it can be either a variable or a constant value, of any data type, that can be evaluated to a zero or non-zero value and so convey a binary state back to the command according to the following rules.
+
+If it is a numerical data type (float or int) then its value (whether a constant or contained in a variable) will be taken literally and the command will receive a 1 (conveying the logical meaning of 'ON' or 'TRUE') or a 0 (conveying the logical meaning of 'OFF' or 'FALSE')
+
+If it is a string then its value (whether a string constant or contained in a string variable) will be evaluated as follows:
+
+If the string value is a character representation of a numerical value, that numerical value will be extracted (as if by casting to int or float) and the rules for a numerical data type described above will be followed.
+
+If the string value is not a legitimate numerical representation then it dealt with as follows:
+
+if the string is a complete match for the word "TRUE" or the word "ON' (case sensitive and without the quotes) then the command will receive a 1 (conveying the logical meaning of 'ON' or 'TRUE') .
+
+If the string is a complete match for the word "FALSE" or the word "OFF" (case sensitive and without the quotes) then the command will receive a 0 (conveying the logical meaning of 'OFF' or 'FALSE').
+
+If the string contains anything else, this will result in either a syntax error (during script checking) or a run-time error.
+
+## casting
+
+In PCS, casting is done (or at least attempted) automatically by the run-time engine as appropriate to the context. While there is no specific 'casting syntax' to allow the user to directly cast a variable or value into a particular type, the overall effect of a user-deliberate cast can be achieved in several steps as demonstrated in the code snippets shown later in this section.
+
+As an example of PCS auto-casting, in many cases that require a floating point number as an argument, if you supply a string variable that contains a string which is a properly formatted floating point number, then the value of that number will automatically be used by the run-time engine (akin to use of the C function atof). Likewise if the result of some command is an integer, the variable argument of that command that accepts the result will be set to that integer value even if that variable is of float type. An error will only be raised if casting is not possible. For example, use of a string variable as an argument that needs to be a numerical value but the contents of the string is not a properly formatted number. Some general rules follow. For more specifics about how casting works see the dedicated sections on the commands act_get and math_var.
+
+### Rules for integer and float Casting:
+
+For all commands that require a varval of type float you may also use a varval of type int and the integer value will automatically be converted to a float value.
+
+For some (but not all) command arguments that expect integer values, if you supply a floating point value this will be cast to an integer using the 0.5 round-off rule i.e. int = (int)(float+0.5) if float is >0.0 and int = (int)(float-0.5) if float is <0.0. If the floating point number exceeds the range of an integer then an error will result and the command will fail. This automatic conversion is done in all of the variable manipulation commands (i.e. commands ending in _var).
+
+For command arguments that expect a floating point number, if you supply an integer this will be directly cast as a floating point number so if you supply 34 it will be treated as 34.0. This should never result in an error (obviously an error may still occur if you supply an illegal value such as 0 for a denominator in a divide-by operation).
+
+For variable manipulations (e.g. addition, subtraction, multiplication and division) the value supplied as the value to operate with will be converted to the same type as the variable to be operated upon. So if you try to multiply an integer varval by a floating point varval the floating point value will be rounded to an integer to do the manipulation (the actual floating point varval will not itself be altered but the value it supplies for this specific purpose will be converted prior to being used for that purpose). As a specific example, if you have an integer variable with value 38000 and you want to multiply it by 1.25 to get the result 47500, if you try this directly you will just get 38000 because the 1.25 will be rounded to the nearest integer i.e. 1 :
+
+```pcs
+def_var int ivar1 38000
+    mul_var ivar1 1.25
+    print_value ivar1   # This will show a result of 38000
+```
+
+The correct way to do this is via casting using an intermediate variable of float type:
+
+```pcs
+def_var int ivar1 38000
+    def_var float fvar1 ivar1   # If fvar1 was previously defined
+                                # then just use 'set_var fvar1
+                                # ivar1' to do the cast
+    mul_var fvar1 1.25
+    set_var ivar1 fvar1
+    print_value ivar1   # This will show a result of  47500
+```
+
+### *Rules for string casting*:
+
+When the interpreter evaluates an argument (using its internal var_evalvv function), any argument that is not the name of an already defined user variable or a standard system variable will be treated as a string constant value (not a string variable).
+
+In general, operations that require a numerical value, if provided with a string, will attempt to cast that string into the required numerical value.
+
+The permitted operations that have a string varval as the LHS-value of that operation can use other (non-string) data type values for the RHS-value and they will be cast into a string for the sole purpose of that operation (without affecting their intrinsic data type if they are variables).
+
+For operations and comparisons where the LHS-value is not a string but the RHS-value is, the RHS-value string will be attempted to be cast to a compatible numerical value. For example if the string variable holds a valid float number like "5.431"[[2]](#footnote-3) then this will be cast to a float (or rounded to an int where and int value is needed). If the string variable cannot be cast because it does not represent a valid number, for example "micrometers", then an error will be thrown.
+
+When you set a string variable with an int or a float then the string variable will take the ASCII / UTF-8 form of that numerical value. For example:
+
+```pcs
+def_var float f1 5.431
+ def_var string str1 f1
+```
+
+At the end of the above commands the variable str1 will contain "5.431" (without the quotes).
+
+In the source code of the interpreter this 'casting a number to a string' is done using sprintf like this: sprintf(tmpstr,"%g",f1). This cast is automatic and imperative whenever a numerical value is required by the context - you don't get to chose whether it happens or not. Such casting happens in the opposite direction to that described above so:
+
+```pcs
+def_var string str1 5.431
+ def_var float f1 str1
+```
+
+will make f1 have the actual numerical value of 5.431 because the string would have been converted to an actual float (double) in the interpreter program using C code like sscanf(str1,"%lg",&f1). Strings are first checked by an internal function to see if they represent a valid number. This means that a string that is not, in its entirety, a number is not cast; 5,431 and 5.4abc are errors.
+
+Because a non-string variable can be used as an RHS-value in the set_var and add_var commands that set or add to a string variable, this gives the user way of incorporating numerical values into strings similar to how the C language function itoa and ftoa work or a rudimentary form of the C language printf formatting specifiers %d %g and %f but without their rich set of formatting options. For example this sequence of commands:
+
+```pcs
+add_var mystring Space
+add_var mystring =
+add_var mystring Space
+add_var mystring myint
+```
+
+can be used to construct a string for printing. For example if mystring was initially "The_mean_value" before reaching this sequence of commands and if myint had a value of 356 then the result of the above 4 add_var operations would be to make mystring have a value of: "The_mean_value = 356" (without the quotes).
+
+In situations where the value in a string variable cannot be cast to a number it will default to type string (that is it will be treated as a literal string). So if the command that uses the variable requires a number this will cause an error but it the command doesn't care (like print_value) then it will simply use the literal string.
+
+Note that the print_value command will print the native value of a variable. So if it is provided with a string variable, it will print the string text as is stored in that variable even if that string text represents a valid numerical value and will not attempt to cast it (so a string variable storing "1.200" will print as 1.200 and not 1.2). On the other hand, if print_value is passed a literal constant that is of numerical type like "1.200" that constant will be interpreted as a numerical value and so print as 1.2 and not 1.200. This is in keeping with the general programming rule that when you type a hard-coded number into source code, you intend for it to be a number not a string. This point of distinction and explanation only arises in PCS because PCS does not use delimiters to define or declare something as a string.
+
+# Actuators and actuator types
+
+Since PARDUS is a robotics control system, the PCS programming language has specific features to allow for defining various types of physical actuators like motors, pumps, and so on. Different actuators have different abilities. Some might only be able to be switched on or off with no intermediate states. Others, like a stepper motor, may have multiple discrete states like 'enabled', 'disabled', 'direction', 'step' and so on. Other actuators may have multiple states like a lamp or heating element or fan that may not only be 'on' or 'off' but may have a graduated varying property like 'intensity'. Other actuators handle the emission or reception of information to or from the outside world.
+
+Because different actuators have different abilities, the PCS programming language abstracts this to the programmer by means of the concept of an ***actuator type***. This is the physical world analogy to the 'data type' of a variable or constant (which, to reflect the analogy, may be seen as an 'information actuator' in this general scheme).
+
+The actuator types are described below.
+
+The following are 'actuator type' constants as defined in the interpreter source code:
+
+```c
+#define ACT_STEPPER  1
+#define ACT_BINARY   2
+#define ACT_MLEVEL   3
+#define ACT_SERVO    4
+#define ACT_SENSOR   5
+```
+
+In a PCS script the user must refer to them by the integer number but these #defines are present in the PCS header file 'stdpard.pch' so, if you include that file in your script, you may refer to them by these names.
+
+Each of the above specifies a category of actuator and in each category there may be defined none, one or more specific actuators of that type. Thus each such specific actuator instance will be identified by an integer which is the actuator 'ID'.
+
+Each type of actuator type will have its own list of properties that a PCS script writer may access. Some of these may be read-only and others read-write for the script writer. These properties will usually be realised in the interpreter source code as members of a structure.
+
+Here are what the actuator type categories mean:
+
+## Stepper
+
+A stepper motor (open or closed loop but not servo-controlled). The first 3 steppers defined in a script will, by definition / convention, be the stage XYZ motors and will have the following ID numbers:
+
+0 = the X stepper motor
+
+1 = the Y stepper motor
+
+2 = the Z stepper motor
+
+In addition, two more stepper ID numbers will be reserved by the interpreter for specific combinations of stage steppers. These ID number will not refer to any additional individual stepper motors. They are:
+
+254 = X and Y stepper motors together
+
+255 = All three stepper motors together
+
+Using 254 and 255 for the special group IDs of the stage steppers means the interpreter can allocate consecutive serial numbers from 0 to 253 to handle up to 254 steppers defined by the PCS script writer. From the perspective of the PCS script writer, use of 254 and 255 as a stepper ID in a script will only be legal if the X and Y (for 254) or all three stage motors (for 255) have already been previously defined.
+
+In the current implementation, stepper drivers of type TMC2209, DRV8825 (or compatible) and A4988 (or compatible) are implemented. All 3 may be used with Arduino Mega2560 but TMC drivers are not supported on the Uno or Nano and will be refused if selected while using those breakout boards. The term 'or compatible' for the non-TMC drivers means any driver with the same stepstick pin functions (including setting microstep size with MS1, MS2 and MS3 pins) and the only difference - as far as PCS command arguments are concerned - between the DRV8825 and the A4988 is that the DRV8825 drivers will be allowed to select 1/32 microstep size while the A4988 will only be permitted to set microstepping up to 1/16. These driver specifics are limitations only of the current software implementation of PARDUS using the Arduino as breakout boards with the current parduino.ino software. They are not an intrinsic limitation of the PARDUS standard.
+
+## Binary
+
+These can only exist in one of two states (so may control, for example, on or off, high or low, opened or closed, red or green filter) and have no intermediate state or 'amount' of operation. Those states must be able to be totally controlled by the high/low signal from a single Arduino digital pin. Some examples are:
+
+* A solenoid valve to control on/off filters or fluid lines
+* An on/off device like a heater or cooler or UV lamp, etc.
+* A trigger signal for some action. This may be an 'activate' signal for a sensor that does not continuously gather data but only when told to do so (like a camera).
+
+While binary activators may, at first, seem rather limited, consider that the 'on' signal might be to deliver power (via a solid state relay) or an input logic signal to a separate microcontroller that is programmed to perform some complex task (with multiple sensors and motors or servos, etc.) when it receives the 'go' command. Thus the binary actuator can provide the 'go' or 'launch' signal for a much more complex process.
+
+## M-Level
+
+These can have multiple levels of operation and are not limited to only two states. That is, they are multi-level (M-Level) actuators.
+
+There are two, quite different, methods by which these multiple levels can be expressed and so there are two sub-types of M-Level. The subtype determines which method an actuator employs. It is chosen with act_set and the info item *INFO_ML_TYPE* (*MLT_PARALLEL* = 0 or *MLT_PWM* = 1). A newly defined M-Level has the type *MLT_UNSET* (3); nothing else can be set until the type is set, and the type cannot be changed afterwards.
+
+**Subtype 1 (the parallel M-Level actuator):** This controls the high/low states of a set of 1 or more (up to 8) digital output pins. A parallel M-Level actuator with *n* pins can therefore represent 2n integer levels, using the on/off states of its *n* pins to represent a binary number from 0 to 2n − 1. The pins are labelled p0 to p7. You may assign the pins in any order, but a level is accepted only while the assigned pins form an unbroken sequence starting with p0: if, for example, p0 and p3 are assigned while p1 or p2 is not, the server refuses every level order for that actuator until the gap is filled. The level you set on such an actuator must not be greater than 2n − 1, *n* being the number of assigned pins, and cannot be negative. The pin activation pattern treats p0 as the lowest bit and p7 as the highest. So if you have only p0 and p1 assigned and you set a level of 1, the pin associated with p0 is set HIGH and the pin associated with p1 is set LOW; a level of 2 reverses that pattern. Because the level is translated directly into a binary pattern across the defined pins, there is no other way the level can be interpreted, and so no translation table is used. A parallel M-Level uses no hardware timer and may use any digital pin that is not otherwise reserved: D2 to D13 on the Uno and Nano, D2 to D53 on the Mega2560 (apart from the pins used for safety systems like a kill switch - if those options are used - which the firmware locks).
+
+**Subtype 2 (the PWM M-Level actuator):** This uses only one pin, which must be p0, and that pin must be one of the pulse-width-modulation (PWM) pins that the firmware permits (see the table of pins in the section on act_set). A level of a PWM M-Level is a row number of a translation table that you build yourself, line by line, with act_set and *INFO_ML_TTABLE*. The table is held by the server: when a level is set, the server sends the frequency and the duty of that row to the Arduino, which never sees the row number. Each row holds an integer frequency number in hertz (0 to 8,000,000) and an integer duty cycle number from 0 to 4999:
+
+* a duty from **0 to 1000** is a duty cycle in **per mille**, that is in thousandths of the period: setting the level to *k* makes the p0 pin oscillate with the frequency and the duty cycle stored in row *k* of the translation table;
+* a duty from **1001 to 4999** is a **special-effect code**, with which the Arduino performs an effect by itself (see “Special-effect duty codes” below); the values 2000 and 3000 are refused.
+
+Three values of a row have a fixed meaning. The firmware tests them, before any calculation, in the order of Table 4.1; they concern the plain duties 0 to 1000 only, since a special-effect code is recognised and dealt with before them.
+
+| Order | Row | Result | What happens to the pin |
+| --- | --- | --- | --- |
+| 1 | duty **0** | constant LOW | A pin on a 16-bit timer (Timers 1, 3, 4, 5) that is driven by its timer at that moment stays connected to it, with the compare value 0: the compare value is buffered until the next BOTTOM of the counter, so at most the first half of one more pulse is made before the pin is LOW (the **clean silence**). Otherwise (Timer 2, or a pin not driven by its timer) the timer is disconnected from the pin and the pin is held LOW. |
+| 2 | duty **1000** | constant HIGH | Whatever the frequency, 0 included: the timer is disconnected and the pin is held HIGH. |
+| 3 | frequency **0** (any other duty) | constant LOW | The timer is disconnected from the pin and the pin is held LOW. |
+
+**Table 4.1.** The fixed values of a translation-table row, in the order in which the firmware tests them.
+
+A row of duty 0 is therefore the natural way to write a rest or silence into a table. On a 16-bit timer whose pin is sounding it keeps the pin on its timer, so that the next sound starts with a correctly formed first pulse (see “The clean onset” below); a row of frequency 0 also silences the pin, but always disconnects it. The calculation itself can also end in a constant level: a duty so small that the compare value rounds to 0 gives LOW, and, on a 16-bit timer, a compare value equal to or greater than TOP (with TOP greater than 1) gives HIGH; in both cases the timer is disconnected from the pin.
+
+Because frequency and duty cycle together offer a very large number of states, only a few of which are useful in any one application, there is no natural mapping from a single level number to a pair of values; that is why a PWM M-Level uses a translation table.
+
+The frequencies that can actually be produced, and the number of distinct duty cycles available at each of them, depend on which hardware timer drives the pin (a 16-bit timer or the 8-bit Timer 2) and on the clock pre-scaler you choose. A timer can only produce frequencies of the form “clock ÷ whole number”, so a requested frequency is replaced by the nearest achievable frequency at or above it; and the higher the frequency, the fewer timer ticks there are in one period, and so the fewer distinct duty cycles there are. At the very highest frequency of each pre-scaler only 0, 500 and 1000 per mille remain on Timer 2; on a 16-bit timer only 0 and 1000 per mille remain, so that the pin does not oscillate at all, and the highest frequency at which it still makes a pulse train is half of that ceiling, with 500 per mille only. The exact limits are tabulated in the section on act_set.
+
+**Special-effect duty codes.** A duty from 1001 to 4999 is a code *1000E + P*: the thousands digit *E* names the effect and the last three digits *P* are its parameter. The Arduino performs the effect by itself, timed by the hardware timer of the pin, without any further order (Table 4.2).
+
+**Table 4.2.** The special-effect duty codes.
+
+| Codes | Effect | Frequency of the row | *P* |
+| --- | --- | --- | --- |
+| 1001 to 1999 | **NOISE.** In every period of the clock a pulse of width *P* per mille of the period is present or absent at random, each with probability 1/2; the first period always carries a pulse. It continues until it is ended (see “When an effect ends”). On Timer 2 it starts softly when an attack step is set (code 4000 + *P* below). | the noise clock, at most 16,000 Hz | pulse width, per mille (1 to 999) |
+| 2001 to 2999 | **TIMED NOISE.** The same noise for a time, then silence. *P* = 100*c* + *d*: the noise lasts *d* milliseconds (*d* = 0 means 100 ms), rounded down to whole periods of the clock, with the pulse width of the **width class** *c* (Table 4.3). On Timer 2 a timed noise of 30 ms or more starts softly when an attack step is set; a shorter one starts sharply. | the noise clock, at most 16,000 Hz | 100*c* + *d* |
+| 3001 to 3999 | **BURST + HISS.** 10 ms of noise (rounded down to whole periods) with a pulse width of 500 per mille, then noise with a pulse width of *P* per mille until it is ended; always a sharp start. | the noise clock, at most 16,000 Hz | hiss width, per mille (1 to 999) |
+| 4000 to 4999, pin on a **16-bit timer** | **GLIDE TIME.** A setting: nothing audible changes. Every following plain level of this actuator glides from the present sound to the new one, the period and the pulse width changing linearly, one step per period, over about *P* milliseconds. 4000 switches the glide off. | ignored | glide time, ms |
+| 4000 to 4999, pin on **Timer 2** | **ATTACK STEP.** A setting: nothing audible changes. Every following continuous noise (1001 to 1999) and every timed noise of 30 ms or more of this actuator starts with a pulse of about one eighth of its width, which grows by that much every *P* milliseconds up to the full width: at most eight widths, an attack of at most 7*P* ms. 4000 gives a sharp start. | ignored | step time, ms |
+
+Table 4.2. The special-effect duty codes.
+
+| Class *c* | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Width (per mille) | 500 | 250 | 125 | 62 | 31 | 15 | 7 | 3 | 1 | 999 |
+| Pulse at 16,000 Hz on Timer 2 (ticks) | 63 | 31 | 16 | 8 | 4 | 2 | 1 | 1 | 1 | 124 |
+
+**Table 4.3.** The width classes *c* of the timed noise (2001 to 2999): the pulse width is 500 per mille shifted right *c* times, and 999 per mille for *c* = 9. The last row gives the pulse at the clock of 16,000 Hz on Timer 2 (TOP 124, ticks of 0.5 µs).
+
+Each class is half the width of the one before, as long as the pulse is wider than one tick: at the 16,000 Hz clock the classes 6, 7 and 8 all give the one-tick pulse. The class 9 is a random **telegraph**: the pin is HIGH or LOW for whole periods, apart from a LOW notch of one tick in each HIGH period, because the width is limited to TOP ticks. Codes 2001 to 2099 are therefore timed noises of 1 to 99 ms at 500 per mille; a noise at 500 per mille cannot last 100 ms (class 0 with *d* = 0 would be the refused code 2000), so a longer one is made with the continuous code 1500 and ended by a later order.
+
+**How the Arduino performs an effect.** An effect is run by the overflow interrupt of the actuator’s own timer, once per period of the waveform: it writes the compare value of the next period (for a glide, also the period). No order ever waits for an effect; every other actuator runs as before, interrupted for a few microseconds once per period. The noise clock is limited to 16,000 Hz (*FX_MAX_RATE*), which bounds the processor time an effect can take. The random decisions come from one 16-bit linear-feedback shift register shared by all timers (taps 0xB400, the polynomial x16 + x14 + x13 + x11 + 1, starting value 0xACE1), which repeats after 65,535 decisions, 4.1 s at a 16 kHz clock [see FX_RANDOM_BIT in the Arduino firmware]. The state of an effect belongs to the timer, so one effect at a time can run on each timer; a new effect on the same timer replaces the old one.
+
+**When an effect ends.** An effect ends when:
+
+1. a level is set for any PWM M-Level on the same timer, with a plain duty or a noise code (a code 4000 to 4999 does not end it);
+2. the actuator is halted with act_halt, its pin is freed or re-assigned, or it is destroyed;
+3. the kill switch is thrown (Mega2560 with *FULL_SAFETY*: every M-Level is halted);
+4. a timed noise has lasted its time.
+
+An order for any other actuator, an M-Level on another timer, a stepper, a servo, a binary or a sensor, and any act_get, neither ends an effect nor waits for it. A noise that ends leaves its pin silent: on a 16-bit timer with the compare value 0, the pin staying on its timer; on Timer 2 disconnected and held LOW. A timed noise on Timer 2 that ends by itself leaves the pin on its timer with a constant LOW (during a noise Timer 2 drives the pin inverted); the next level for that timer (other than a code 4000 to 4999), or act_halt, disconnects it first, so that a plain level which follows has the normal polarity.
+
+**The glide time and the attack step belong to the timer.** The glide time (16-bit timer) or the attack step (Timer 2) is stored with the timer, together with the actuator that last sent a code 4000 to 4999 or last started a noise on that timer, and the pin it used then. It applies only to that actuator, and, for a glide, only while its p0 is still that pin. It survives act_halt and every effect; it is changed only by a new code 4000 to 4999, and cleared when an actuator with the same ID is created. If two actuators use the same timer one after the other, send the code again before relying on it: a noise started by the other actuator makes the other actuator the owner, and it then uses the stored time.
+
+**The clean onset (16-bit timers).** When an actuator that owns its timer’s effect state (it has sent a code 4000 to 4999, 4000 included, or started a noise on that timer) sets a plain level that is a pulse train while its pin is on its timer but silent (after a row of duty 0, or a noise that has ended), and no other output of that timer is connected, the period and the compare value are set at once and the counter is set one tick below the new TOP. The new compare value is loaded at the next BOTTOM of the counter, and the first pulse, centred on the BOTTOM after that, is whole: it comes about one and a half periods of the new frequency after the order reaches the Arduino. No glide is made from silence. A level set on a pin that is not connected to its timer (after the pin is assigned, after act_halt, a row of frequency 0, a constant LOW or HIGH, or the kill switch) is set at once by the firmware function analogEmit(), which writes the new TOP into the timer wherever its counter is. Whenever the counter is above the new TOP at that moment, it first runs on to 65,535, so that the first pulse can be up to 65,536 ticks late, 32.8 ms at *PWM_PSC_8*. A pin that should start its next sound promptly is therefore best silenced with a row of duty 0 rather than with act_halt.
+
+You will be refused the pins of Timer 0 for PWM M-Level actuators (D5 and D6 on the Uno and Nano; D4 and D13 on the Mega2560), because Timer 0 runs the timing functions of the board (*millis()*, *micros()* and *delay()*) on which the stepper pulse timing depends. You will also be refused the channel-A pin of Timer 2 (D11 on the Uno and Nano; D10 on the Mega2560), because the firmware uses that channel’s register to set the frequency of Timer 2; on Timer 2 only D3 (Uno and Nano) and D9 (Mega2560) can carry a PWM output. A pin on no timer at all is refused in the same way. Each of these refusals is reported as “Pin number out of range”.
+
+To give you the widest possible choice of frequencies you may choose the clock pre-scaler for each PWM M-Level, but only before p0 is associated with an Arduino pin. The default is *PWM_PSC_8*. If you want to change the pre-scaler of an actuator whose p0 is already assigned, you must first free the pin, then change the pre-scaler, then assign the pin again.
+
+Pins on a 16-bit timer (Timers 1, 3, 4 and 5) run in “Phase and Frequency Correct” PWM mode (mode 8, TOP = ICR*n*). The pre-scalers of these timers have no divisor of 32 or 128, so an actuator whose pre-scaler is *PWM_PSC_32* or *PWM_PSC_128* will be refused a 16-bit pin (“Pin number out of range”) at the moment you assign p0. Pins on the 8-bit Timer 2 run in “Fast PWM” mode (mode 7, TOP = OCR2A) and accept all seven pre-scalers.
+
+**IMPORTANT**: All the PWM pins on one timer share that timer’s pre-scaler and its period, because a timer has a single clock divider and a single “TOP” register. The firmware writes an actuator’s pre-scaler into the timer when its p0 is assigned, and writes its TOP and its pre-scaler again with every noise and every plain level it sets at once, that is, not by a glide or a clean onset, unless a servo shares the timer. Two or more PWM M-Levels on the same timer therefore always oscillate at the same frequency, and whichever of them most recently set a level has set the frequency and the pre-scaler for all of them. Each may still set its own duty cycle, but its compare value is calculated only when its own level is set: when another member of the group changes the TOP, the others keep their compare values, so that their duty cycles (compare value ÷ TOP) change as well. A glide and the clean onset write only the period, the counter and the compare value, and keep the pre-scaler already in the timer. A level of any member also ends an effect running on the shared timer. Because Timer 2 has only one usable PWM pin on each board, timer sharing can only arise on the 16-bit timers: on the Uno and Nano, D9 and D10 share Timer 1; on the Mega2560 the groups are {D11, D12}, {D2, D3, D5}, {D6, D7, D8} and {D44, D45, D46}. If a servo’s signal pin is assigned to a timer that one or more inactive PWM M-Levels already use, the servo’s pre-scaler (8 on a 16-bit timer) and frame frequency take precedence and are imposed on the M-Level(s).
+
+**Order of assignment on a shared timer**: a PWM M-Level and a servo can share a 16-bit timer only if the M-Level’s p0 is assigned *first* and the servo’s signal pin *last*. Assigning the p0 of a PWM M-Level to a timer that already carries a servo is refused with a “Read only” error, because setting up the M-Level would disconnect the servo’s output and replace the servo’s pre-scaler, which would stretch every later servo pulse (with *PWM_PSC_64*, a 1,500 µs command would become 12,000 µs) . If you need both on one timer, assign the M-Level pins first and the servo pin last, or simply keep servos and PWM M-Levels on different timers. On a timer that carries a servo, a noise code is refused with “Read only”, and a glide or a clean onset is not made: the level is set at once, against the servo’s frame.
+
+A pre-scaler can be chosen only while p0 is unassigned: *INFO_ML_PSC* is refused whenever p0 is assigned, by the server, with the message “You can only set the prescaler for pin 0 if it is unset.”, and, should such an order ever reach the Arduino, by the firmware too, with a “Read only” error. So this command can never change the pre-scaler of a running timer. A running timer’s pre-scaler *can* be changed by another PWM M-Level on the same timer: by the assignment of its p0, or, once that is assigned, by any plain level or noise it sets, since each of these writes its own pre-scaler and TOP into the timer. Changing the pre-scaler of a timer while an M-Level on it is oscillating can have undesired consequences, namely:
+
+1. **Mid-cycle clock skew and phase fragmentation**: altering the clock-select bits (CSnx) of a running timer interrupts its counter (TCNT) mid-stream, so that the active cycle is stretched or compressed into an unaligned, partial pulse.
+2. **Acoustic transient shocks**: if a piezo buzzer is driven through a mid-cycle pre-scaler change that abruptly lowers its frequency while it holds a high duty cycle, the element receives a sudden step in drive. This is heard as a loud click or pop, and repeated shocks can fatigue the piezo diaphragm.
+
+For this reason you will be forbidden to assign the p0 of a PWM M-Level to a timer on which another PWM M-Level is active (the attempt is reported as a “Read only” violation). De-activate the other M-Level first (for example with act_halt) and then assign the pin again; a refused attempt changes nothing, so it can simply be repeated. The firmware does not, however, prevent PWM M-Levels whose p0 were assigned earlier from being active together and changing each other’s period and pre-scaler with their levels; give the members of such a group the same pre-scaler, or keep sounds that must not disturb each other on different timers.
+
+**Changing the pin of an M-Level.** To move an M-Level pin to another Arduino pin you may either free it first (act_set with *FREE_PIN*, 255) and then assign the new pin, or assign the new pin in one act_set. In the second case the firmware first makes every test on the new pin (range, lock, use, timer, servo, active PWM M-Level); a refused request changes nothing. It then releases the old pin: an oscillating output is stopped and any effect on its timer ended, the pin is written LOW, made a high-impedance input with its pull-up off, and freed for other actuators. Then it sets up the new pin as an output, LOW; for a PWM M-Level it puts the new pin’s timer in its PWM mode with the actuator’s pre-scaler, and the actuator becomes inactive (*INFO_ML_STATE* 0). Assigning the pin an M-Level pin already has is accepted and changes nothing. In either case the new pin stays LOW until the next level order reaches the Arduino. Because the server does not send a level equal to the last one it sent, set a different row first, or use act_halt, which clears the server’s record of the last level. For a PWM M-Level that is active (*INFO_ML_STATE* 1), a direct move to another pin of the *same* timer is refused with “Read only”, because the actuator is itself the active M-Level on that timer: halt it first. A glide time set on a 16-bit timer belongs to the old pin: after a move, send the code 4000 + *P* again.
+
+**Activity, act_halt and the kill switch.** An M-Level becomes active (*INFO_ML_STATE* 1) when a level order for it is carried out: any plain duty, including a row of duty 0 or of frequency 0, or a noise code; a code 4000 to 4999 leaves the state as it was. It becomes inactive (0) when it is created, when the p0 of a PWM M-Level is assigned, when it is halted with act_halt or by the kill switch, and when its last pin is freed. A timed noise that has ended by itself leaves it active. act_halt and the kill switch disconnect a PWM pin from its timer, end any effect on that timer and hold the pin LOW; they write every pin of a parallel M-Level LOW. act_halt of an inactive M-Level does nothing. The server clears its record of the last level when it sends act_halt, but it knows nothing of the kill switch, of a timed noise that has ended by itself, or of an effect ended by another actuator on the same timer. After any of these, set another row, or send act_halt, before you set the same level again: otherwise the server does not send it, and nothing sounds.
+
+## Servo
+
+A servo is a multi-position actuator that uses positional feedback to travel to one of many precise positions, as may be used, for example, to drive a filter wheel or an objective changer. The feedback control loop is inside the servo itself. Some servos make the position reported by their internal sensor available on a fourth wire, which a PCS script can read; others keep it internal.
+
+There are many kinds of servo actuator, including stepper-motor servos, analogue-motor servos (brushed, brushless or coreless) and servos powered hydraulically or by other non-motor means. Analogue-motor servos may have analogue or digital control circuits (analogue servos and digital servos).
+
+PARDUS supports 3-wire and 4-wire (the fourth wire carrying the position feedback voltage) analogue-motor servos with analogue or digital controllers, such as the TowerPro MG995 and similar, or faster high-end models such as the Savox HV digital brushless servos. The defining feature of a servo PARDUS supports is that its position is commanded by the width, in microseconds, of a pulse repeated at a constant frame rate, in one of three frequency bands (nominally 50 Hz, 200 Hz and 333 Hz), with no other signalling. Specialist industrial servos that use proprietary digital protocols and dedicated drivers, and other categories of servo (stepper servos and so on), are not currently supported.
+
+A servo needs a PWM-capable pin with a constant frame frequency and pre-scaler. The pins a servo may use are the same as those a PWM M-Level may use (see the table of pins in the section on act_set): any pin of a 16-bit timer, and D3 (Uno and Nano) or D9 (Mega2560) on the 8-bit Timer 2. A pin on Timer 0, a pin on no timer, and the Timer-2 channel-A pin (D11 on the Uno and Nano, D10 on the Mega2560) are refused with “Pin number out of range”. A 16-bit timer gives a servo a pulse resolution of 1 microsecond in every band; Timer 2 gives 64 microseconds in the 50 Hz band and 16 microseconds in the other two (see the section on act_set).
+
+If a servo’s signal pin is assigned to a 16-bit timer that a PWM M-Level actuator already uses, the servo’s pre-scaler and frame frequency take absolute priority over whatever has been set for the M-Level(s). The reverse order (an M-Level’s p0 assigned to a timer that already carries a servo) is refused with a “Read only” error; see the section on M-Level actuators. A later attempt by such an M-Level to change the timer’s frequency is ignored by the firmware without error. The M-Level can still change its duty cycle, but the duty-cycle resolution is then set by the servo’s frame (see the section on act_set).
+
+For accurate positioning and for the safety of the hardware (to avoid overheating, stripped gears and other damage), each servo used with PARDUS must be calibrated and given a suitable range of limits when its actuator is created in PCS. This is described in the act_set section of this manual.
+
+The PARDUS servo subsystem is programmed from scratch by direct register manipulation. It therefore has several advantages over the standard Arduino Servo.h library: PARDUS servos can be given speed regulation and acceleration profiles, and any number of them can be grouped into a Bresenham set for co-ordinated motion. Because the pulses are generated by the timers’ own compare-match output hardware and not by timed CPU interrupts (the method Servo.h uses), PARDUS servo control places very little load on the AVR processor.
+
+Servos are moved in PARDUS according to this general model:
+
+1. Select a motion profile for servos using act_accel.
+2. Load each servo’s desired destination into a queue using act_set commands.
+3. Execute the motion of all servos in the queue using a single act_moveto command.
+
+The queue is cleared whenever the act_moveto command is issued. The same procedure applies whether you want to move one servo (a queue of 1) or many. For details see the individual command entries.
+
+## Sensor
+
+These allow access to the numerical value of a specific single input pin on the breakout board. They may be specified as being of analogue or digital type (giving access to an analogue pin or digital pin respectively).
+
+A sensor actuator can have its sensing pin 'hot-swapped' to a different pin of the same type (analogue or digital) within a script. However you cannot simply 'hot-swap' a pin from analogue to digital or *vice versa*. You can achieve the same effect, however, by simply destroying an analogue sensor actuator and re-creating it (with the same name and ID if that is your choice) but with the type being digital (or *vice versa* - destroy a digital sensor and re-create it as an analogue sensor). It takes a few more programming steps in the script than simply hot-swapping the pin but the overall effect is as if you had hot swapped an analogue pin to a digital one (or *vice versa*). Here is an example PCS script to illustrate this hot-swapping ability.
+
+```pcs
+Pardus pcs 1
+verbosity 1
+###########################################################
+# Testing sensor nodes - 'hot-swapping' an analogue pin   #
+# and effectively hot-swapping analogue to digital using  #
+# undef_actuator and def_actuator.                        #
+###########################################################
+#include stdpard.pch
+def_var string actname1 _
+def_var int loopidx 0
+def_var int pin_state 0
+def_func main
+    get_actuators
+# Safety Layer: Clean up any previously defined actuator of the same index
+# and type (but possibly with a different name to the one you are about to
+# create) to prevent a duplicate definition error later.
+act_getname ACT_SENSOR 1 actname1
+set_condexp actname1 != null
+do_if Condexp
+  undef_actuator actname1
+enddo
+# Instantiate the sensor actuator and make it of the analogue type
+def_actuator ACT_SENSOR 1 Sensor_general
+act_set Sensor_general INFO_SEN_TYPE  SEN_ANALOGUE
+act_set Sensor_general INFO_SEN_PIN   5      # Reading analogue pin 5
+# Make periodic sensings and print the value
+print_value Sensing_on_pin_A5:
+call_func sensor_readings
+# Now hot-swap the sensed pin from A5 to A3
+print_value Swapping_to_pin_A3:
+    act_set Sensor_general INFO_SEN_PIN   FREE_PIN    # Release current pin
+    act_set Sensor_general INFO_SEN_PIN   3           # Reading analogue pin 3
+# Make periodic sensings and print the value
+print_value Sensing_on_pin_A3:
+call_func sensor_readings
+# Now 'hot-swap' from an analogue sensor to a digital one:
+print_value Swapping_to_pin_D7:
+# We can't just swap the pin so we destroy the analogue sensor first:
+undef_actuator Sensor_general
+# Now re-define it as a digital sensor
+    def_actuator ACT_SENSOR 1 Sensor_general
+    act_set Sensor_general INFO_SEN_TYPE  SEN_DIGITAL
+    act_set Sensor_general INFO_SEN_PIN   7      # Reading digital pin 7
+set_var loopidx 32
+print_value Sensing_on_pin_D7:
+call_func sensor_readings
+return
+def_func sensor_readings
+set_var loopidx 16
+loop_while loopidx
+    # Read the sensor value
+    act_get Sensor_general INFO_SEN_VAL pin_state
+    # Print the value
+    print_value pin_state
+    sleep 1.0
+    sub_var loopidx 1
+endloop
+return
+exit
+```
+
+## Use of Arduino PWM Modes
+
+The PWM-type M-Level actuators and the Servo actuators both use PWM pins on the Arduino breakout boards. However the generated waveforms are made using bare-metal timer register manipulation and not CPU-emulation. CPU wave emulation is used in some common libs like Servo.h and has the advantage that more pins may be used to drive servos (even non-PWM pins) but this emulation mode brings with it severe limitations which would degrade the multi-actuator type precision control system of PARDUS. Thus PARDUS accepts a reduction in the maximum number of pins available for PWM mode actuators in exchange for preserving precision multi-actuator control.
+
+The hardware-driven waveform architecture of PARDUS relies on the internal magnitude comparators of the ATmega silicon. Because the CPU writes to the control registers once and walks away, it is physically impossible for high-speed serial data packet bursts, stepper motor pulse train loops, or multi-axis matrix calculations to cause microsecond-level timing jitter. This provides the absolute positioning stability required for sub-micron microscopy imaging and smooth robotic path sweeps. This holds for every plain level of an M-Level. The special-effect codes of the PWM M-Level (noise, timed noise, burst and hiss, glide) add one interrupt per period of the waveform, the timer’s own overflow interrupt, which writes the compare value of the next period (for a glide, also the period). The edges of the waveform are still made by the comparator hardware, but each period of an effect costs the processor a few microseconds, and the noise clock is limited to 16,000 Hz for that reason.
+
+However, because these waveforms are tied directly to physical silicon modules, their deployment is governed by two strict hardware constraints: *Shared Clock Prescalers* and *Fixed Frequency Ceilings*. Table 4.4 shows the timers that PARDUS uses for PWM, and how the firmware sets them.
+
+| Board | Timer | Bits | Mode | TOP register | PWM pins (compare output) | Pre-scalers | Effects |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Uno, Nano | 1 | 16 | 8: phase and frequency correct | ICR1 | D9 (OC1A), D10 (OC1B) | 1, 8, 64, 256, 1024 | noise; glide |
+| Uno, Nano | 2 | 8 | 7: fast PWM | OCR2A | D3 (OC2B); D11 (OC2A) refused | all seven | noise; attack |
+| Mega2560 | 1 | 16 | 8: phase and frequency correct | ICR1 | D11 (OC1A), D12 (OC1B) | 1, 8, 64, 256, 1024 | noise; glide |
+| Mega2560 | 2 | 8 | 7: fast PWM | OCR2A | D9 (OC2B); D10 (OC2A) refused | all seven | noise; attack |
+| Mega2560 | 3 | 16 | 8: phase and frequency correct | ICR3 | D5 (OC3A), D2 (OC3B), D3 (OC3C) | 1, 8, 64, 256, 1024 | noise; glide |
+| Mega2560 | 4 | 16 | 8: phase and frequency correct | ICR4 | D6 (OC4A), D7 (OC4B), D8 (OC4C) | 1, 8, 64, 256, 1024 | noise; glide |
+| Mega2560 | 5 | 16 | 8: phase and frequency correct | ICR5 | D46 (OC5A), D45 (OC5B), D44 (OC5C) | 1, 8, 64, 256, 1024 | noise; glide |
+| every board | 0 | — | not changed (it runs *millis()*, *micros()*, *delay()*) | — | none: D5, D6 (Uno, Nano) and D4, D13 (Mega2560) are refused | — | — |
+
+**Table 4.4.** The timers used for PWM actuators, as the firmware sets them. A period lasts 2 × TOP ticks in mode 8 and TOP + 1 ticks in mode 7; one tick lasts *N ÷ 16* µs.
+
+### 1. The Shared Clock Prescaler Rule
+
+Each hardware timer module on the Arduino (Timer 1 and 2 on the Nano/Uno; Timers 1, 2, 3, 4, and 5 on the Mega 2560) can only run a single prescaler divisor and a single counting ceiling (TOP) at any given moment.
+
+If multiple PWM-type M-Level actuators or Servo actuators share a timer module, they are bound to the same time-base envelope. Because all Servo actuators are standardized to a stable base carrier frequency (e.g. 50Hz requiring an immutable hardware prescaler of 8 on 16-bit timers and 1024 on 8-bit timers), any coexisting PWM M-Level actuator on that same timer is forcefully adapted to that clock envelope.
+
+While the M-Level’s individual duty cycle remains fully independent, its emitted frequency is completely overridden by the servo’s carrier base. Among PWM M-Levels that share a timer, the one that most recently set a level imposes its frequency and pre-scaler on the others, whose compare values are not recalculated (see the section on M-Level actuators). To prevent mid-cycle phase fragmentation, clock skew, and acoustic transient shock pops, the firmware refuses, with a read-only conflict (*PARDU_ERR_RDONLY*, “Read only”):
+
+1. the assignment of the p0 of a PWM M-Level to a timer that carries a servo, or on which a PWM M-Level is active;
+2. the assignment of a servo’s signal pin to a timer on which a PWM M-Level is active, or which carries servos of another frequency band;
+3. a noise code on a timer that carries a servo;
+4. any change of *INFO_ML_PSC* while the actuator’s own p0 is assigned.
+
+The firmware does not refuse a level of a PWM M-Level whose p0 was assigned to the shared timer earlier, even when it changes the TOP and the pre-scaler under another M-Level that is sounding. Only one special effect can run on a timer at a time, and a level of any M-Level on that timer ends it.
+
+### 2. The Fixed Frequency Ceiling Restriction (The Pin 11 / Pin 10 Block)
+
+To slow down the small, high-speed 8-bit Timer 2 module to the safe ~50Hz-60Hz envelope required by some analog servos and audio buzzers, the PARDUS firmware locks the silicon into Fast PWM Mode 7.
+
+In this mode, Timer 2 does not count blindly to its hardware maximum of 255. Instead, it uses its Output Compare Channel A register (OCR2A) as a custom, programmable counting ceiling: the counter counts from 0 up to the number stored in OCR2A and then starts again from 0, so that a period lasts OCR2A + 1 ticks, which stabilises the time-base. Because Channel A is completely allocated to regulating the global carrier frequency, its physical hardwired pin can no longer modulate independent duty cycles.
+
+Consequently, the physical pin tied to Channel A is entirely blocked for use by any Servo or PWM-type M-Level actuator. Attempting to allocate it inside a script will be forcefully rejected by the firmware validation gates, throwing an immediate *PARDU_ERR_PINRNUM* error packet (“Pin number out of range”). Due to differing silicon routing layouts between the microcontrollers, this blocked frequency ceiling pin moves between platforms:
+
+* On the Arduino Nano / Uno: Channel A maps to Digital Pin 11. Pin 11 is therefore completely blocked for Servo/PWM M-Level use. (It remains fully usable for non-timed tasks like standard Parallel-type M-Level actuators or SPI data communications.)
+* On the Arduino Mega 2560: Channel A maps to Digital Pin 10. Pin 10 is therefore completely blocked for Servo/PWM M-Level use.
+
+Symmetrically, Channel B remains fully open on both boards as your functional, independent 8-bit output driver line (mapping to Pin 3 on the Nano/Uno and Pin 9 on the Mega 2560). It reads the common ceiling natively, allowing full, separate positioning sweeps or tone modulations without risk of system register contamination. With TOP at its smallest value, 1, a period of Timer 2 lasts two ticks, so the highest frequency it produces is *F ÷ (2N)*, with only 0, 500 or 1000 per mille.
+
+### Maximum number of simultaneous PWM actuators
+
+In practice this means that the PARDUS / PCS system using an 8-bit AVR Arduino board (Uno, Nano or Mega2560) can deploy a total simultaneous number of PWM-capable actuators (M-Level or Servo) of 3 on the Uno/Nano - on digital pins 3 (8-bit timer), 9 and 10 (16-bit timers); or, on the Mega2560, 12 when the line #define FULL_SAFETY is commented out - on digital pins 9 (8-bit timer), 2, 3, 5, 6, 7, 8, 11, 12, 44, 45, 46 (16-bit timers) - and 10 when *FULL_SAFETY* is defined, which the firmware does automatically for the Mega2560: D2 (the kill-switch input) and D12 (the motor-voltage relay output) are then locked, leaving pins 9, 3, 5, 6, 7, 8, 11, 44, 45 and 46. The server and the firmware also allow at most 10 M-Level actuators, of both subtypes together (IDs 0 to 9), and at most 10 servos (*MLEVELSMAX*, *SERVOSMAX* in parddefs.h).
+
+The Uno/Nano uses 2 timers across those pins - so can vary two frequencies independently on those 3 pins. The Mega2560 uses 5 timers across those pins - so can vary 5 frequencies independently on those pins because each timer can use only one prescaler value (that determines the frequency range available), and one TOP value (that determines the specific frequency of oscillation). The pulse width and duty cycle can be varied individually for each pin (not only for each timer), with the reservation that each pin’s compare value is calculated against the TOP in force when that pin’s own level is set. Likewise, one special effect at a time can run on each timer: at most two at once on the Uno/Nano and five on the Mega2560.
+
+# The PCS preprocessor
+
+When a PCS script is loaded into the interpreter program (such as pardclient) it undergoes preprocessing before it is syntax checked. The preprocessor function does two things:
+
+It includes any external files the script requests via #include directives.
+
+It makes any string substitutions the script requests via #define directives.
+
+For version 1 of PCS that is all the preprocessor does.
+
+To be a valid directive there must:
+
+* be no non-white space characters before the '#'
+* be no white space characters between the '#' and the rest of the directive
+* be at least one white-space after the end of the directive before its argument
+* be the required number of arguments after the directive.
+
+Using a '#' in your PCS file without following the first 3 rules means the '#' will be interpreted as a comment (as will a typo like '#defin'). Following the first 3 but not following the last rule will result in a script check error.
+
+The preprocessor analyses the script file that is loaded and outputs its resulting pre-processed version of that script to a file called _pppcs.pcs (or _stpcs.pcs for a 'stop script' - see the pardclient user manual for more about stop scripts) so do not try to load that file directly into the client or a file access error may result. These pre-processed script files will be saved in your OS temp directory.
+
+You may read the _pppcs.pcs file in a separate text editor if you would like to see the results of pre-processing on your input file. The actual PCS file on disc that you load into the client program is not altered itself. After successful pre-processing, the script checker loads the _pppcs.pcs file to compile and check it and the script interpreter runs the commands in the _pppcs.pcs file.
+
+Although superficially resembling preprocessor directives of the C programming language PCS preprocessor directives behave differently in that only file include and simple string substitutions are supported and the directives all have global scope no matter where, in the script, they occur.
+
+## The #define directive
+
+Usage:
+
+#define <find_string> <replace_string>
+
+Description:
+
+The #define directive allows the programmer to perform automatic text macro substitutions throughout their script prior to execution.
+
+Arguments:
+
+<find_string> - an alphanumeric identifier string (letters, digits, and underscores only, up to 64 characters) to be replaced.
+
+<replace_string> - the string token used to replace the <find_string> wherever it is encountered as a distinct word entity.
+
+**Note**: Only simple string substitution is supported in version 1 of PCS. There is no facility to use arguments in parentheses or substitute in multi-word expressions.
+
+**Note**: Substitutions apply strictly to isolated alphanumeric word boundaries. A word is defined as a continuous sequence of letters, digits, and underscores. Any character that is not a letter, digit, or underscore—such as spaces, brackets, parenthesis, commas, or mathematical operators—safely isolates the macro name.
+
+For example, if you define `#define CURRIDX 5`, the word CURRIDX inside complex nested code structures like:
+
+```pcs
+set_var myvar myarray[CURRIDX]
+set_var myint pcg_ar[gptr[CURRIDX]]
+set_var total base+CURRIDX
+```
+
+will be isolated cleanly by the delimiters and successfully expanded into:
+
+```pcs
+set_var myvar myarray[5]
+set_var myint pcg_ar[gptr[5]]
+set_var total base+5
+```
+
+(Note: 'base+5' is not a valid mathematical expression in PCS but it could be the name of a variable - albeit a poor style choice for a variable name).
+
+A macro name will not be replaced if it is directly fused to other alphanumeric characters or underscores (e.g., MY_CURRIDX or CURRIDX2 will be ignored). The final line length after all substitutions are made must not exceed 2047 bytes.
+
+The main use is to allow the script writer to use human-meaningful words in their script where numerical values are required by the main PCS syntax. For example to use the word 'ACT_STEPPER' in place of the numerical value '1' by means of the preprocessor directive:
+
+```pcs
+#define ACT_STEPPER  1
+```
+
+Without such a preprocessor string substitution ability, the only other way to use human meaningful labels for numbers would be to define a variable with the human-friendly name and set its value to the number value but doing so would incur a cost in terms of RAM allocation and variable evaluation processing time every time that variable is used in the script at run-time.
+
+It is convention to use all capitals for the <replace_string> to distinguish them from the names of variables or PCS commands but it is not mandatory.
+
+Neither argument is expected to be encased in quote marks - if quote marks are used they will be interpreted as part of the literal string to be found or replaced.
+
+The fact that preprocessor substitution is purely string based - without regards to the semantics of the string - means that you can use #define substitutions for ***command aliasing***. For example if you do `#define print_value PRINT` then you can use aliased command PRINT in your script instead of print_value.
+
+More than one #define of the same <find_string> is an error ("Duplicate 'find' string"), even with the same replacement.
+
+A <find_string> or <replace_string> longer than 64 bytes is truncated when it is registered.
+
+## The #include directive and header files
+
+Usage:
+
+#include <filename>
+
+Description:
+
+The #include directive allows the programmer to include a PCS header file in their script.
+
+Arguments:
+
+<filename> - the name or full path and name of a file containing more pre-processor directives.
+
+**Note**: The <filename> must not have any spaces in its name or in a path and the angled brackets are not part of the syntax (unlike in C). So an example is:
+
+#include myfile.pch
+
+**Note**: The search path for <filename> is resolved as follows:
+
+1. The pre-processor will first try to open <filename> exactly as written, so if you provide a full path as well as the file name the pre-processor will look there.
+2. If the first attempt fails then the pre-processor will look for <filename> in the same directory as the PCS script that is being processed.
+3. If both attempts to read the include file fail, the pre-processor will also fail with an error message.
+
+Note: Every file used for inclusion must have a properly formatted header signature on its very first coding line. This signature must consist of exactly three words: the case-sensitive string "Pardus", followed by the file format token "pch", and completed by an integer format version number.
+
+Currently, the only supported file format version number is 1, meaning the first coding line of a valid include file must be exactly:
+
+Pardus pch 1
+
+Any file that omits this signature, places code before it, or uses an incorrect file format token (such as "pcs") will be rejected immediately with an explicit header format error specifying the exact filename and line number.
+
+After this signature line can come comments, blank lines, and pre-processor directives. As with a standard PCS script, leading and trailing whitespace and blank lines are safely ignored. The header file must be explicitly terminated with an exit command; all text trailing after the exit line is ignored. Any text before the exit line which is not a preprocessor directive is also ignored, allowing for standard code comments.
+
+By convention, header files have the extension .pch but this is not mandatory for proper reading and parsing of the files.
+
+**Note**: Advanced Features in Version 1:
+
+1. Full Recursion: The #include directive is completely recursive. Header files may safely contain their own #include directives to reference deeper library files.
+
+2. Silent Include Guards: The pre-processor contains a historical tracking registry that tracks completely processed headers. If a file has already been parsed earlier in the script run, subsequent attempts to #include it are silently ignored. This natively prevents duplicate macro definition errors and immunises your code against infinite circular inclusion loops.
+
+3. Include Depth Limits: Scripts support nested inclusions up to a maximum depth of 16 layers deep before throwing a stack protection limit error.
+
+Some pre-prepared include files are available on the PARDUS open source repository to make PCS programming more 'human friendly' such as the file stdpard.pch which includes all the actuator-related symbols used in the C source code for the interpreter allowing PCS programmers to use those symbols directly in their PCS scripts (such as the names of the various actuator types and the names of the various information item numbers, etc. as will be described later in this manual).
+
+# Variables and arrays
+
+There are two classes of variables in PCS, user-defined variables and system variables.
+
+All variables have global scope.
+
+All variables are arrays (single variables are just arrays of size 1)
+
+The names of variables are case sensitive.
+
+The possible data types for variables are int, float, and string. These are described in more detail, together with the rules on casting, in the chapter 'Data types, the ‘varval’ and casting'.
+
+## User-defined variables
+
+These are created with the def_var and def_array commands and, once created, they may be destroyed using the undef_var command. All user-defined variables will be destroyed automatically when the script terminates for any reason. User-defined variables are read-write capable. Because all variables are arrays, when the term 'variable' is used in this manual it automatically also refers to 'array'.
+
+### Dynamic memory allocation and scope
+
+The size of an array may be specified by another variable at the time the array is created with def_array and does not need to be pre-determined before the script is run. This allows for dynamic array size allocation in PCS scripts. The size of an array may also be changed during run-time using a def_array -> undef_var -> def_array sequence. See the detailed description of def_array for more information.
+
+All variables have **global scope** but may only be used from the point in the script at which they are defined and they may not be used (as variables[[3]](#footnote-4)) from the point in the script at which they are undefined (if they are ever undefined). This gives the PCS programmer the ability to manually determine the **temporal scope** of a variable. See undef_var for more detail.
+
+### Limitations imposed by the syntax checker on variable use
+
+There are 3 rules imposed by the PCS syntax checker that you must be aware of to avoid syntax errors or run-time behaviour you might not otherwise have expected.
+
+**1. The use of dereferencing brackets**: The PCS syntax rules make a distinction between scalar variables (that is, arrays of size 1) and vector variables (that is, arrays of size >1). All scalars must be used with their base name only and no de-referencing brackets. All vectors must be used with dereferencing brackets with the sole exceptions of use in the commands def_array and undef_var where only their base name must be supplied.
+
+**2. Limitations on the temporal scope of a variable**: The interpreter's syntax checker goes through the script *line-by-line sequentially from the start* of the file to the first use of the exit command regardless of any conditional branching or looping rules. As soon as it sees a def_var or def_array command it will attempt to create the variable. As soon as it sees an undef_var command it will attempt to destroy that variable and forbid is use as a variable from that line on unless or until the variable is re-created with an other def_var or def_array command. Any attempt to use a variable name (with or without a dereferencing bracket component) that has been destroyed will be treated as though you are supplying a string literal, not a variable, and this may not result in an error but in behaviour you might not expect during run time. This means that if you place a def_array or an undef_array inside a conditional block, like a do_if block or a function that may or may not be called, then those variable creation and deletion events will be registered by the script checker when it comes to that line in the script regardless of any conditional code that would block that line from being executed during run time.
+
+**3. The checker only uses the initialisation value of a variable**: Because the syntax checker executes the actual creation and deletion of variables as it comes across them, and because the syntax checker does not perform any operation that may change the values of variables already created, it means that if you use a variable as an argument to some other command (including as a size argument to a def_array command) then the value you supplied as the initialising value at the the time of def_var or def_array will be the value used by the syntax checker whenever that variable is used. For this reason, make sure you supply an initial value that will not cause a syntax error wherever that variable is used. Before actually running the script, all variables created during the syntax checking phase will be totally deleted so this will not affect any calculations your script makes during run time (e.g. for dynamic allocation of array sizes). This applies to every argument that the checker validates: a variable used as a goto label, a function name or a math_var function must be initialised to a valid label, function or function name. The type of error that may occur at the syntax check phase due to improper initialisation value selection is illustrated in the following examples:
+
+a) In this example you will get a syntax error because you initialised the sz integer to 0 and you cannot use 0 as the value of size for defining an array:
+
+```pcs
+def_var int sz 0
+def_var int mp 10
+add_var sz mp               # This will not be performed by the syntax checker
+def_array int myarray sz 0  # so sz will remain 0 hence syntax check will fail
+                            # here.
+```
+
+b) In this example you will get a syntax error because you initialised sval to '_' and '_' cannot be cast to an integer:
+
+```pcs
+def_var string sval _
+set_str sval 10             # This will not be performed by the syntax checker
+def_array int myarray sval 0 # so sval will remain '_' and the check
+                             # will fail here.
+```
+
+The correct thing to do in example a) would be to define sz with a value >= 2 such as 'def_var sz 2' and in example b) define svar to a value that can be cast to an integer such as 'def_var sval 3'.
+
+**Note**: Although it is perfectly legal to use a size value of 1 with def_array, using 1 will create a single variable, not a multi-element array. Although the interpreter's internal C source code treats all variables as arrays - even arrays of size 1 - the interpreter itself, while interpreting PCS source code, makes a distinction between arrays of size 1 (PCS source code cannot use dereferencing brackets with such 'arrays', they are treated as single variables for interpretation purposes) and arrays of size >=2 (these must use dereferencing brackets when used in PCS source code). This is why I use the '>=2' value in the above commentary, because I make the assumption that the coder intends to create a multi-element array.
+
+## System variables
+
+These are a set of variables that always exist and the script writer has read-access to. Some of these variables can also be written to by the user but only via specific commands. Other system variables are strictly read only for the PCS script writer. There follows a list of all current system variables with a description of their contents and / or purpose.
+
+|  |  |  |
+| --- | --- | --- |
+| **Name** | **Type** | **Description** |
+| Space | string | Contains a single space character ‘ ‘. It is for adding spaces to strings during concatenation with the add_var command or creation with the def_var or setting with set_var or comparison operations. |
+| Hash | string | Contains a single hash character ‘#’. It is for adding hashes to strings during concatenation with the add_var command or creation with the def_var or setting with set_var or comparison operations. |
+| DateTime | string | This is a string that is updated whenever it is evaluated and contains a time-date string up to the nearest second of the format: YearMonthDay_HourMinuteSecond for example 20260303_124911 |
+| Condexp | int | This value of 0 or 1. It is set to have a value of 0 by default at the start of execution of a script. The value of Condexp may be set or changed by means of issuing the 'set_condexp' command in a script (which see). There is no other way for a user to set the value of Condexp. The value of Condexp is retained throughout the running of a script until it is set or changed by a set_condexp command. If you want to use the current value of Condexp even after another set_condexp command is run then you must set a user-defined variable to the current value of Condexp before calling the next set_condexp command. |
+| Sysval | int | This may take on any integer value. This is set to have a value of 0 by default. It is potentially changed any time the 'int system(const char *command)' function is run because it takes the return value from this function (so may change whenever the command 'execute_system' is processed, for example). The user cannot alter this variable at will but can copy its current value to any varval that accepts integer values. |
+| TRUE | int | This holds a numerical value of 1 |
+| FALSE | int | This holds a numerical value of 0. |
+| ON | int | This holds a numerical value of 1. |
+| OFF | int | This holds a numerical value of 0. |
+| CLImode | int | This holds a numerical value of 0 if the PCS program is being run from the pardclient GUI or 1 if the program is being run from the headless pcs-cli. |
+| NoTissue | int | This may have an integer value of 0 or 1. It is set to have a value of 1 by default at the start of execution of a script. Whenever a grab_image command or 'get_preview_tc ON' command is executed and tissue-content thresholding is used (see tc_threshold), if the tissue-content threshold test failed then the NoTissue variable will be set to 1 (and an image will not be returned in the case of the grab_image command). It will retain this value until a grab_image does result in an image being taken - or a 'get_preview_tc ON' command returns a tissue content value that passes the threshold test - at which point it will be set to 0. |
+| HasTissue | int | This is a convenience variable that will have the complementary value to NoTissue (it will be 1 when NoTissue is 0 and vice versa). |
+| PreviewReport | int | This contains a value that indicates what non-fatal error occurred after any of the PCS commands that trigger a preview image frame grab, namely get_preview, get_preview_focus, get_preview_stats and get_preview_tc. See p.Error: Reference source not found for details. |
+| Ps_SatL_R | int | After a get_preview_stats command this reports the number of undersaturated pixels in the red channel of a colour image (or in a monochrome image). |
+| Ps_SatL_G | int | After a get_preview_stats command this reports the number of undersaturated pixels in the green channel of a colour image. |
+| Ps_SatL_B | int | After a get_preview_stats command this reports the number of undersaturated pixels in the blue channel of a colour image. |
+| Ps_SatU_R | int | After a get_preview_stats command this reports the number of oversaturated pixels in the red channel of a colour image (or in a monochrome image). |
+| Ps_SatU_G | int | After a get_preview_stats command this reports the number of oversaturated pixels in the green channel of a colour image. |
+| Ps_SatU_B | int | After a get_preview_stats command this reports the number of oversaturated pixels in the blue channel of a colour image. |
+| Ps_Min_R | int | After a get_preview_stats command this reports the minimum pixel value in the red channel of a colour image (or in a monochrome image). |
+| Ps_Min_G | int | After a get_preview_stats command this reports the minimum pixel value in the green channel of a colour image. |
+| Ps_Min_B | int | After a get_preview_stats command this reports the minimum pixel value in the blue channel of a colour image. |
+| Ps_Max_R | int | After a get_preview_stats command this reports the maximum pixel value in the red channel of a colour image (or in a monochrome image). |
+| Ps_Max_G | int | After a get_preview_stats command this reports the maximum pixel value in the green channel of a colour image. |
+| Ps_Max_B | int | After a get_preview_stats command this reports the maximum pixel value in the blue channel of a colour image. |
+| NSteppers | int | After a get_actuators command this reports the number of stepper motors currently defined on the server. |
+| NBinaries | int | After a get_actuators command this reports the number of binary actuators currently defined on the server. |
+| NMlevels | int | After a get_actuators command this reports the number of M-level actuators currently defined on the server. |
+| NServos | int | After a get_actuators command this reports the number of servos currently defined on the server. |
+| NSensors | int | After a get_actuators command this reports the number of sensors currently defined on the server. |
+| CurrActIdx | int | This reports the index number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
+| CurrActType | int | This reports the actuator type number of the currently selected actuator. It is updated upon successful completion of a def_actuator command or a act_getid command. |
+| NReads | int | This reports the result of any call to the command fset_var. The default value at the start of any script is -4. |
+| NWrites | int | This reports the result of any call to the command fput_var. The default value at the start of any script is -4. |
+| NewLines | int | This reports the number of logical line endings encountered on the input stream immediately following a string-based fset_var operation. The default value is 0. |
+| NBytes | int | This reports the total number of raw bytes consumed from the file during the "reading phase" of the last fset_var command and the total number of bytes written to a file by the fput_var command. |
+| Millis | int | This is a rolling millisecond counter and is updated whenever it is used. Although it is an int (signed) it will never be negative because it rolls over to 0 after 2147483647 (about 24 days) so effectively acts as a 'uint31_t'. |
+| PreviewPos | int | The position in the main VGA RGB preview display buffer to read from when evaluating PreviewVal. |
+| PreviewInc | int | The automatic increment of PreviewPos that is applied each time PreviewVal is read. |
+| PreviewVal | int | The value of the main VGA RGB preview display buffer at position PreviewPos. This will be either a red, green or blue pixel value, each in the range 0 to 255, depending on the values of PreviewPos and PreviewInc because the display buffer stores colour pixel values in the order R, G, B for each pixel. |
+| PMRep1 | float | The last known step count (in atomic steps) of the X axis stepper motor. |
+| PMRep2 | float | The last known step count (in atomic steps) of the Y axis stepper motor. |
+| PMRep3 | float | The last known step count (in atomic steps) of the Z axis stepper motor. |
+| PMRep4 | float | The last known step count (in atomic steps) of the last moved stepper motor. |
+| Ps_Integral_R | float | After a get_preview_stats command this reports the sum of all pixel values in the red channel of a colour image (or in a monochrome image). |
+| Ps_Integral_G | float | After a get_preview_stats command this reports the sum of all pixel values in the green channel of a colour image. |
+| Ps_Integral_B | float | After a get_preview_stats command this reports the sum of all pixel values in the blue channel of a colour image. |
+| Ps_Var_R | float | After a get_preview_stats command this reports the variance of all pixel values in the red channel of a colour image (or in a monochrome image). |
+| Ps_Var_G | float | After a get_preview_stats command this reports the variance of all pixel values in the green channel of a colour image. |
+| Ps_Var_B | float | After a get_preview_stats command this reports the variance of all pixel values in the blue channel of a colour image. |
+| Ps_Mean_R | float | After a get_preview_stats command this reports the mean of all pixel values in the red channel of a colour image (or in a monochrome image). |
+| Ps_Mean_G | float | After a get_preview_stats command this reports the mean of all pixel values in the green channel of a colour image. |
+| Ps_Mean_B | float | After a get_preview_stats command this reports the mean of all pixel values in the blue channel of a colour image. |
+| Ps_DCT_R | float | After a get_preview_stats command this reports the mid-frequency discrete cosine transform power of all pixel values in the red channel of a colour image (or in a monochrome image). |
+| Ps_DCT_G | float | After a get_preview_stats command this reports the mid-frequency discrete cosine transform power of all pixel values in the green channel of a colour image. |
+| Ps_DCT_B | float | After a get_preview_stats command this reports the mid-frequency discrete cosine transform power of all pixel values in the blue channel of a colour image. |
+| Ps_MAL_R | float | After a get_preview_stats command this reports the mean absolute Laplacian of all pixel values in the red channel of a colour image (or in a monochrome image). |
+| Ps_MAL_G | float | After a get_preview_stats command this reports the mean absolute Laplacian of all pixel values in the green channel of a colour image. |
+| Ps_MAL_B | float | After a get_preview_stats command this reports the mean absolute Laplacian of all pixel values in the blue channel of a colour image. |
+| Ps_Focus_R | float | After a get_preview_stats command this reports the value of the chosen focus statistic of all pixel values in the red channel of a colour image (or in a monochrome image). |
+| Ps_Focus_G | float | After a get_preview_stats command this reports the value of the chosen focus statistic of all pixel values in the green channel of a colour image. |
+| Ps_Focus_B | float | After a get_preview_stats command this reports the value of the chosen focus statistic of all pixel values in the blue channel of a colour image. |
+| Ps_Npix_R | float | After a get_preview_stats command this reports the number of pixels used in the mean and variance calculations for pixels in the red channel of a colour image (or in a monochrome image). |
+| Ps_Npix_G | float | After a get_preview_stats command this reports the number of pixels used in the mean and variance calculations for pixel values in the green channel of a colour image. |
+| Ps_Npix_B | float | After a get_preview_stats command this reports number of pixels used in the mean and variance calculations for pixel values in the blue channel of a colour image. |
+| Ps_Msupport | float | After a get_preview_stats command this reports the number of pixels in the region of support if a preview mask is applied. Note that other statistics values described above as pertaining to 'all pixel values' will actually be for all pixel values within the region of support of any applied mask. |
+| CurrTC | float | The tissue content value of the image. This is updated with each call to 'get_preview_tc ON' |
+
+## Arrays
+
+Only 1-dimensional arrays are allowed in PCS. In the PCS compiler all variables are treated as arrays. If you define a variable as an array of size 1 using the def_array command this is entirely equivalent to if you used the def_var command instead. Thus, def_var is redundant. and is provided purely for convenience as a 'programming style' choice for the PCS programmer. Using def_var makes it clear to anyone reading the script that this is a single variable (a scalar) and so cannot be indexed with square brackets. For more details see the dedicated descriptions of the def_var and def_array commands.
+
+## Protected names
+
+When a user defines a variable they can select the name they want to give it but certain names are forbidden - these are the 'protected names'. In addition to the names of all the system variables, the following are also protected.
+
+The system symbol CurrAct. This may be used in any command that requires the argument <act_id> which means the unique string name that defines an actuator. Using CurrAct in such cases will cause the interpreter to use the values of the two system variables CurrActIdx and CurrActType as the actuator index and the actuator type arguments for that command call.
+
+The system symbol FITS (case sensitive) is reserved for use as an argument in some imaging commands so cannot be used as a name for a user-defined variable even though it is not a variable in itself.
+
+The system symbols that refer to combined stage motors are also protected names. These are StageXY and StageXYZ.
+
+Also protected are the words exit and ignore as wells as name that reads as a number (5, 1e+3) and any name containing a bracket
+
+Command names are not protected. So you could, quite legally, define a variable with the name of a command like this: 'def_var int print_value 1', and so 'print_value print_value 2' will be a legal coding line and prints '1'.
+
+More will be said about these system symbols and the system variables in the detailed descriptions of the PCS commands elsewhere in this document.
+
+# Functions
+
+In version 1 of PCS there are two ways to implement a function-like subroutine to avoid repeating code blocks. One uses the ***formal function*** definition and calling system. The other uses non-local goto jumps. The 'functions' implemented by that method are sometimes referred to as ***subroutines*** to distinguish them from formal functions. This chapter deals with formal functions. The goto method will be described in the section detailing the goto command.
+
+## Defining a function: def_func and return
+
+The code for a function begins with a def_func command that tells the interpreter where the function block begins and assigns a name (its 'label') to the function.
+
+def_func <function_label>
+
+Each def_func command must be followed at some point by one - and only one - return command. The return command has no arguments; it defines the end of the function block of code.
+
+There is no concept of 'declaring' a function separate to defining it. Functions may be used (called) before they are defined in a script.
+
+Function definitions cannot be nested - you cannot have a def_func command following another def_func command without a return command in between the two def_func commands.
+
+The function label main is special - see section on 'main' below. All non-main function must be defined after the main function block. All function labels must not contain white space and you cannot have duplicate labels. For def_func the <function_label> argument must be a hard-coded string, not a variable. There is no other restriction for naming functions.
+
+## Calling a function: call_func
+
+Functions are invoked with the call_func command:
+
+call_func <function_label> [if <varval>]
+
+Functions may be called recursively (so there is also the risk of a stack overflow).
+
+Note that the <function_label> argument can be a string variable meaning that the same call_func command in a script can be used to call different functions if the script sets the string variable argument to different values (different function labels) according to some algorithm. That is, <function_label> does not have to be a hard-coded string constant.
+
+Note the option of making a function call conditional on the value of a varval being non zero (similar to the extended goto command). This way you could shorten PCS command sequences. For example you could re-write this:
+
+```pcs
+act_getid X_Axis
+set_condexp CurrActIdx >= 0
+do_if Condexp
+  act_halt CurrAct
+  act_set CurrAct INFO_ENA_STATE 0
+enddo
+act_getid Y_Axis
+set_condexp CurrActIdx >= 0
+do_if Condexp
+  act_halt CurrAct
+  act_set CurrAct INFO_ENA_STATE 0
+enddo
+act_getid Z_Axis
+set_condexp CurrActIdx >= 0
+do_if Condexp
+  act_halt CurrAct
+  act_set CurrAct INFO_ENA_STATE 0
+enddo
+```
+
+to just this (by also functionalising the halt and disable code into the function halt_disable):
+
+```pcs
+act_getid X_Axis
+set_condexp CurrActIdx >= 0
+call_func halt_disable if Condexp
+act_getid Y_Axis
+set_condexp CurrActIdx >= 0
+call_func halt_disable if Condexp
+act_getid Z_Axis
+set_condexp CurrActIdx >= 0
+call_func halt_disable if Condexp
+```
+
+## Function arguments
+
+An important difference compared to functions in other languages is that PCS has no facility for local or automatic variables - all variables in a PCS script are global. Thus you cannot pass arguments to function in the same way you can for other languages.
+
+The way this is handled in PCS is that if you require 'pass-by-value' arguments then you set aside some user-defined variables for use as argument-substitutes for your functions. Then, when the time comes to call your function you do the local copying of values to those argument-substitute variables and ensure your function uses those argument-substitute variables in its processing.
+
+## Return values
+
+PCS functions do not return anything. They are essentially just re-usable blocks of code. If you want to use the results of their processes on a variable, for example, then you should make the function put its result in some variable and, because all variables are global, you can then use that result either directly (by using the variable) or you copy the result to some other variable for use when the function returns.
+
+## main
+
+Unlike some languages (for example, C) there is no mandatory requirement for a 'main' function entry point and, in fact, no mandatory requirement for the use of any functions at all in a PCS script.
+
+However, if you do choose to define even one formal function then you must also define main. You can choose to define main alone, without any other function if you want to. This will give you the option of defining other functions at some later time. If you do not define main (and, by extension therefore, you do not define any functions at all) then the script will simply execute each line it encounters following whatever control-of-flow logic you have until it encounters the exit command.
+
+The main function is the only one where the name of the function is strictly defined - it must be called main.
+
+If you define main then this must be the very first function to be defined in your script.
+
+Any other function may have a name of your choosing but it must be unique (you can't have two or more functions with the same name).
+
+The return command from main is equivalent to the exit command - the script will terminate upon enacting this return command.
+
+# Code blocks, loops and control of flow
+
+In PCS, code blocks are defined by specific pairs of commands only - not by any kind of brackets and not by indentation level. The command pairs that define a block of code are the following:
+
+The function block:
+
+```pcs
+def_func
+return
+```
+
+The while loop block
+
+```pcs
+loop_while
+endloop
+```
+
+The 'if' (with optional 'else') block(s):
+
+```pcs
+do_if
+else
+enddo
+```
+
+In this if construction there are three options of code block, the do_if ... enddo, the do_if ... else and the else ... enddo blocks.
+
+### Control of flow
+
+This is achieved in the form of:
+
+* Sequential flow to the next script line (the default)
+* The evaluation of the conditions associated with the loop_while or do_if commands.
+* The presence of an else command in a do_if block
+* The value of the function label argument in a call_func command and its optional conditional form: call_func <function_label> if <condition>. Recall that, unlike the def_func command, the <function_label> argument in call_func can be a string variable. Therefore by including logic that alters the contents of that string variable the program may call a different function each time it visits that same call_func line in a script.
+* The goto command and its optional conditional form: goto <label> if <condition>
+* The return command from the main function initiates controlled exit from the script
+* The exit command initiates controlled exit from the script. This may be reached as a prime command in the script or as a failure option in the autofocus command if the programmer has selected that option via af_setup.
+* The use of conditional expressions with the set_condexp command and Condexp system variable.
+* Details of the above commands can be found in the chapters 'Functions' and 'List of commands'.
+
+# The Graphics Sub-Interpreter (GSI)
+
+PCS includes the ability to draw bitmap overlays onto the live preview pane of pardclient. It does this via a series of PCS command that all begin with 'preview_draw_' which are implemented by a graphics drawing sub-system ('engine') of PCS call the graphics sub-interpreter or GSI.
+
+Using the GSI is an alternative, and functionally separate, way of displaying graphics compared to drawing in the script console area with coloured text and UTF8 Unicode graphics (which is also possible using the series of 'print_' commands).
+
+This works by drawing the graphics to a separate RGB pixel buffer that is exactly of VGA size (640x480 pixels) and this buffer is painted onto the actual preview image buffer just prior to that preview buffer being displayed on the GUI preview pane of pardclient.
+
+This gives the PCS programmer a programmatical way to annotate live preview images coming from a camera feed. For example:
+
+* to draw a scale bar (which may be dynamic - for example if the camera's zoom can be altered programmatcally, you can alter the scale bar accordingly).
+* to draw a bounding box around objects that are detected by some detection algorithm
+* to draw some textual annotation labels over the preview
+* to animate the scale bar or bounding box, text, etc.
+* to implement a user-controllable arrow pointer or other position indicator
+* and much more
+
+However the pardclient does not need to be connected to a server or a camera for the graphics commands to work so you may use them 'offline' to do general graphics and text drawing and glyph 'blitting' (short for 'bit-block transfer') onto the VGA preview canvas of pardclient.
+
+Note that the GSI interprets the colour black (0,0,0) as 'transparent', not black, so the darkest shade of grey you can paint with the GSI is (1,1,1). The darkest colours (e.g. (1,0,0) for darkest red) will not be transparent.
+
+The text drawing facility has a basic ASCII English character set font (8x8 pixels per character) initialised at the start of every script run. This comprises a continuous set of 95 printable characters (upper and lower case letter, numbers, punctuations) all in their ASCII positions starting from a space character at position 32 (of 255) to the tilde, '~', at position 126. However, there are a full 256 character slots available for the text font and there is a general programmable character generator (PCG) facility that allows you to use custom character designs in any of these 256 character positions (including over-writing the standard font) if you require additional or different characters for any purpose. Example uses for the custom PCG characters include internationalisation (accents, etc.) and Greek letters (such as the Greek 'm' for a micrometer scale).
+
+The GSI is designed to guard against overflow of drawings and text past the VGA bounds. It does this by silently ignoring any overshoots and so avoiding any issues with potential memory seg faults. You can therefore draw with confidence but note that any draw actions outside the bounds of the VGA area will simply be ignored. For speed of rendering, the GSI does not use aliasing.
+
+Further details are provided in the descriptions for the 'preview_draw_' set of commands elsewhere in this manual.
+
+# Trackers
+
+PCS allows you to define and use trackers of various types - just as it allows you to define and use actuators or variables. Trackers operate at the client level (no communication with the server is required).
+
+A tracker follows a target from one preview image to the next. You tell it where the target is in one image (the template window), then give it each new image in turn and it reports where the target has moved to and how confident it is that the target is in the new area. All trackers work on the VGA (640 x 480) preview buffer and all coordinates are in that frame.
+
+You can define multiple trackers, each with a different tracking algorithm tuned to a specific target, and use them to track multiple targets on each preview frame. Trackers only report the position of their target and a confidence score. What you do with that information is up to you. Trackers do not draw a bounding box around their target (for example) - but you can do that if you want to by linking the tracked position to a bounding box overlay drawing provided by the preview_draw_## commands.
+
+The usual sequence of commands for implementing tracker functionality is:
+
+* **def_tracker** - create a tracker of the type you want (once).
+* Put an image containing the target in the preview buffer and use **init_tracker** to tell the tracker where the target is.
+* For each new image: load it into the preview buffer and use **track** to find the target. Use **get_tracker** to read the status flag and other information of a tracker.
+* Use **set_tracker** to tune the tracker, **match_tracker** to score specific windows (for example, to recover a lost target) and **undef_tracker** when you have finished with it.
+
+The position of the target is always reported as the top left corner (row, column) of a square window of <template_dim> x <template_dim> pixels, the *template window*.
+
+*Search area*: The zmncc, hog, com and ght trackers look for the target only inside a square search area of <search_dim> x <search_dim> pixels centred on the last known position of the template window (moved if necessary to keep it inside the frame). This means the target can move by at most about (<search_dim> - <template_dim>) / 2 pixels in any direction between two track commands: a target that moves further than that between images will be lost. A bigger search area allows faster targets to be tracked but costs more processing time. The klt tracker does not use a search area: it works on the whole frame and ignores <search_dim> (which must still be supplied as a valid value to satisfy PCS command syntax).
+
+Confidence and occlusion. Every track operation returns a confidence value. Each tracker has an *occlusion threshold*: when the confidence is below it, the target is judged to be occluded (or lost), the tracker's occlusion counter is incremented and its status flag is set to TRKS_OCCLUDED. Confidence values of different tracker types are on different scales so the default thresholds are only starting points - tune them with set_tracker for your images.
+
+*Failure policy*: Tracking problems never terminate your script; they are reported through the tracker's status flag (see init_tracker). A script is terminated only for invalid arguments (for example an unknown tracker name, coordinates outside the allowed range, a variable of the wrong type or a setting number that does not exist) or for a catastrophic failure such as running out of memory or the preview image buffer not existing. When a command cannot produce a result it never writes an invalid value (such as -1) into your row and column variables: it leaves them as they were, so they always remain valid input for the next command.
+
+*Choosing a tracker type*:
+
+| **Type** | **How it follows the target** | **Suits** | **Notes** |
+| --- | --- | --- | --- |
+| zmncc | Compares the brightness pattern of the template with every position in the search area (zero-mean normalised cross correlation, so it is insensitive to overall brightness and contrast changes). The template slowly adapts to the target's changing appearance. | Textured targets whose appearance changes slowly. | Not tolerant of rotation or size change. Default occlusion threshold 0.80. |
+| hog | Histogram of Oriented Gradients. Compares the pattern of edge directions (a grid of histograms of oriented gradients, 9 orientation bins) in the template with every position in the search area. | Targets with a characteristic shape, where lighting varies. | Needs a sensible <cell_dim>. Fixed template. Default threshold 0.50. |
+| com | Follows the centre of mass of the bright (or dark) pixels in the search area. It does not use the appearance of the template at all - the template only fixes the window size and start position. | A single bright (or dark) blob on a contrasting background, such as a lamp or LED. | Fast. Confused by other bright (dark) objects in the search area. Default threshold 0.50. |
+| ght | Generalised Hough Transform (translation only). The strong edges of the template are recorded; edges found in the search area vote for the positions where the template would fit. | Targets with a distinct outline, including ones with little surface texture; tolerates partial occlusion. | Sensitive to edge polarity (light-to-dark edges only match light-to-dark edges). No rotation or size change. Fixed template. Default threshold 0.35. |
+| klt | Sparse pyramidal Kanade-Lucas-Tomasi. Follows many small corner features inside the box from image to image and also follows features in a band around the box, using them to cancel out background motion. | Fast or large motion, a moving camera, cluttered backgrounds, partial occlusion. | Works on the whole frame (no search area). The template window sets the size of the box and is where the features to follow are chosen at initialisation; the tracker then follows those features rather than searching for a stored picture of the template. Uses several megabytes of memory per tracker. Default threshold 0.30. |
+
+# The PCS Library Archiver and Linker
+
+## Introduction
+
+Like many other programming languages, PCS has the ability to allow you to create (archive) and use (link) libraries.
+
+A PCS **library** is a collection of PCS functions, together with the global variables and arrays they use, that any script can incorporate into itself by means of the add_lib command. The variables of a library may serve as arguments, results or behaviour modifiers of the functions of that library.
+
+A library is written as an ordinary PCS script. It becomes a library when it is compiled by means of the command make_lib in its source code. When the PCS run-time engine sees this command it **compiles that PCS program into library file**, whose extension is always .pcl.
+
+A script uses a compiled library with the command add_lib. On seeing this command, the pardclient copies the library’s definitions and functions into the script’s compiled program before the script is checked, so the script runs exactly as if the library’s source had been written into it.
+
+## Writing a library
+
+A PCS file that you intend to compile into a library must follow the following pattern - which is more restrictive than for general PCS programs in that there are restrictions imposed here that do not exist for general PCS programs that are not intended to be compiled to libraries:
+
+```pcs
+Pardus pcs 1                             # The usual PCS magic.
+make_lib                                 # Must be the first command.
+def_var   <type> <name> <value>          # Define any global variables and/or
+def_array <type> <name> <size> <value>   # arrays the library exposes to the
+                                         # user. No other commands or goto
+                                         # labels are allowed before main.
+def_func main                            # The library's own test program.
+    ...                                  # This main function will not be
+return                                   # copied into the library. This main
+                                         # must not use any goto labels.
+def_func <first library function>        # Then follows as many functions as
+    ...                                  # is wanted. These must not depend
+return                                   # depend on anything defined in main
+def_func <second library function>       # and there must be no code at all
+    ...                                  # between the last return and the
+return                                   # exit line.
+exit
+```
+
+### The rules
+
+The pardclient enforces the following rules when the library is made. Every refusal names the rule (by its number in the specification, '*Rules for libs'*, detailed at the end of this chapter) and the line concerned.
+
+1. **A full syntax check first.** The library source must pass the full script check applies to all PCS programs (which is why they must include a main function even though that is stripped away when the source is archived into a library file). The pardclient checks it once more when make_lib runs, even if you are using a dove file as your library source (usually, dove files skip the script check phase because a script check would have been done when creating the dove file, but for programs that are about to undergo archiving into a lib, the check is repeated regardless of whether you load the lib source a .pcs or as a pre-compiled .dove file).
+2. make_lib **comes first.** make_lib must be the first coding line after the magic line, and may appear only once. Anywhere else it is a syntax error, reported by the script check.
+3. **Only definitions before** main**.** Before def_func main, only def_var and def_array may stand. Nothing else is allowed there: no other command, no goto label, no null_command, and no add_lib.
+4. **No library inside a library.** A library cannot use another library directly. To build a library using other libraries, copy those other libraries' PCS source into the new library’s source.
+5. main **and at least one other function.** There must be a function main, and at least one other function after it.
+6. **No label in** main**.** The function main may contain no goto label at all.
+7. **No gaps between functions.** Between the return of one function and the def_func of the next, nothing may stand, not even a goto label.
+8. **Only** exit **after the last function.** After the return of the last function, nothing but exit may stand.
+9. main’s **names are its own.** No variable or array defined in main may have the same name as one defined before main or after main.
+10. **The functions must not depend on** main**.** main is not copied into the library, so every other function must be able to run all its code paths, including every optional path, without anything that only main defines. The pardclient refuses a library when any of the following holds:
+    * **Variables.** A variable or array that only main defines is used outside main: as an argument, as an array subscript at any depth, or as a file name. Words that set_str and cat_str copy as text are not uses.
+    * **Actuators.** The name of an actuator that main defines appears anywhere outside main. The name is taken as the script check takes it: as written, or as the value of the string variable that holds it. Define a library’s actuators in one of its own functions (for example an initialisation function) instead.
+    * main **itself.** A function calls main.
+    * **The program without** main**.** The library, with the body of main removed, fails the full script check. This catches every other dependence the check can see, for example a command whose prerequisites (such as af_setup before autofocus) only main supplies.
+
+* Goto labels need no test of their own: rule 6 allows none in main.
+
+**Two things that cannot be judged before the script runs.** Rule 10 cannot judge them, and the author must take care of them:
+
+1. **The current actuator** CurrAct**.** Every command that names an actuator changes it. A function that uses CurrAct relies on whoever called it to have selected an actuator.
+2. **Names computed at run time.** A function or label name that is assembled into a string variable while the script runs, and then used with call_func or goto, cannot be known in advance.
+
+### Good practice
+
+The rules are the minimum that the client requires. A good library also:
+
+* gives its functions, labels and variables names that a script is unlikely to use, for example with a common prefix such as rv_;
+* assumes no particular hardware;
+* defines, in its own functions, every actuator it uses;
+* puts in main a short test of its own functions.
+
+During development it helps to comment out make_lib: the library source then runs as an ordinary script.
+
+## Making a library (archiving)
+
+Load the library source .pcs file into pardclient and press *Run*. Instead of running the script, the client takes four steps:
+
+1. It checks the rules above.
+2. It asks where to save the library. The default is the script’s own folder and name, with the extension changed to .pcl, and the user may change both.
+3. It always saves the library with the extension .pcl. A name ending .dove or .pcs has that extension replaced, and any other name has .pcl appended.
+4. It writes the compiled library. The console then reports, for example:
+
+```
+Library written: /home/prof/pcs/mathlib.pcl (6 definition rows, 28 function rows in 3 functions).
+```
+
+If the save is cancelled, the run ends with the error:
+
+make_lib: the save was cancelled; no library file was written.
+
+The library is first written to a temporary file, <library>.tmp, in the same folder. It replaces any older library of the same name only when it is complete. The temporary file is always deleted.
+
+A library source that was previously saved as a compiled program (.dove) can also be made into a library: load the .dove and press *Run*. The library is still checked in full (unlike with other dove programs that do not contain the make_lib command) and, if archiving is successful, the newly created library with be saved as a .pcl file as described above.
+
+## Using a library
+
+A script names its libraries immediately after the magic line like this:
+
+```pcs
+Pardus pcs 1
+add_lib mathlib.pcl
+add_lib /home/prof/pcs/libraries/robovox.pcl
+...
+```
+
+The rules are:
+
+1. **Placement.** Every add_lib must come immediately after the magic line, before any other command or goto label, and all add_lib lines must be contiguous.
+2. **Formal functions.** The script must contain at least one formal function (def_func main at least).
+3. **The file name.** The file name is the rest of the line after add_lib, so it may contain spaces.
+
+The library inclusion (linking) process does this: Each library’s definitions are placed after the add_lib lines, and its functions after the script’s last function. The script and its libraries share one set of names. A name defined in both, or a library named twice, is refused by the script check as a duplicate definition.
+
+## Compiled programs (.dove) that use libraries
+
+If a script that uses libraries is saved as a compiled program (.dove), the libraries are included in it. The .dove is a static build: it runs without the .pcl files.
+
+## Where the client looks for a library
+
+The file named by add_lib is looked for first exactly as written: either a full path, or a name relative to the folder from which the client was started. If it is not found there, it is looked for in **the folder of the last script loaded**. Files named by #include are looked for in the same way.
+
+**Caution.** The main script and the stop script (also called an 'interrupt script' - see the pardclient user manual for details) share that “last script loaded”. Suppose a stop script is loaded from another folder *after* the main script. If the main script is then compiled again (the *Run* button compiles it afresh from its file whenever no compiled program is ready), its libraries and included files are looked for in the **stop script’s** folder.
+
+To avoid this, either give full paths in add_lib and #include, or keep the main script and its stop script in the same folder.
+
+## Messages about library lines
+
+Every line of a script keeps its own source code line number in messages, and so does every line of a library. A message about a line that came from a library therefore names the library and the line in the library’s source file, for example:
+
+```
+[user.pcs][13]: Array index out of bounds: 'el_tab[el_i]' (Index: 10). (line 13 of library errlib.pcl)
+```
+
+The same holds when the program was saved as a .dove.
+
+## The compiled library file (.pcl)
+
+The layout of a compiled PCS library.
+
+| offset | size | content |
+| --- | --- | --- |
+| 0 | 7 bytes | the characters PCS LIB (no terminating zero) |
+| 7 | 32-bit unsigned | format version (1) |
+| 11 | 32-bit unsigned | ndefs: the number of definition rows |
+| 15 | 32-bit unsigned | nfuncs: the number of function rows |
+| 19 | (variable) | ndefs rows, then nfuncs rows, each in the row format of a .dove file |
+
+The rows are stored exactly as the compiler produced them. They carry no position: every position in a program, such as the target of a goto or the start of a function, is worked out by the script check (or, for a .dove, by the AOT linker) after the libraries have been linked and just prior to running the program.
+
+The client refuses a library file that does not have this form exactly. The faults it detects are:
+
+* a wrong magic or version;
+* fewer or more rows than the header announces;
+* a damaged row;
+* definition rows that are not def_var or def_array;
+* functions that do not end with return.
+
+## Messages of the library system
+
+The messages of make_lib.
+
+| message (abbreviated) | rule (under ‘The rules’) |
+| --- | --- |
+| make_lib: script_check failed at line N: ... | 1 |
+| make_lib must be the first coding line ... | 2 |
+| make_lib (rule 4.1.7): line N, 'X', comes before 'def_func main' ... | 3 |
+| make_lib (rule 4.1.7): line N, 'add_lib': a library cannot use another library ... | 4 |
+| make_lib (rule 4.1.2): ... | 5 |
+| make_lib (rule 4.1.4): line N, 'L:': the function main may contain no goto label. | 6 |
+| make_lib (rule 4.1.5): line N, 'X', stands between ... | 7 |
+| make_lib (rules 4.1.1 and 4.1.6): line N, 'X', stands after the return of the last function ... | 8 |
+| make_lib (rule 4.1.3): 'X' is defined in main (line N) and also outside main (line M). | 9 |
+| make_lib (rule 4.1.3): 'X' is defined only in main (line N) but used outside main (line M) ... | 10a |
+| make_lib (rule 4.1.3): actuator 'X' is defined in main (line N) but named outside main (line M) ... | 10b |
+| make_lib (rule 4.1.3): line N calls main, which is not part of the library. | 10c |
+| make_lib (rule 4.1.3): the functions depend on main: with the body of main removed, script_check fails at line N: ... | 10d |
+
+The messages of add_lib.
+
+| message (abbreviated) | meaning |
+| --- | --- |
+| Linker error at line N: every add_lib must come immediately after the magic line ... | ‘Using a library’, rule 1 |
+| Linker error at line N: make_lib comes after add_lib ... | add_lib must come after any make_lib |
+| Linker error (syntax) at line N: the script has no formal functions ... | ‘Using a library’, rule 2 |
+| Linker error at line N: add_lib needs a library file name ... | ‘Using a library’, rule 3 |
+| Linker error at line N: library X not found ... | see ‘Where the client looks for a library’ |
+| Linker error: X is not a PCS library (.pcl) file., and the other Linker error: X ... messages | the file is not a valid library (see ‘The compiled library file’) |
+
+## Rules for Libs
+
+These are the rules that the numbers in the above messages pertain to.
+
+A library is written as an ordinary PCS source code file but it cannot be used as a library until it is pre-processed and compiled into a library as follows:
+
+1. All library source files are just normal pcs files but they need to be constructed according to some rules that make them usable as a library.
+2. A pcs file is compiled into a library by the archiver if it sees the command 'make_lib' as the first coding line after the magic line.
+3. The command 'make_lib' appearing anywhere after the first coding line (post magic) is a syntax error and the pre-processor / syntax checker must reject a script as malformed if it finds that command anywhere else in a script or more than once in a script.
+4. If the run-time engine sees the command 'make_lib' (op code OP_MAKE_LIB) in the compiled PCS program then, instead of running the rest of the program, it processes the script into a lib file according to the following:
+   1. The following rules are checked. If any one of them fails then the script is rejected as not compatible with a lib file and this is treated as a run-time error:
+      1. If the script contains a goto label or any code after the return of the last function and before exit it is rejected.
+      2. If the script contains no functions other than main it is rejected. (This implies that main must be present.). Thus 'main' must be the first function, and at least one other function must follow it.
+      3. No variable or array defined in main may have the same name as one defined (def_var or def_array) before main or after main.
+      4. main may contain no goto label at all. Then nothing outside main can jump into main.
+      5. between the return of one function and the def_func of the next nothing may stand, not even a goto label.
+      6. If any coding line (including a goto label) occurs between the return of the last function and the exit command it is rejected.
+      7. If any command or label, other than def_var or def_array, occurs before 'def_func main' it is rejected. This excludes the initial magic line and add_lib command - but nothing else.
+
+# PCS and AI Coding Agents
+
+PCS was designed at a time when AI coding assistants were becoming commonly available and widely adopted. For this reason PCS was designed to be 'AI-friendly' in that is has certain features built into the language that make it easy and efficient for AI agents to learn, to debug and to code in.
+
+While PCS remains fully accessible to human programmers, certain design choices prioritise the way Large Language Models (LLMs) and automated planners process logic, tokenise syntax, and manage state.
+
+## The AI-friendly design principles of PCS
+
+The following summarise the core principles of the language which are of particular value to AI coding agents.
+
+### 1. Atomic and Predictable Syntax
+
+PCS avoids nested functional complexity (e.g., x = func1(func2(y))). Instead, it uses a flat, instruction-based format where each line performs a single, verifiable operation. This reduces "token attention" drift and ensures the AI can maintain perfect syntactic accuracy over long scripts.
+
+### 2. Operator Abstraction (Dynamic Dispatch)
+
+In PCS, logical and mathematical operators (like ==, >, sin, or pow) are often treated as data tokens or variables. An AI can store the argument of a goto command, a function name in a call_func command or a comparison symbol in a string variable (including an array of strings) and "decide" at runtime which operation to perform. This allows for highly compact, meta-programmable logic that bypasses the need for massive if/else trees.
+
+The use of this feature in the goto command as well as the call_func command means the AI agent is free from the restrictions of using only run-time string constants (a restriction found in many other languages like C). This enables '***first-class control flow***'. By treating control flow elements (labels, functions, and operators) as first-class variables, PCS allows AI agents to architect flexible, non-linear workflows. This removes the brittleness of hard-coded logic and empowers the script to adapt its own structure in response to environmental data. Such ***meta-programming*** allows for the use of a '***Jump Table***' approach that is more efficient for LLMs to manage than complex branching logic.
+
+Here is a skeleton template example for PCS meta-programming:
+
+```pcs
+Pardus pcs 1
+verbosity 1
+def_array string CompOp 6 ==
+def_var int CompIdx 0
+def_array string FuncName 100 func_1
+def_var int FnIdx 0
+def_array string GotoLabel 20 exit_label
+def_var int GtIdx 0
+def_var float fvar1 0.0
+def_var float fvar2 0.0
+def_var int ivar 0
+def_var int ivar 0
+def_func main
+  # Populate the comparison operations array
+  set_var CompOp[0] ==
+  set_var CompOp[1] !=
+  set_var CompOp[2] >=
+  set_var CompOp[3] >
+  set_var CompOp[4] <=
+  set_var CompOp[5] <
+  # Likewise populate the function name array and goto label array
+  # ... populating code here ...
+  # Other code, manipulating CompIdx, fvar1, fvar2, FnIdx, GtIdx, etc.
+  # Note that the 'if <varval>' component of call_func and goto are optional
+  # but, as an example, we could do something like this:
+  set_condexp fvar1 CompOp[CompIdx] fvar2
+  call_func FuncName[FnIdx] if Condexp
+  # Other code here ...
+  set_condexp ivar1 CompOp[CompIdx] ivar2
+  goto GotoLabel[GtIdx] if Condexp   # Also remember that a PCS goto is
+                                     # 'stack aware' and capable of non-local
+  # etc.                             # jumps.
+return
+# Other functions defined below here.
+exit_label:
+exit
+```
+
+### 3. Transparent State Management
+
+PCS uses a Global-Only variable environment. By eliminating local scope and variable "shadowing," the AI always has a clear, unambiguous view of the entire machine state. This is particularly effective for Non-Local Jumps (goto), allowing the AI to move between different processing modes without the risk of stack-frame corruption or hidden memory leaks.
+
+### 4. Vectorised Reasoning via Universal Arrays
+
+Every variable in PCS is an array. This encourages the AI to think in "batches" or "lookup tables." By storing function labels, branch targets, or mathematical operators in arrays, an AI can navigate complex behavioural states using simple index-based dispatching.
+
+### 5. Explicit Data Casting
+
+PCS employs a "Left-Hand Master" rule for automatic casting. When comparing or operating on different data types, the interpreter clearly defines how the conversion occurs. This predictability ensures that an AI-coder can accurately anticipate how the system will handle "3" (string) versus 3 (integer).
+
+*Example:*
+
+set_var myStr 5
+
+results in myStr containing the string composed of ['5']['0'] whereas, using this same myStr, if we do
+
+set_var myInt myStr
+
+this results in myInt containing the numerical value 5.
+
+### 6. Minimalist Delimiter Logic
+
+By dispensing with quotes and brackets for strings and complex expressions, PCS minimises "syntactic noise." This reduces the likelihood of the AI "forgetting" a closing character and ensures that the literal data provided is exactly what sits in memory.
+
+### 7. The Scratchpad zone
+
+The PCS exit command allows for "free text annotation" below it in any script file. This is a very useful feature for LLMs. The area below exit may be used for persistent memory, scratchpad logic, or storing JSON metadata that doesn't need to be parsed by the PCS interpreter. AI models appreciate having a designated "scratchpad" area.
+
+## Guide for AI prompting
+
+When using an AI LLM to generate or debug PCS scripts, providing a clear "System Prompt" is essential. Because PCS uses a flat, global-only architecture with unique string handling, you should explicitly instruct the AI to adopt the following coding style:
+
+### The "PCS Expert" Prompt
+
+To get the best results, start your request to the AI with a prompt similar to this:
+
+```
+*"Act as an expert PCS programmer. Write a script for version 1 that follows these rules:
+Provide a 'Plan' in the Scratchpad zone below the exit command before writing the main code.
+Use a flat logic structure (avoid deep nesting where possible).
+Remember that strings have no delimiters; quotes are literal data.
+All variables are global; use unique prefixes for function-specific variables.
+Use the set_condexp result Condexp for all branching logic that requires a conditional expression to be evaluated.
+All variables are arrays; use var[index] syntax for sizes > 1."*
+```
+
+### Guidelines for AI Code Generation
+
+* **Atomic Steps**: Ask the AI to "break complex maths into individual steps using math_var or individual arithmetic commands like add_var." This prevents the model from trying to use C-style inline equations which will fail the PCS syntax check.
+* **String Formatting**: Remind the AI that "spaces between arguments are collapsed." If the AI needs to generate a formatted UI, instruct it to "use the Space system variable with add_var (or cat_char with a value 32) to build precise whitespace." and that "PCS does not use delimiters of any kind to define or declare strings; if a delimiter is used it will be a literal part of the string".
+* **Dynamic Labels**: Encourage the AI to "use string variables for goto labels and function call destinations to create state-machine transitions." LLMs are excellent at managing state tables when given the permission to do so.
+
+### Avoid blind trust
+
+Since PCS is a language that controls hardware, mistakes can lead to physical damage (just as mistakes in G-code can damage a 3D printer or CNC machine).
+
+It may take a lot of specialist PCS training before an AI can generate code that approximates to 'safe' code for hardware control.
+
+It is highly advisable ***not*** to simply 'trust and run' PCS scripts written by an AI. You should examine the code to ensure it does what you intend in a safe way (for example, that all extant motors have the correct limit switch pin assignments) before running it on a live robot, CNC stage or other mechanism. Close supervision of the robot / stage is also advised, especially on the first run and be ready to hit the kill switch if necessary.
+
+# List of commands
+
+Here is an alphabetically ordered list of current prime commands and their usage notes.
+
+### act_accel
+
+act_accel <act_type> [args based on <act_type>]
+
+This sets essential common parameters for motion of an actuator of type <act_type> which will be used for all non-homing motions with actuators of that type till you change those parameters with another call to this command.
+
+<act_type> - for the options for this integer see def_actuator. The arguments that are expected to follow <act_type> will depend on <act_type>.
+
+For <act_type> = 1 (stepper) the following format is expected:
+
+act_accel <act_type> <prop_acc> <isd_min> <isd_max_min>
+
+Their meanings, data types and value ranges are as follows:
+
+<prop_acc> - a float number between 0.0 and 1.0. This is the proportion of the motion steps that are involved in acceleration and deceleration (as opposed to the remaining steps which will be done at a constant (maximum) velocity in between the acceleration and deceleration phases.
+
+<isd_min> - For stepper motors this is the minimum inter-step delay (isd) in microseconds. This determines the maximum speed of travel once travelling at constant velocity (i.e. at the end of any initial acceleration phase from a standstill). It must be > 1 (and is usually a few hundred or more. A value much lower than this probably won't be honoured in the motion because the various C source code statements that occur between motor pulse steps (like checking for limit switch status, etc.) will take about 150-200 microseconds to complete meaning any value you supply here much less lower this will just get over-ridden with whatever minimum time it takes to do those statements).
+
+<isd_max_min> - This is the longest isd you are willing to tolerate at the start and end of the motion. This number should be considerably larger than <isd_min> or the motion profile calculation will fail. A value in the low thousands would be typical. Both <isd_min> and <isd_max_min> are integers representing a whole number of microseconds.
+
+For <act_type> = 4 (servo) the following format is expected:
+
+act_accel <act_type> <s_acc> <duration>
+
+Their meanings, data types and value ranges are as follows:
+
+<s_acc> - an integer between 0 and 255. This is the proportion of the motion steps that are involved in acceleration and deceleration (as opposed to the remaining steps which will be done at a constant (maximum) velocity in between the acceleration and deceleration phases. The proportion is calculated by first converting the required servo motion range for a particular movement into number of 'steps' (a step is the smallest movement the servo can make at its current settings and bit depth of the timer its motion signal pin is connected to). This total number of steps is first divided by 2 to give the maximum number of steps that can be allotted to an acceleration or deceleration phase (called 'max_ramp_steps') and then the actual number of these steps to use for the acceleration and deceleration ramps is given by (using bit shift division):
+
+(s_acc * max_ramp_steps)/256
+
+To prevent initial and final acceleration steps from taking to long, a hard-coded lower limit of 0.5 seconds is imposed for the maximum inter-step delay at the start and end of any acceleration ramp. Unlike with steppers (where a sigmoid acceleration curve is used) servos use a simple linear ramp acceleration profile.
+
+<duration> - This is the duration, in microseconds, that you would like the entire motion sequence (acceleration, deceleration and any intervening constant motion phase) to take. It must be > 0. If the value you supply here is not longer than the estimated time it will take the servo to make the entire motion at its fastest intrinsic speed then the servo will undergo its motion at its native speed and will not be slowed down using this act_accel motion profile. This 'native speed' is calculated using the value you set for the servo minimum inter-step-delay using act_set with INFO_SRV_ISD (called isd_min in the source code) according to:
+
+isd_min * total_steps
+
+This is why it is important to set an acceleration profile before you add a servo to the motion list - because the decision on whether to move the servo with the acceleration and speed profile you set here is made at the time you list a servo on the motion queue with act_set and INFO_SRV_QPOS. Thus, if you ever change the acceleration profile after listing a servo on the queue you should unlist that servo and re-list it prior to issuing the act_moveto command in order to achieve a predictable motion profile for it.
+
+**Note**: This command must not be called for the Binary actuator type because these do not use motion characteristics and so to call act_accel for this type of actuator will actually cause an error that will terminate the program.
+
+**Note**: This command needs to be called at least once per login session in order for other motion commands (apart from stepper homing) to be allowed. A call to act_moveto or act_moveby will result in a script-terminating error if the interpreter sees that act_accel has not been called for the the actuator type you are trying to move. Likewise a call to act_set with INFO_SRV_QPOS (but not INFO_SRV_SPOS) for a servo will be rejected with an error as a safeguard to avoid erroneous motion queue parameter calculations (for the reasons discussed above).
+
+### act_get
+
+act_get <act_id> <info_ID> <var> [<var_y> <var_z>]
+
+This reads the value of the <info_ID> struct member of the actuator defined by <act_id> and sets it as the value of the variable <var>.
+
+<act_id> - See undef_actuator for a full description of this.
+
+<info_ID> - must be an integer corresponding to a readable item from the actuator's data structure. The currently valid readable info item integers are shown below (taken from parddefs.h). Note that only the integer value of the information item must be supplied, not the 'INFO_' token string, *unless* you include a pch header file containing these #defines (excluding the C comments) in your script, then you may use these #defined 'INFO_' token strings in your PCS script to make it more readable. The PCS include file, stdpard.pch, available on the PARDUS open source repository, was created to allow you to use all the following symbols in your PCS scripts:
+
+```c
+// These are the values for a Stepper actuator:
+#define INFO_ENA_STATE 1  // Ardu only    // Ask Ardu
+#define INFO_HOMED_TO  2                  // Ask Ardu  // Read only
+#define INFO_DIRN1     3                  // LG
+#define INFO_DIRN2     4                  // LG
+#define INFO_DIRNC     5                  // Ask Ardu
+#define INFO_DIRNP     6  // Ardu only    // Ask Ardu  // Read only
+#define INFO_MSDENOM   7                  // LG
+#define INFO_MSDEMAX   8  // Server only  // LG
+#define INFO_PULWIDTH  9                  // LG
+#define INFO_BLSTEPS   10                 // LG        // Read only
+#define INFO_BLSTMAX   11 // Server only  // LG
+#define INFO_CALIMAX   12 // Server only  // LG
+#define INFO_STEPCOUNT 13                 // Ask Ardu
+#define INFO_SW_LIM1   14                 // LG
+#define INFO_SW_LIM2   15                 // LG
+#define INFO_NHS       16                 // LG
+#define INFO_ISD_HOBL  17                 // LG
+#define INFO_LIMSTATE  18                 // Ask Ardu  // Read only
+#define INFO_PIN_PUL   19                 // LG
+#define INFO_PIN_DIR   20                 // LG
+#define INFO_PIN_LIM1  21                 // LG
+#define INFO_PIN_LIM2  22                 // LG
+#define INFO_PIN_DIAG  23                 // LG
+#define INFO_PIN_ENA   24                 // LG
+#define INFO_NAME_LS1  25 // Server only  // LG
+#define INFO_NAME_LS2  26 // Server only  // LG
+#define INFO_NAME_SW1  27 // Server only  // LG
+#define INFO_NAME_SW2  28 // Server only  // LG
+#define INFO_NAME_UNI  29 // Server only  // LG
+#define INFO_MATURITY  30 // Server only  // LG        // Read only
+#define INFO_XYZCOORDS 31                 // Ask Ardu
+#define INFO_DURALAM   32 // Ardu only    // Ask Ardu  // Read only
+#define INFO_STEPLAM   33 // Ardu only    // Ask Ardu  // Read only
+#define INFO_ONESTEP   34                 // LG        // Read only
+#define INFO_FASTMSD   35                 // LG
+#define INFO_MMODE     36 // Ardu only    // Ask Ardu
+#define INFO_TMCSGVAL  37 // Ardu only    // Ask Ardu  // Read only
+#define INFO_TMCSTATUS 38 // Ardu only    // Ask Ardu  // Read only
+#define INFO_TMCCHCONF 39 // Ardu only    // Ask Ardu  // Read only
+#define INFO_SG_BUFFPC 40 // Ardu only    // Ask Ardu
+#define INFO_SG_THRESH 41 // Ardu only    // Ask Ardu
+#define INFO_TURBO_BST 42 // Ardu only    // Ask Ardu
+#define INFO_TMCMSCNT  43 // Ardu only    // Ask Ardu  // Read only
+#define INFO_TENSTEPS1 44                 // LG
+#define INFO_TENSTEPS2 45                 // LG
+#define INFO_UNIT_TYPE 46 // Server only  // LG        // Read only
+#define INFO_PIN_MS1   47                 // LG
+#define INFO_PIN_MS2   48                 // LG
+#define INFO_PIN_MS3   49                 // LG
+#define INFO_SD_TYPE   53                 // LG
+// These are the values for a Binary actuator:
+#define INFO_BIN_STATE 1  // Ardu only    // Ask Ardu
+#define INFO_ON_VAL    3                  // LG
+#define INFO_OFF_VAL   4                  // LG
+#define INFO_PIN_BIN   24                 // LG
+#define INFO_MATURITY  30 // Server only  // LG        // Read only
+// These are the values for an M-Level actuator:
+#define INFO_ML_STATE  1 // Ardu only    // Ask Ardu  // Read only
+#define INFO_ML_TYPE   3                 // LG
+#define INFO_ML_TIMER  6 // Ardu only    // Ask Ardu  // Read only
+#define INFO_ML_PSC    4                 // LG
+#define INFO_ML_FREQ  33 // Ardu only    // Ask Ardu  // Read only
+#define INFO_ML_TTABLE 8 // Server only  // LG
+#define INFO_PIN_P0   19                 // LG
+#define INFO_PIN_P1   20                 // LG
+#define INFO_PIN_P2   21                 // LG
+#define INFO_PIN_P3   22                 // LG
+#define INFO_PIN_P4   23                 // LG
+#define INFO_PIN_P5   24                 // LG
+#define INFO_PIN_P6   47                 // LG
+#define INFO_PIN_P7   48                 // LG
+#define INFO_ML_LEVEL 49                 // LG
+#define INFO_MATURITY 30 // Server only  // LG        // Read only
+// These are the values for a Servo actuator:
+#define INFO_SRV_STATE  1 // Ardu only    // Ask Ardu  // Read only
+#define INFO_SRV_AFB   33 // Ardu only    // Ask Ardu  // Read only
+#define INFO_SRV_TIMER  6 // Ardu only    // Ask Ardu  // Read only
+#define INFO_SRV_ISD   17                 // LG
+#define INFO_SRV_FREQ  9                  // LG
+#define INFO_SRV_PINS  19                 // LG
+#define INFO_SRV_PINP  21                 // LG
+#define INFO_SRV_QPOS  44                 // LG
+#define INFO_SRV_SPOS  45 // Ardu only    // Ask Ardu
+#define INFO_SRV_MIN   14                 // LG
+#define INFO_SRV_MAX   15                 // LG
+#define INFO_SRV_THMAX 10 // Server only  // LG
+#define INFO_SRV_THMIN 11 // Server only  // LG
+#define INFO_SRV_CALIB 12 // Server only  // LG        // Read only
+#define INFO_SRV_ACCEL 49                 // LG
+#define INFO_MATURITY  30 // Server only  // LG        // Read only
+// These are the values for a camera_get operation
+#define INFO_CAM_MIN   50                 // LG (on client)
+#define INFO_CAM_MAX   51                 // LG (on client)
+#define INFO_CAM_CURR  52                 // Ask PARDcap using PS_CIID_CAMG
+// These are the values for a Sensor actuator:
+#define INFO_SEN_TYPE   3                 // LG
+#define INFO_SEN_PIN   21                 // LG
+#define INFO_SEN_VAL   33 // Ardu only    // Ask Ardu  // Read only
+#define INFO_MATURITY  30 // Server only  // LG        // Read only
+```
+
+The items labelled 'Server only' are data only stored on the server for this actuator (they are not stored on the Arduino) so accessing these items does not require the server to communicate with the Arduino. Conversely the items labelled 'Ardu only' are only held on the Arduino so can only be accessed by means of the server communicating with the Arduino and that could cause a stutter or short delay in otherwise continuous actions (like motion) being performed by the Arduino.
+
+All the other items are maintained in sync on both the Arduino and the server. To save unnecessary comms with the Arduino, only those items that may be set or changed as a result of Arduino actions are read from the Arduino ('Ask Ardu') by the server instead of being looked up on the server's local copy of the structure (local get or 'LG') in response to a client's act_get command. Obviously, an act_set command will require communication with the Arduino to set the data on the Arduino's version of the actuator structure with the exception of 'Server only' data items.
+
+For the command to succeed <act_id> must represent an actuator that is currently defined on the server, <info_ID> must correspond to a readable member of that actuator’s structure and <var> must be a user-defined variable (not a literal constant value or an internal system variable) and must be of a data type that can accept the requested info item (i.e. a string, float or int).
+
+The optional two arguments <var_y> <var_z> are used in the cases where <info_ID> specifies three values. For stepper actuators these are:
+
+INFO_NHS
+
+INFO_XYZCOORDS
+
+In the latter case the supplied <act_id> is overridden by the stepper actuator IDs of 0, 1 and 2 (the default XYZ motors of the stage) and this command will only be allowed if those three steppers are defined.
+
+**Note**: Table AG.1 gives every info item of an M-Level actuator, with what act_get and act_set may do with it.
+
+| No. | Info item | act_get | act_set | Held on | Values | Meaning |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | *INFO_ML_STATE* | yes, from the Arduino | no (read only) | Arduino | 0 or 1 | 1 once a level order has been carried out; 0 after creation, assignment of p0 (PWM), *act_halt*, the kill switch, and the freeing of the last pin. |
+| 3 | *INFO_ML_TYPE* | yes | once only, first | both | *MLT_PARALLEL* 0, *MLT_PWM* 1 (*MLT_UNSET* 3 when created) | The subtype; nothing else can be set before it. |
+| 4 | *INFO_ML_PSC* | yes | only while p0 is unassigned | both | 0, 3, 5, 6, 7, 8, 10 (default 3, *PWM_PSC_8*) | The pre-scaler code that the next assignment of p0, and every level, use. |
+| 6 | *INFO_ML_TIMER* | yes, from the Arduino | no (read only) | Arduino | 0 (none), 1 to 5 | The timer of p0; 0 while p0 is unassigned and always for a parallel M-Level. |
+| 8 | *INFO_ML_TTABLE* | yes, with three variables | yes, with three values | server only | row; frequency 0 to 8,000,000 Hz; duty 0 to 4999 except 2000 and 3000 | One row of the translation table. |
+| 19 to 24, 47, 48 | *INFO_PIN_P0* to *INFO_PIN_P7* | yes | yes | both | an Arduino digital pin; 255 (*FREE_PIN*) = unassigned | The pins; a PWM M-Level uses *INFO_PIN_P0* only. |
+| 30 | *INFO_MATURITY* | yes | no (read only) | server only | 0 to 3 | 1 for the type, 1 more for p0, 1 more for a PWM M-Level with a table. A parallel M-Level accepts levels from 2, a PWM M-Level from 3. |
+| 33 | *INFO_ML_FREQ* | yes | no (read only) | Arduino | — | The frequency ceiling the firmware computed when p0 was assigned (see the note below). |
+| 49 | *INFO_ML_LEVEL* | yes, the server’s record | yes | both | PWM: a row 0 to *n* − 1; parallel: 0 to 2n − 1; *act_get* returns 2147483647 when no level has been sent since creation or the last *act_halt* | The level last sent to the Arduino. |
+
+Table AG.1. The info items of an M-Level actuator.
+
+**Note**: For M-Level actuators the ‘<var_y> <var_z>’ arguments are used when setting or getting rows in the translation table using *INFO_ML_TTABLE*, and the format of the act_get command is then:
+
+act_get <act_id> INFO_ML_TTABLE <row> <freq> <duty>
+
+Where:
+
+<row> is a user-defined integer variable that holds the row in the table (starting at 0) whose data you want to retrieve. It must be a variable, not a literal number, because the client requires every receptor of act_get to be a user-defined variable, and it must not be negative.
+
+*<*freq*>* is the variable to hold the returned frequency integer (0 to 8,000,000).
+
+*<*duty*>* is the variable to hold the returned duty integer (0 to 4999: a duty cycle in per mille from 0 to 1000, or a special-effect code from 1001 to 4999).
+
+The values returned are the values stored in the table, which are the values you asked for. They are not necessarily the values the hardware produces: the frequency produced is the nearest achievable frequency at or above the stored one, limited to the range of the pre-scaler, and the duty cycle produced is the nearest achievable at that frequency (see the section on act_set). A stored frequency of 0 means silence (pin held LOW), unless the duty is 1000 (pin held HIGH).
+
+If the actuator has no translation table, an attempt to act_get a row of this non-existent table is an error. Such an error is not fatal to the script but is signified by the <row> value being incremented by 1 when the command executes.
+
+If the actuator has a translation table but the row you supplied does not exist in it (index out of bounds), this error is signified by the <row> value being incremented by 2 when the command executes.
+
+You can therefore check for these errors by keeping a copy of the value you supply for <row> and comparing it with the value in <row> after the command executes. If the two differ, the values returned in <freq> and <duty> are garbage and must not be used.
+
+**Note**: For M-Level actuators, *INFO_ML_STATE* reports whether the actuator has been set to its current activation level (which can be read with *INFO_ML_LEVEL*) or whether it has been de-activated (for example by an act_halt command or by the physical kill switch). It is read from the Arduino. It is 1 after any level order that the Arduino has carried out, including a row of duty 0 or of frequency 0 (the pin is then silent but the actuator is active) and a noise code; a code 4000 to 4999 leaves it unchanged, and a timed noise that has ended by itself leaves it at 1. It is 0 after the actuator is created, after the p0 of a PWM M-Level is assigned, after act_halt or the kill switch, and after its last pin is freed. A PWM M-Level whose state is 1 prevents the assignment of the p0 of another PWM M-Level, or of a servo’s pin, to its timer.
+
+**Note**: *INFO_ML_LEVEL* is read from the server’s own record, without asking the Arduino. It is the level (the row number, for a PWM M-Level) last sent with success. It reads 2147483647 (*MLEVEL_RESET*, *INT32_MAX*) after the actuator is created and after every act_halt sent for it. The server is not told of the kill switch, of the end of a timed noise, or of an effect ended by a level of another actuator on the same timer, so the value read is then the last level sent, even though the pin may be silent.
+
+**Note**: *INFO_ML_TIMER* is read from the Arduino: 0 while p0 is unassigned and for a parallel M-Level; otherwise the number of the timer that drives p0 (1 or 2 on the Uno and Nano; 1 to 5 on the Mega2560).
+
+**Note**: *INFO_ML_PSC* returns the actuator’s own pre-scaler code, as last set with act_set. It is the pre-scaler in force on the timer only while this actuator was the last on that timer to set a level (see the note on shared timers below), and on a timer shared with a servo it is not in force at all.
+
+**Note**: For PWM M-Level actuators, *INFO_ML_FREQ* (33) is the frequency ceiling the firmware computes for the actuator’s pre-scaler when p0 is assigned; any translation-table frequency above it is reduced to it. Its value can also be calculated instead of read: for a pin on a 16-bit timer the ceiling is *F ÷ (2N)* by integer division (8,000,000, 1,000,000, 125,000, 31,250 and 7,812 Hz for the pre-scalers 1, 8, 64, 256 and 1024); at that ceiling TOP is 1, the duty can only be 0 or 1000 per mille, and the highest frequency at which the pin makes a pulse train is half of the ceiling, *F ÷ (4N)*, with 500 per mille only. For the pin on Timer 2 the ceiling is *F ÷ N* Hz, but the highest frequency Timer 2 can actually produce is half of that, *F ÷ (2N)* Hz, because a fast-PWM period cannot be shorter than two timer ticks. Before p0 is first assigned the firmware holds the value 11 (*PWM_PSC_UNDEF*) in its place.
+
+**Note**: When a PWM M-Level actuator is on a pin that shares a 16-bit timer with a servo actuator, the servo’s frame frequency (50 Hz, 200 Hz or 333 Hz) and pre-scaler (8) are used for the M-Level, overriding whatever you may read with *INFO_ML_PSC* and whatever frequency is stored in the relevant row of the translation table. (Such sharing arises only when the servo’s pin was assigned after the M-Level’s p0; the firmware refuses the opposite order.)
+
+**Note**: As discussed in more detail in the section on act_set, a group of PWM M-Level actuators that share a hardware timer also share one pre-scaler and one frequency (the timer’s “TOP” value), the last M-Level of the group to set a level having set them for all. The other members of the group may therefore return act_get values of pre-scaler that are not actually in force, and their duty cycles are those of their own compare values against the TOP now in force. It is the responsibility of the PCS programmer to keep track of the frequency and pre-scaler most recently set on each timer.
+
+**Note**: Every M-Level info item conveys an integer, so the receptor <var> (and, for *INFO_ML_TTABLE*, the three receptors) must be user-defined variables capable of taking an integer value.
+
+**Example** (PCS). Read the state, the timer, the last level and one table row of a PWM M-Level called Voice, and check the row for errors:
+
+```pcs
+def_var int ml_state 0        # INFO_ML_STATE: 0 or 1
+def_var int ml_timer 0        # INFO_ML_TIMER: 0 to 5
+def_var int ml_level 0        # INFO_ML_LEVEL: the last level sent
+def_var int ml_row 2          # the row to read
+def_var int ml_row_copy 2     # a copy, to detect an error
+def_var int ml_freq 0         # receives the stored frequency
+def_var int ml_duty 0         # receives the stored duty
+act_get Voice INFO_ML_STATE ml_state
+act_get Voice INFO_ML_TIMER ml_timer      # 1 for D9 on a Nano
+act_get Voice INFO_ML_LEVEL ml_level      # 2147483647 if no level since creation or act_halt
+act_get Voice INFO_ML_TTABLE ml_row ml_freq ml_duty
+set_condexp ml_row != ml_row_copy
+do_if Condexp
+    print_value ml_row                    # copy + 1: no table; copy + 2: no such row
+enddo
+```
+
+**Note**: For Servo actuators the '<var_y> <var_z>' arguments are never used.
+
+**Note**: The <info_ID> of INFO_UNIT_TYPE is labelled as 'read only' because it can only be used with act_get but not act_set. However you can set this value on the server using the separate command act_unit (which see).
+
+**Note**: Here is an extract from the parddefs.h file that describes the actual struct members and various actuator types. This includes struct members the above info items relate to (as well as struct members the PCS script writer does not have direct access to):
+
+```c
+// Actuator Definition Structure for a Stepper Motor
+#ifdef ARDUINO
+// This is the structure as used on the Arduino:
+typedef struct {
+   uint8_t  driver_type; // Type of driver used
+   TMC2209Stepper *tmc_driver; // Pointer to the TMC driver object
+   uint8_t  ena_state;   // The enabled status (one of the ENA_ #defines)
+   uint8_t  motion_mode; // MM_STEALTHY or MM_PRECISE
+   uint8_t  turbo_boost; // 0 = off, 1 = transient on, >1 = latched on
+   uint8_t  homed_to;    // Which limit switch the motor is currently homes to
+                         // (one of the LIM_ #defines except SOFT1 and SOFT2 )
+   uint8_t  dirn1;       // The direction value (1 or 0) that causes the
+                         // motor to spin in the direction that causes motion
+                         // towards limit switch 1.
+   uint8_t  dirn2;       // The direction value (1 or 0) that causes the
+                         // motor to spin in the direction that causes motion
+                         // towards limit switch 2.
+   uint8_t  currdirn;    // The current direction (one of the DIRN_ #defines)
+   uint8_t  prevdirn;    // The last direction the motor moved in (DIRN_ #defs)
+   uint32_t msdenom;     // The microstep denominator (2,4,8,16,32,64,etc)
+   uint32_t fastmsd;     // The microstep denom. for the  fast phase of homing
+   uint8_t  pulwidth;    // The number of microseconds for a pulse (high part)
+   uint32_t blsteps;     // The number of backlash steps to take when needed
+   uint32_t tensteps1;   // The number of (de)tensioning steps to take in dirn1
+   uint32_t tensteps2;   // The number of (de)tensioning steps to take in dirn2
+   uint32_t onestep;     // The number of maxmsdenom steps that a single step in
+                         // the current msdenom is worth. This will be >= 1.0 .
+   uint32_t stepcount;   // The number of maxmsdenom steps from the homed pos.n
+   uint32_t stallcount;  // The number of stall signals (for StallGuard use).
+   uint32_t duralam;     // The duration (in microseconds) of the last motion.
+   uint32_t steplam;     // The number of steps taken in the last motion.
+   uint32_t sw_lim1;     // Stop if stepcount is >= this software limit.
+   uint32_t sw_lim2;     // Stop if stepcount is <= this software limit.
+   uint32_t  nhs0;       // (n)ull (h)ome (s)teps - initial dirn2 steps
+   uint32_t  nhs1;       // (n)ull (h)ome (s)teps - dirn1 steps
+   uint32_t  nhs2;       // (n)ull (h)ome (s)teps - final dirn2 steps
+   uint32_t isd_hobl;    // The inter-step delay to use for homing and backlash
+   uint8_t  limstate;    // The current state of the limit switches (LIM_ #defs)
+   uint8_t  sg_buffpc;   // Stall isd percentage buffer (<100 deactivates SG)
+   uint8_t  sg_thresh;   // The SGTHRS value for StallGuard4 (0 deactivates SG)
+   uint8_t  pin_ms1;     // Arduino pin to use for ms1 for non-TMC drivers
+   uint8_t  pin_ms2;     // Arduino pin to use for ms2 for non-TMC drivers
+   uint8_t  pin_ms3;     // Arduino pin to use for ms3 for non-TMC drivers
+   uint8_t  pin_pul;     // Arduino pin to use for the PUL signal (digital)
+   uint8_t  pin_dir;     // Arduino pin to use for the DIR signal (digital)
+   uint8_t  pin_lim1;    // Arduino pin to use for the LIM_SWTC1 signal (analogue)
+   uint8_t  pin_lim2;    // Arduino pin to use for the LIM_SWTC2 signal (analogue)
+   uint8_t  pin_diag;    // Arduino pin to use for the LIM_STALL signal (analogue)
+   uint8_t  pin_ena;     // Arduino pin to use for the ENA signal (digital)
+ } Act_StepperNode;
+#endif
+#ifndef ARDUINO
+// This is the structure as used on the server PC:
+typedef struct {
+   uint8_t  driver_type; // One of the SD_ #defines
+   uint8_t  homed_to;    // Which limit switch the motor is currently homes to
+                         // (one of the LIM_ #defines except SOFT1 and SOFT2 )
+   uint8_t  dirn1;       // The direction value (1 or 0) that causes the
+                         // motor to spin in the direction that causes motion
+                         // towards limit switch 1.
+   uint8_t  dirn2;       // The direction value (1 or 0) that causes the
+                         // motor to spin in the direction that causes motion
+                         // towards limit switch 2.
+   uint8_t  currdirn;    // The current direction (one of the DIRN_ #defines)
+   uint8_t  pulwidth;    // The number of microseconds for a pulse (high part)
+   uint32_t blsteps;     // The number of backlash steps to take when needed
+   uint32_t tensteps1;   // The number of (de)tensioning steps to take in dirn1
+   uint32_t tensteps2;   // The number of (de)tensioning steps to take in dirn2
+   uint32_t maxblsteps;  // The backlash steps at maximum microstep denom
+   uint32_t msdenom;     // The microstep denominator (2,4,8,16,32,64,etc)
+   uint32_t fastmsd;     // The microstep denom. for the  fast phase of homing
+   uint32_t maxmsdenom;  // The maximum microstep denom
+   uint32_t onestep;     // The number of maxmsdenom steps that a single step in
+                         // the current msdenom is worth. This will be >= 1.0 .
+   uint32_t stepcount;   // The number of maxmsdenom steps from the homed pos.n
+                         // the current msdenom is worth. This will be >= 1.0 .
+   double   maxcalibri;  // The number of maxmsdenom steps in a calibrated unit.
+   uint32_t sw_lim1;     // Stop if stepcount is >= this software limit.
+   uint32_t sw_lim2;     // Stop if stepcount is <= this software limit.
+   uint32_t  nhs0;       // (n)ull (h)ome (s)teps - initial dirn2 steps
+   uint32_t  nhs1;       // (n)ull (h)ome (s)teps - dirn1 steps
+   uint32_t  nhs2;       // (n)ull (h)ome (s)teps - final dirn2 steps
+   uint32_t isd_hobl;    // The inter-step delay to use for homing and backlash
+   uint8_t  limstate;    // The current state of the limit switches (LIM_ #defs)
+   uint8_t  pin_pul;     // Arduino pin to use for the PUL signal (digital)
+   uint8_t  pin_dir;     // Arduino pin to use for the DIR signal (digital)
+   uint8_t  pin_lim1;    // Arduino pin to use for the LIM_SWTC1 signal (analogue)
+   uint8_t  pin_lim2;    // Arduino pin to use for the LIM_SWTC2 signal (analogue)
+   uint8_t  pin_diag;    // Arduino pin to use for the LIM_STALL signal (analogue)
+   uint8_t  pin_ena;     // Arduino pin to use for the ENA signal (digital)
+   uint8_t  pin_ms1;     // Arduino pin to use for ms1 for non-TMC drivers
+   uint8_t  pin_ms2;     // Arduino pin to use for ms2 for non-TMC drivers
+   uint8_t  pin_ms3;     // Arduino pin to use for ms3 for non-TMC drivers
+   char    *lsname[5];   // List of limit switch names ([0] is always "Unhomed")
+   char    *unitstr;     // Name of units motor is calibrated to.
+   char     Name[32];    // Name of this actuator as supplied by the user.
+   uint8_t  maturity;    // Must reach a certain value for the actuator to be
+                         // usable (starts off as 0 when the actuator is first
+                         // created.
+ } Act_StepperNode;
+#endif
+// Actuator Definition Structure for a Binary actuator
+#ifdef ARDUINO
+// This is the structure as used on the Arduino:
+typedef struct {
+   uint8_t  bin_state;   // The binary status (one of the BIN_ #defines)
+   uint8_t  on_val;      // The value (1 or 0) that, when written to the pin,
+                         // causes the actuator to be in the BIN_ON state.
+   uint8_t  off_val;     // The value (1 or 0) that, when written to the pin,
+                         // causes the actuator to be in the BIN_OFF state.
+   uint8_t  pin_bin;     // Arduino pin to use for the bin signal (digital)
+ } Act_BinaryNode;
+#endif
+#ifndef ARDUINO
+// This is the structure as used on the server PC:
+typedef struct {
+   uint8_t  on_val;      // The value (1 or 0) that, when written to the pin,
+                         // causes the actuator to be in the BIN_ON state.
+   uint8_t  off_val;     // The value (1 or 0) that, when written to the pin,
+                         // causes the actuator to be in the BIN_OFF state.
+   uint8_t  pin_bin;     // Arduino pin to use for the bin signal (digital)
+   char     Name[32];    // Name of this actuator as supplied by the user.
+   uint8_t  maturity;    // Must reach a certain value for the actuator to be
+                         // usable (starts off as 0 when the actuator is first
+                         // created.
+ } Act_BinaryNode;
+#endif
+// Actuator Definition Structure for an M-Level actuator:
+#define MLEVEL_RESET INT32_MAX // Use INT not UINT because PCS user variables
+                               // are always int32_t.
+#ifdef ARDUINO
+// This is the structure as used on the Arduino:
+typedef struct {
+   uint8_t  ml_type;    // The type of MLevel (one of the MLT_ #defines)
+   uint8_t  ml_pin[8];  // Arduino pin(s) to use for the signal(s) (digital)
+   uint8_t  is_active;  // Safety interlock flag for emergency stop routines
+   uint8_t  ml_psc;     // Prescaler power 2 exponent for pin 0
+   uint32_t ml_max;     // Maximum frequency allowed for pin 0
+   uint8_t  npins;      // Number of pins used (1 for PWM, up to 8 for Parallel)
+   uint8_t  timer;      // What Timer the ml_pin[0] is using
+ } Act_MlevelNode;
+#endif
+#ifndef ARDUINO
+// This is the structure as used on the server PC:
+typedef struct {
+   uint16_t duty;    // The duty cycle mille (0 to 1000), or a
+                     // special-effect code (1001 to ML_DUTY_CODE_MAX)
+   uint32_t freq;    // Frequency (from lower to upper limit as per timer)
+ } MLevel_TTable;
+typedef struct {
+   uint8_t  ml_type;     // The type of MLevel (one of the MLT_ #defines)
+   MLevel_TTable *ml_tt; // To hold a dynamically created translation table
+   uint32_t ntt;         // Number of elements in the translation table
+   size_t   sztt;        // Current byte size of the translation table
+   uint8_t  ml_pin[8];   // Arduino pin(s) to use for the signal(s) (digital)
+   uint8_t  ml_psc;      // Prescaler exponent to use with each pin in PWM mode.
+   char     Name[32];    // Name of this actuator as supplied by the user.
+   uint32_t last_level;  // Caches the last level sent to avoid duplicate calls
+   uint8_t  npins;       // Tracks active pin count on the server
+   uint8_t  pingaps;     // Are there gaps in the pin assignments? (0/1)
+   uint32_t max_level;   // Pre-calculated absolute maximum level ceiling
+   uint8_t  maturity;    // Must reach a certain value for the actuator to be
+                         // usable (starts off as 0 when the actuator is first
+                         // created.
+ } Act_MlevelNode;
+#endif
+// Actuator Definition Structure for a Servo actuator:
+#ifdef ARDUINO
+// This is the structure as used on the Arduino:
+typedef struct {
+   uint8_t  pin_srv;     // Arduino pin to use for the servo signal (digital)
+   uint8_t  pin_pos;     // Arduino analogue pin to use for reading the servo position
+   uint8_t  is_active;   // Safety interlock flag for emergency stop/halt routines
+   uint8_t  freq;        // Carrier frequency band
+   uint16_t current_us;  // Active pulse duration in microseconds
+   uint16_t srv_min;     // Position lower limit (microseconds, default 544)
+   uint16_t srv_max;     // Position upper limit (microseconds, default 2400)
+   uint16_t isd_min;     // Time to complete an atomic step move in microseconds
+   uint16_t isd_minp;    // isd_min rounded up to whole numbers of carrier periods
+   uint16_t tick_size;   // Minimum step change in position (depends on frequency band)
+   uint8_t  timer;       // What Timer pin_srv is using (default = 0 i.e. unset)
+ } Act_ServoNode;
+#endif
+#ifndef ARDUINO
+// This is the structure as used on the server PC:
+typedef struct {
+   uint8_t  pin_srv;     // Arduino pin to use for the servo signal (digital)
+   uint8_t  pin_pos;     // Arduino analogue pin to use for reading the servo position
+   char     Name[32];    // Name of this actuator as supplied by the user.
+   uint8_t  maturity;    // High-level maturity factor metric
+   uint8_t  freq;        // Carrier frequency band
+   uint32_t destn_us;    // Queued position (shadow of the Arduino value)
+   uint32_t srv_min;     // Position lower limit (microseconds, default 544)
+   uint32_t srv_max;     // Position upper limit (microseconds, default 2400)
+   uint32_t isd_min;     // Time to complete an atomic step move in microseconds
+   double   theta_min;   // Minimum angle of servo (default 0)
+   double   theta_max;   // Maximum angle of servo (default 180)
+   double   calibri;     // Used to convert between angle and microseconds.
+ } Act_ServoNode;
+#endif
+// Actuator Definition Structure for a Sensor actuator
+#ifdef ARDUINO
+// This is the structure as used on the Arduino:
+typedef struct {
+   uint8_t  pin_sense;   // Arduino pin (analogue or digital) to use for reading
+   uint8_t  type;        // Whether it is analogue or digital
+ } Act_SensorNode;
+#endif
+#ifndef ARDUINO
+// This is the structure as used on the server PC:
+typedef struct {
+   uint8_t  pin_sense;   // Arduino pin (analogue or digital) to use for reading
+   uint8_t  type;        // Whether it is analogue or digital
+   char     Name[32];    // Name of this actuator as supplied by the user.
+   uint8_t  maturity;    // High-level maturity factor metric
+ } Act_SensorNode;
+#endif
+```
+
+and here are some of the relevant #defined constants with their explanations (all of these are also included in stdpard.pch so you may use these constants in your PCS scripts if you include that file):
+
+```c
+// For Stepper actuators:
+// The ENA values
+#define ENA_DISABLED 0  // Disabled, non-energised, coils
+#define ENA_ENABLED  1  // Enabled, energised, coils but not currently spinning
+#define ENA_SPINNING 2  // Motor is currently undergoing motion steps
+// The limit or limit switch (LIM_) identifier values. These are used to
+// identify which limit switch a motor is homed_to and also which limit or limit
+// switch is currently triggered in the limstate member:
+#define LIM_UNSET   0  // Not homed (or no limit switch triggered)
+#define LIM_SWTC1   1  // Physical switch 1 (triggered by moving in dirn1)
+#define LIM_SWTC2   2  // Physical switch 2 (triggered by moving in dirn2)
+#define LIM_NULL1   3  // Null-homed 1 (step count goes to 0 by moving in dirn1)
+#define LIM_NULL2   4  // Null-homed 2 (step count goes to 0 by moving in dirn2)
+#define LIM_SOFT1   5  // Software limit 1 activated (cannot be homed to)
+#define LIM_SOFT2   6  // Software limit 2 activated (cannot be homed to)
+#define LIM_ZERO    7  // Motor attempted to move to a negative step count. This
+                       // can happen if a limit switch is a bit noisy or has
+                       // some error or if there is some error in the axes such
+                       // that returning to a step count of zero does not
+                       // trigger the limit switch. Alternatively this can
+                       // happen in cases of null homing where there is no
+                       // physical end stop switch to trigger and step count is
+                       // all we have.
+#define LIM_STALL   8  // The StallGuard4 threshold was exceeded - likely stall.
+                       // If a stall is detected then the Arduino sends back the
+                       // the error code  to the user but that does not tell you
+                       // which motor triggered the stall event. However the
+                       // Arduino also sets the limstate member of the motor
+                       // that triggered the stall to this LIM_STALL value. So
+                       // the user can do a 'cold read' of the limit state of
+                       // each motor in turn (using act_get with INFO_LIMSTATE)
+                       // to find out which motor triggered the stall.
+// Stepper Driver_type:
+#define SD_UNDEF   0
+#define SD_A4988   1
+#define SD_DRV8825 2
+#define SD_TMC2209 3
+// For Binary actuators:
+// The BIN values for binary actuators
+#define BIN_OFF 0    // Disabled, Off, state 1
+#define BIN_ON  1    // Enabled, On, state 2
+#define BIN_UNSET 3  // Unset / unknown
+// For M-Level actuators:
+// The INFO_ML_TYPE values
+#define MLT_PARALLEL 0    // Parallel digital pin actuator
+#define MLT_PWM      1    // PWM actuator
+#define MLT_UNSET    3    // Type unset/unknown
+// PWM Prescaler options (options for INFO_ML_PSC)
+#define PWM_PSC_1     0  // Translates to:   1
+#define PWM_PSC_8     3  // Translates to:   8
+#define PWM_PSC_32    5  // Translates to:  32
+#define PWM_PSC_64    6  // Translates to:  64
+#define PWM_PSC_128   7  // Translates to: 128
+#define PWM_PSC_256   8  // Translates to: 256
+#define PWM_PSC_1024  10 // Translates to:1024
+#define PWM_PSC_UNDEF 11
+// Duty-cycle related codes
+#define ML_DUTY_MAX       1000  // plain PWM duty: 0 .. 1000 per mille
+#define ML_FX_BASE        1000  // duty = ML_FX_BASE * E + P
+#define ML_FX_NOISE       1     // E = 1
+#define ML_FX_TIMEDNOISE  2     // E = 2
+#define ML_FX_BURSTHISS   3     // E = 3
+#define ML_FX_GLIDE       4     // E = 4
+#define ML_DUTY_CODE_MAX  4999  // largest valid duty value
+#define FX_MAX_RATE                     16000UL
+#define FX_BURST_MS                     10
+#define FX_GLIDE_MIN_TOP                256
+#define FX_ATTACK_MIN_MS                30
+#define FX_PSC8_MIN_HZ                  7813UL
+For Servo actuators:
+// Servo carrier frequency range bands (options for  INFO_SRV_FREQ)
+#define SRV_FREQ_MID50   1  // Target: ~50Hz  (Safe Range: 40Hz to 70Hz)
+#define SRV_FREQ_MID200  2  // Target: ~200Hz (Safe Range: 150Hz to 250Hz)
+#define SRV_FREQ_MID333  3  // Target: ~333Hz (Safe Range: 250Hz to 400Hz)
+#define SERVO_RESET INT32_MAX  // Initial position for server structs
+For Senor actuators:
+// The INFO_SEN_TYPE values
+#define SEN_DIGITAL  0    // Digital pin sensor
+#define SEN_ANALOGUE 1    // Analogue pin sensor
+#define SEN_UNSET    3    // Type unset/unknown
+```
+
+**Note**: You can supply all three receptor variables in cases where only one is needed. This will not generate an error, the other two variables will just be ignored. However, you must supply the additional two variables in cases where the requested information item requires them or a syntax error will result.
+
+**Note**: act_get is a *mandatum interruptivum*, a command that is allowed to interrupt other commands. Only some 'other commands' will look for and so act on *mandata interruptiva*. These include motion commands for steppers.
+
+**Note**: For guidance on whether to use float or int type for any of the 'var' arguments for actuators of type Stepper or Servo, see the entry on the command act_unit. For reading the value of a Sensor actuator an integer will be retrieved so you should use an integer (or float) type for the receptor 'var' argument.
+
+**Note**: You will be forbidden from using act_get to read info items specific to TMC2209 stepper drivers for stepper actuators that are not marked as using that driver. Those data items are as follows:
+
+INFO_PIN_DIAG
+
+INFO_TMCSGVAL
+
+INFO_TMCSTATUS
+
+INFO_TMCCHCONF
+
+INFO_SG_BUFFPC
+
+INFO_SG_THRESH
+
+INFO_TURBO_BST
+
+INFO_TMCMSCNT
+
+**Note**: You will be forbidden for getting non-TMC driver specific info items from stepper actuators that are marked as using the TMC2209 driver. The data items for the non-TMC drivers (A4988 and DRV8825) are common to both of them and are as follows:
+
+INFO_PIN_MS1
+
+INFO_PIN_MS2
+
+INFO_PIN_MS3
+
+**Note**: When getting coordinates or distances using INFO_XYZCOORDS, INFO_STEPCOUNT, INFO_SW_LIM1 and INFO_SW_LIM2, the value you will receive from the server using act_get will be in atomic units regardless of what you have set act_unit to be.
+
+**Note**: For servos the difference between INFO_SRV_QPOS and INFO_SRV_SPOS is as follows:
+
+* INFO_SRV_QPOS - an act_get operation retrieves the destn_us position from the server side shadow struct (this is a shadow of the servo queue) and does not communicate with the Arduino. An act_set communicates the value to the Arduino servo motion queue. The value will also be synced to the local server destn_us struct member after act_set. This value is initialised to SERVO_RESET (= INT32_MAX) and is also set to that value when not used (i.e. the servo is not on the queue to be moved) or not set.
+* INFO_SRV_SPOS - an act_get operation retrieves the current_us position from the Arduino servo struct. An act_set communicates the value to the Arduino servo struct destn_us member directly (without moving the servo) and does not affect the motion queue.
+
+**Note**: The INFO_SRV_SPOS option is provided so that you can alter the default servo position value or correct or update the position value of a servo. See act_set for more details.
+
+**Note**: When getting a servo position (using INFO_SRV_QPOS or INFO_SRV_SPOS), the value you will receive from the server using act_get will be in microseconds regardless of what you have set act_unit to be. You may convert this to angular units using the servo's current calibri factor by means of the following formula:
+
+theta = theta_min + ((musec - srv_min) / calibri)
+
+Where:
+
+* theta = The target computed position in degrees.
+
+* musec = The value returned by act_get using INFO_SRV_QPOS or SPOS.
+
+* srv_min = The servo's srv_min value (INFO_SRV_MIN).
+
+* theta_min = The servo's theta_min value (INFO_SRV_THMIN).
+
+* calibri = The servo's calibration factor (INFO_SRV_CALIB).
+
+And here is an example implementation in PCS assuming 'LabServo' is an extant servo actuator on the system:
+
+```pcs
+# =========================================================================
+# CONVERSION EXAMPLE: FETCHING SERVO ANGLES
+# =========================================================================
+def_var float current_raw_us 0.0
+def_var float s_min 544.0
+def_var float t_min 0.0
+def_var float s_calib 10.311111
+def_var float calculated_degrees 0.0
+# 1. Fetch the microsecond count straight from the Arduino struct
+act_get LabServo INFO_SRV_SPOS current_raw_us
+# 2. Fetch the active structural limits and calibration slope
+act_get LabServo INFO_SRV_MIN   s_min
+act_get LabServo INFO_SRV_THMIN t_min
+act_get LabServo INFO_SRV_CALIB s_calib
+# 3. Execute the Inverse Formula
+set_var calculated_degrees current_raw_us
+sub_var calculated_degrees s_min            # (musec - srv_min)
+div_var calculated_degrees s_calib          # ((musec - srv_min) / calibri)
+add_var calculated_degrees t_min            # theta_min + ...
+# Output the resolved angle
+print_value calculated_degrees 2
+```
+
+**Note**: For the INFO_TMCSTATUS option, which only applies to steppers, your supplied <var> will be assigned an int32_t cast of the original uint32_t status register but the interpreter's private internal global TMC_Status_Reg variable will also be updated to the unaltered uint32_t register value. You cannot access this TMC_Status_Reg variable directly via the script but you can access the status information items it contains by means of the tmc_status_parse command, which see. However, the sign of the signed value you receive in your <var> here provides you with one piece of status information - if it is positive it means the driver's standstill status flag is unset and if it is negative it means that the flag is set.
+
+**Note**: For the INFO_TMCCHCONF option, which only applies to steppers, your supplied <var> will be assigned an int32_t cast of the original uint32_t chop conf register but the interpreter's internal private global TMC_ChopConf_Reg will also be updated to the unaltered uint32_t register value. You cannot access this TMC_ChopConf_Reg variable directly via the script but you can access the status information items it contains by means of the tmc_chconf_parse command, which see. However, the sign of the resulting value will reflect the state of the 'Short protection low side' feature in the register, with a positive value indicating this protection is ON and a negative value indicating this protection is OFF.
+
+**Note**: Any call to get a data item that requires communication with the Arduino (marked as 'Ask Ardu' in the list above) can cause a delay or jitter in motion due to extending the inter-step delay (while the Arduino processes your request) and possibly even more of a time disruption will occur with those information requests that involve UART comms with the stepper driver (i.e. anything that begins with INFO_TMC). So avoid making such requests during sensitive motion actions.
+
+**Note**: Setting TurboBoost mode with INFO_TURBO_BST to some non-zero number will mark that motor for using extra RMS ampage for its next movement command - whatever that command may be. The TurboBoost setting will take place immediately (the motor must be stationary and an enforced 100 ms delay without any steps will be imposed at the Arduino when making the change) so setting TurboBoost without motion will increase the holding current. After a motion command is executed for that motor the TurboBoost status will automatically be reset to 0 and current will return to normal if and only if the TurboBoost status was previously set to 1 (as opposed to any other non-zero number). If TurboBoost was set to 2 or more then that signals TurboBoost to latch on and so it will not reset to 0 until the PCS programmer deliberately sets it to 0 or until they set it to 1 thereby allowing it to automatically clear back down to 0 after the next motion command. The actual current values for TurboBoost and 'normal' (non-Turbo) current are set in #defines near the start of the Arduino source code. Typical values may be (for non-Turbo) 600 mA RMS during motion and 300 mA at rest and for TurboBoost that will increase to 670 mA RMS during motion and 335 mA at rest but clearly you can change that via the Arduino sketch source code (parduino.ino). Leaving motors on TurboBoost at rest should only be done when necessary and you should manually set TurboBoost to 0 when you no longer need the stronger holding rest current. This is to avoid unnecessary heating of the motors and the drivers.
+
+**Note**: For M-Level actuators, in the Arduino structure, is_active is the value of INFO_ML_STATE, timer that of INFO_ML_TIMER and ml_max that of INFO_ML_FREQ. In the server structure, last_level is the value of INFO_ML_LEVEL, and last holds the frequency and the duty last sent, which the server compares with the row selected by a new level (see the section on act_set).
+
+### act_getid
+
+act_getid <name_string>
+
+This will update the internal system variables CurrActIdx and CurrActType with the index and actuator type (respectively) of the actuator of name <name_string>. The CurrActType integer value will correspond to the actuator's type thus:
+
+1 = Stepper
+
+2 = Binary
+
+3 = Mlevel
+
+4 = Servo
+
+5 = Sensor
+
+If there is no extant actuator with the supplied name, the values of CurrActIdx and CurrActType will both be set to -1. In this way you can test if an actuator of a certain name exists. See also act_getname.
+
+<name_string> - A varval of type 'string' containing the actuator name you want to assess.
+
+**Note**: This works by searching the local (client side) database of currently extant actuators and does not communicate with the server. You should ensure, therefore, that the command get_actuators has been called at least once before using this command.
+
+### act_getname
+
+act_getname <act_type> <act_index> <string_variable>
+
+This gets the name of the actuator of type <act_type> and index number <act_index> and sets the string variable <string_variable> to that name.
+
+<act_type> must be one of these integers or the command will give a run-time error:
+
+1 = Stepper
+
+2 = Binary
+
+3 = Mlevel
+
+4 = Servo
+
+5 = Sensor
+
+If there is no extant actuator with that type and index, the value of <string_variable> will be set to "null" (without the quotes). So, in this way you can test if an actuator exists. See also act_getid.
+
+**Note**: This works by searching the local (client side) database of currently extant actuators and does not communicate with the server. You should ensure, therefore, that the command get_actuators has been called at least once before using this command.
+
+**Note**: def_actuator and act_getname are the only two commands that require you to input two separate numbers to identify an actuator instead of the single <act_id> argument (described, for example, under undef_actuator)
+
+### act_halt
+
+act_halt <act_id>
+
+Causes an actuator to stop what it is doing as soon as the act_halt instruction is received, even if the actuator has not finished its task. This has no effect for binary actuators.
+
+<act_id> - See undef_actuator for a full description of this.
+
+**Note**: act_halt is a *mandatum interruptivum*, a command that is allowed to interrupt other commands. Only some 'other commands' will look for and so act on *mandata interruptiva*. These include motion commands for steppers.
+
+**Note**: act_halt is not applicable to Sensor actuators.
+
+### act_home
+
+act_home <act_id> <home_type>
+
+Home the actuator defined by <act_id> in a way defined by <home_type>
+
+<act_id> - See undef_actuator for a full description of this.
+
+<home_type> - an integer which corresponds to one of the following:
+
+If the actuator is of type stepper these integers are potentially valid:
+
+```c
+#define LIM_SWTC1  1 // Home to limit switch 1 (triggered by moving in dirn1)
+#define LIM_SWTC2  2 // Home to limit switch 2 (triggered by moving in dirn2)
+#define LIM_NULL1  3 // Null-homed 1 (step count goes to 0 by moving in dirn1)
+#define LIM_NULL2  4 // Null-homed 2 (step count goes to 0 by moving in dirn2)
+```
+
+I say 'potentially' valid because any of them may be invalid if, for example, the stepper structure has not been set up for null homing or with a limit switch pin set to an Arduino pin.
+
+You cannot home to a software limit.
+
+An actuator of type stepper cannot be moved with any other command until it is homed.
+
+When you select one of the two null homing types, your choice of LIM_NULL1 or LIM_NULL2 will not necessarily be what ends up as the value of the homed_to member of the motor structure. All these options do at this stage is tell the server to initiate a null homing procedure. What ultimately determines whether the motor is homed_to LIM_NULL1 or LIM_NULL2 is your choice of the nhs0, nhs1 and nhs2 step counts as set using the act_set command (if the homing procedure continues to completion) because the last direction the motor moves in when homing ends, the homed_to value will be the opposite of that direction (if the last direction was dirn1 then the motor will be homed_to=LIM_NULL2 and *vice versa*).
+
+If the homing procedure is halted before completion homed_to will be LIM_UNSET (= un-homed).
+
+The reason the null homing switch number is opposite to the last moved-in direction is to make the terminology of null homing 'limits' analogous to the terminology used for physical end stops - LIM_SWTC1 and LIM_SWTC2. So, for example, when homed to physical end-stop LIM_SWTC2 it means that this is the switch that will get triggered when the motor moves enough steps in dirn2. So moving *away from* LIM_SWTC2 causes step count to rise. Likewise, in null homing where the last moved-in direction is dirn1, it will be like homing to a virtual end stop switch 2 where moving away from this switch (i.e. in dirn1) will cause the step count to rise and moving towards the switch (in dirn2) will cause the step count to decrease.
+
+Only actuators of a type that can be homed will be accepted by this command. If the <act_id> specifies any other type then the command will return an immediate error.
+
+The command will return OK if the server finds no problem with the arguments and the Arduino does not have a problem with the arguments. This means the Arduino has 'agreed' to attempt the homing procedure and will get on with it but the Arduino returns immediately after the command passes its tests and does not wait for the homing procedure to start or finish. If an error occurs during homing the 'PARD move report' (PMR) that you can check with the command act_movereport (which see) may contained information it its error code that may help you understand the reason for failure.
+
+You, the PCS script writer, can check for success or failure of this command by doing an act_get command on the same actuator's <homed_to> member. If you make this request before homing completes you could get a 'busy' response. Otherwise if the <homed_to> member equals the value you set as <home_type> it means the homing completed OK. Any other value suggests an error occurred.
+
+**Note**: Because the Arduino returns control back to the user immediately this avoids lengthy delays in comms (that might cause a timeout error) and also allows the user to do other things - like generating a live preview - while the homing action is taking place thereby allowing for visual feedback assessment of the homing procedure which can give another means to know if something went wrong and when the procedure has ended.
+
+**Note**: For null-homing no physical limit switch will be checked during the homing procedure and no physical limit switch will be checked for any subsequent motion unless you have also set a pin for a physical end stop. If you have not set any physical end stop pin then it is entirely the user's responsibility to take measures to avoid those physical limits being hit and potentially damaging the hardware.
+
+**Note**: Homing will set the currdirn value on the breakout board. Until that is done the currdirn may show as UNSET when attempts are made to act_get it.
+
+**Note**: Immediately after successful homing of any type, the step count will be reset to 0 and you can only move in the direction away from the limit switch you homed to (you can't move to a negative step count). For null homing this is also true. for example, if you have null homed to LIM_NULL1 this means that motion in dirn2 increases your step count from 0 and motion in dirn1 decreases your step count but if you try to move below a step count of 0 this will be treated as if a physical limit switch was triggered (and limstate will take the value LIM_ZERO to indicate this). However, in the case of a null homed motor where the is no physical limit stopping you, you may want to move in this 'negative' direction (e.g. to operate a filter wheel that may rotate in any direction without a physical stop or to operate a pump with similar lack of restriction). To enable this, just issue an act_set command after homing to set the current step count to some (usually large) positive number. Then you will be able to move in any direction until the step count reaches zero (or until a physical limit switch is triggered in cases where you have one setup for that direction (set up both in terms of physical hardware and stepper actuator configuration with act_set commands).
+
+**Note**: Even with physical limit switches you may get a halt triggered by step count reaching zero (the homed position) even if the physical limit switch does not trigger at this point due to some error in motion (stalls or other error) or simply due to some error/variation in the triggering position of some limit switches. In that case you can tell whether this has occurred simply because you reached a step count of zero without triggering the switch (limstate will show LIM_ZERO) compared to whether the switch was actually triggered (limstate will show LIM_SWTC1 or LIM_SWTC2) by checking the limstate value with act_get. In the case of a LIM_ZERO halt you should be able to continue to move the motor in the forbidden direction by setting the step count to some positive number and carry on moving in that direction but this will only work till the actual physical limit switch triggers - a triggered physical limit switch will override all attempts at motion regardless of step count.
+
+**Note**: For stepper motors you can check when the motion is complete in three main ways. The first is the preferred way because it does not interrupt the Arduino while the motor is moving and so cause potential slight disruptions to the regularity of the inter-step delay and this is by using the act_movereport command (which see). If that method is not available for some specific reason then another way is by doing an act_get for the stepper for <info_ID> = 1 (INFO_ENA_STATE). The ena_state will be 2 when the motor is spinning and 1 when at rest. You could alternatively do an act_get for <info_ID> = 2 (INFO_HOMED_TO). The difference between the latter two methods is that the homed_to state will only change from un-homed to homed (to the appropriate limit) if the motion completes successfully but ENA state will change from 2 to 1 when the motion ends even if, for some reason, it ended prematurely such that the homing could not be complete. This may occur if an act_halt command stopped it before it could finish (for example).
+
+**Note**: When homing starts, the homed_to member of the motor structure is set to LIM_UNSET (to indicate that it is un-homed) so that if homing is interrupted or fails this will be the resulting state of the motor.
+
+### act_moveby
+
+act_moveby <act_id> <duration> <distance> [<dist_y> [dist_z]]
+
+This moves the actuator identified by <act_id> by a certain distance from its current position in its current direction (current direction can be set using the act_set command, which see) and attempts to do this motion over a time of <duration> microseconds.
+
+<act_id> - See undef_actuator for a full description of this. In addition to the options described there, this command may also accept an <act_id> of StageXY or StageXYZ (case sensitive) which will attempt motion of 2 (X and Y) or 3 (X, Y and Z) axes of the stage. This means stepper actuators of ID 0 for X, 1 for Y and 2 for Z. In the case of <act_id> = StageXY you must supply one more argument, <dist_y>, which will apply to the Y axis motion (the X axis motion being governed by the <distance> argument). If you supply <act_id> = StageXYZ then you must supply the [dist_z] argument in addition to <distance> and <dist_y>. The motion will be done using the multidimensional Bressenham line algorithm to effect simultaneous coordinated motion for 2 or 3 motors. If you only want to move the X and Z motors then use <act_id> = StageXYZ and set the <dist_y> value as 0. You can use these StageXY and StageXYZ options for single motor activation (if all but 1 of the distance arguments are 0). In that case the PCS script interpreter will simply convert your multi-motor move command into a single motor move command in the program (because there are less overheads in doing single motor movements because they do not need Bressenham calculations). Also you can use these StageXY and StageXYZ options for no motion at all (all the distance arguments are 0) - the script will just do no motion in that case.
+
+<duration> - an integer which may be 0 or positive. If 0 it means you want the duration calculated automatically based on your choice of <isd_min> (from the act_accel command) and the total number of steps the movement will require (which will be calculated over on the server from your choice of microstep denominator and <distance> and <unit> (from the act_unit command). If it is positive then it represents the number of microseconds you want the whole motion to take. Your choice here may cause an acceleration curve to be impossible to satisfy resulting in failed calculation falling back to the default uniform motion - so use this manual option for <duration> with care.
+
+<distance> - a float-capable value >= 0.0 specifying the number of distance units to move.
+
+<dist_y> - a float-capable value >= 0.0 specifying the number of distance units to move for the stage Y axis motor when <act_id> is StageXY or StageXYZ.
+
+[dist_z] - a float-capable value >= 0.0 specifying the number of distance units to move for the stage Z axis motor when <act_id> is StageXYZ.
+
+**Note**: All distances are expected to be supplied in either calibrated units (if you set act_unit to > 0 for steppers) or in atomic steps (i.e. 1/maxmsdenom microsteps). No negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest ***onestep*** value (which is calculated internally in the server program using the formula onestep = maxmsdenom / msdenom). For example, if you set one of the distance arguments to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective distance of 0 and the motor will not move at all because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set a distance argument = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1 and your motor will travel 1 msdenom step meaning the step count will increment or decrement by 32 atomic units or less. I say 'or less' for the potential cases where you have been moving around with different msdenom settings such that, for example, if your current atomic step count is 10 and your act_moveby command results in a request to move back by 32 atomic steps, no movement will actually occur but the step count will be set to 0. Such 'drift' should not be possible if you are careful to observe msdenom and distance discipline when operating at different msdenom settings in one login session.
+
+**Note**: In order for this command to be processed you must have, at least once during the current log in session, made a call to act_accel for the type of actuator you want to move with this command. Failure to do this will result in the command being denied with an error (the script will terminate or fail to check out OK).
+
+**Note**: The movement you requested may not be fulfilled exactly as you requested. For example a limit might be reached (either a software limit or a physical end-stop) that terminates the motion before the full <distance> is achieved or the <duration> you specified might not be possible for some reason and the movement may take longer (or shorter if a limit is triggered). Thus you might want to get information on the actual motion, for example so you can make corrections in future motions (like decrease <duration> in any future motion requests to try to make up for motions that took longer than expected). You can do this as follows:
+
+1. To find out the actual steps taken you can use act_get to get the step count before and after the motion.
+2. To get the duration you can use act_get to read the 'INFO_DURALAM' member of the actuator structure which stores the last know duration for the last movement it made (apart from homing).
+3. Just as with homing, the command will return just prior to actually beginning the motion so you can tell when the motion has ended, e.g., by using the act_movereport command or querying the ena_state with act_get (it will be 2 while in motion and 1 when at rest).
+
+**Note**: If act_moveby is called with a <distance> (or one of the other distance arguments) value of 0 then a 'dummy' PMR is set up at the server side to respond to any call to act_movereport. This dummy PMR will just send back all the PMRep variable values as they were last (without changing their values) and also the actuator's duralam and steplam members will not have changed from when the actuator last moved so will not be reliable in those circumstances. In the case of <act_id> = StageXY, this dummy PMR situation will only occur when both the <distance> and <dist_y> values are 0. In the case of <act_id> = StageXYZ, this dummy PMR situation will only occur when all three of <distance>, <dist_y> and [dist_z] values are 0.
+
+**Note**: When doing multi-stage motor movements (<act_id> = StageXY or StageXYZ) and 1 or more of the distance values are 0 - and especially if all but 1 of the distance values are 0 - this may result in different times for motion to complete if you are running speeds that are near the limit of capacity of the breakout board. This is because the breakout board might be able to honour your choice of minimum ISD if only 1 motor is being activated but might not be able to do so and so will effect a longer minimum ISD than you chose or than was possible with only 1 motor activated.
+
+### act_movereport
+
+act_movereport <int_result> <actype> <actid>
+
+This listens on the incoming serial port of the server for a PARDUS move report (PMR) but it does not wait for one. If a PMR is present when it looks it will do the this:
+
+1. set the value of <int_result> to 1
+2. set the value of <act_type> to the type of actuator the PMR pertains to
+3. set the value of <act_index> to specific actuator the PMR pertains to
+4. set the system variables PMRep1, PMRep2, PMRep3 and PMRep4 to values relevant to a report for that actuator type and the specific actuator.
+5. terminate the script with an error message if the PMR conveys that an error has occurred. The error message conveyed to the client via the server will contain information about the nature of the error as provided in the PMR.
+
+In the case that the last movement was that of a stepper motor, these values will contain the current step counts of the X, Y, Z motors (in PMRep1, PMRep2 and PMRep3 respectively) if any of those motors are defined, plus the step count of the most recently activated motor (in PMRep4) if that motor was defined and if it was the motor whose motion ending triggered the PMR. If any of those motors are not defined, the respective PMR value will be 0.
+
+All step counts conveyed by the PMRep variables will be in either calibrated units or atomic (1/maxmsdenom) microsteps depending on your selection for act_unit.
+
+If the last motion (the motion whose ending triggered the PMR) was by a different type of actuator, the values will have meanings relevant to that actuator.
+
+If a PMR is not present when it looks it will set the value of <int_result> to 0 and will not alter the values of <actype>, <actid> or the PMR system variables.
+
+<int_result> - a user-defined variable capable of accepting an integer result.
+
+<actype> - a user-defined variable capable of accepting an integer result.
+
+<actid> - a user-defined variable capable of accepting an integer result.
+
+**Note**: Once a PMR is read by act_movereport, it is effectively 'used-up' and so it no longer exists. Subsequent calls to act_movereport will return 0 (unless a new PMR is pushed onto the serial port from the Arduino by another actuator completing its motion).
+
+**Note**: Any command that sends an order to the Arduino will clear the incoming buffer as part of the order send communications system. So, if there was an unread PMR waiting there, it will be cleared (i.e. flushed and lost) and not stored anywhere. You will have lost the opportunity to read it with act_movereport. You may still use other methods to check for end of motion like sending an act_get order to look for the current ena_state of a stepper motor, for example.
+
+**Note**: Because several motion orders, like act_moveby, do not wait for the motion to complete but return as soon as the motion order is accepted by the Arduino, there needs to be some way for the script writer to know when a motion has completed so they do not send non-*interruptivum* commands to the Arduino during the motion and so trigger a 'Busy' error that will terminate the script. One way to find out this information is to periodically do an act_get command to look for the ena_state of a stepper motor (for example) but this necessitates a to-and-fro communication with the Arduino while the motion is potentially still being carried out and this can briefly interrupt the motion making it un-smooth. It is for this reason that this alternative act_movereport method is available because it does not require the Arduino to interrupt its current operation to receive its instruction as an order, interpret it, process it and send a report before getting back to whatever it was doing - as it must do for mandata interruptiva like act_get. Instead, act_movereport passively checks the incoming serial buffer on the server PC. The Arduino is programmed to send a PMR at the end of any motion command so this does not interfere with the motion while it is happening. By periodically calling act_movereport therefore you do not interrupt the Arduino but you still get to find out when a motion command completes - just as if you had periodically called act_get for ena_state but without the downsides of that.
+
+### act_moveto
+
+act_moveto <act_id> [arguments as per actuator type]
+
+This moves a motion actuator (that is, a stepper or a servo) actuator to a specific position.
+
+For use with steppers the command structure is this:
+
+act_moveto <act_id> <duration> <position> [<posn_y> [posn_z]]
+
+<act_id> - see act_moveby for a full description of this.
+
+<duration> - an integer which may be 0 or positive. See act_moveby for more.
+
+<position> - a float-capable value that represents some point along the stroke of the actuator. The units are whatever you set the units to be using the act_unit command (which see).
+
+<posn_y> - a float-capable value >= 0.0, as for <position> but pertaining to the Y axis when <act_id> is StageXY or StageXYZ.
+
+[posn_z] - a float-capable value >= 0.0, as for <position> but pertaining to the Z axis when <act_id> is StageXYZ.
+
+For use with servos the command structure is this:
+
+act_moveto <act_id> <varval>
+
+<act_id> - see act_moveby for a full description of this. For this to be valid you must supply the id of an extant individual servo but only actuator type (not the specific actuator id) will be used.
+
+<varval> - a binary choice varval. If the value of <varval> evaluates to a non-zero numerical value or to TRUE or ON then all the servos on the current queue will be moved to their destinations according to the current motion profile supplied by your last call to act_accel for servos. Otherwise the current servo queue will be completely wiped and no motion will be done.
+
+***Notes for Servos***
+
+**Note**: This is an 'all actuator' trigger - either all servo actuators on the queue are moved or all servo actuators on the queue are removed from the queue. This is why only the actuator type is important for the <act_id> argument.
+
+**Note**: The entire movement will be done in approximately the duration and acceleration profile you set with act_accel if the range of motion and native speed of the servos will allow it. If even one of the servos on the list will permit that motion profile then that motion profile will be attempted. Any servos on the queue that cannot be moved with that profile (because, for example, the duration is too short for their natural speed) then they will be moved at their natural speed while other servos are moved with the motion profile.
+
+**Note**: If none of the servos on the list can be moved with the motion profile set (or if the duration was set to 0 with act_accel) then they will all move with their natural speed and the servos will be triggered in a tight loop only a few microseconds apart so they will appear to all start their motion simultaneously. They may not end simultaneously, however, due to the fact they all run at their own speed and may have different distances to travel.
+
+**Note**: If more than one servo can be paced at the slower speed dictated by the act_accel duration parameter, they will all move in a coordinated fashion using the Bresenham algorithm so that they will all start together and finish together even if they each move through different angles.
+
+**Note**: If the queue contains some servos that can travel at the slower speed dictated by the act_accel duration parameter and some that cannot, those servos that cannot be speed-limited will trigger their single intermediate small step right at the fractional mid-point tick of the Bresenham sequence. At the end of the Bresenham sequence they will then be sent directly to their destination positions at their native speed. Consequently, you will observe a mixture of Bresenham coordinated motions and, at the end, fast native destination snaps.
+
+***Notes for Steppers***
+
+**Note**: All position units are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps - that is, in (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply will be rounded to the nearest *onestep* value (see page 97 for the meaning of onestep). For example, if you set <position> to 15 (assuming we are using atomic steps and not calibrated units) and the motor is currently at position 30, then the difference between current position (30) and desired destination (15) will be calculated as 15 atomic steps. However, when maxmsdenom is 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) this 15 atomic steps will result in an effective motion of 0 (no move at all) because (uint32_t)(0.5 + (15.0 / 32.0)) = 0.
+
+However if you set <position> = 14 making the difference between current position (30) and destination (14) = 16 then the effective value will be 1 step in the current 1/8 step size (= 32 atomic steps) because (uint32_t)(0.5 + (16.0 / 32.0)) = 1. The motor will therefore try to move 32 atomic steps back towards home but it will not actually move because this would take it past 0. This is because the Arduino code has this check in it prior to taking any step:
+
+```c
+if(Stepperlist[id]->stepcount < Stepperlist[id]->onestep){
+       Stepperlist[id]->stepcount = 0.0;
+       Stepperlist[id]->limstate=LIM_ZERO;
+       return 1;
+      } else Stepperlist[id]->stepcount-=Stepperlist[id]->onestep;
+```
+
+So the step counter will be set to 0 (even though it was 30 and even though no motion will be done) and the step function will return a 1 (usually triggering an 'end of motion' signal). This scenario is unusual and should only occur if you switch microstep size to a different value during some motion session. This is because you could never get a stepper position of 15 if you only ever moved in 1/8 steps (in the case of 1/8 steps your motor position will be incremented in units of 'onestep' = 32).
+
+**Note**: In order for this command to be processed you must have, at least once during the current log-in session, made a call to act_accel for the type of actuator you want to move with this command. Failure to do this will result in the command being denied with an error (the script will terminate or fail to check out OK).
+
+**Note**: This command works by making a calculation on the server of the difference between the actuator's current position and the <position> you supply here. From this difference it works out the absolute distance the actuator has to travel and in what direction. It sends a command to the Arduino to set the direction and then sends another command to do the motion - that command literally being an act_moveby command. Thus act_moveto ultimately boils down to an act_moveby command so see act_moveby for further details.
+
+**Note**: Whether actuator succeeds at moving to the position you specify will depend on whether it meets any limits (like software limits or limit switches) during the motion and whether the motion is halted by an act_halt command. So you should not assume the actuator has gone all the way and you should check the actuator's position at the end of the motion using an act_get command.
+
+**Note**: The Arduino will not wait for the motion to complete before returning control to the server (and hence to the PCS script). It will return control as soon as a valid move command has been verified and before the motion begins. So as for how to know when the motion is complete, use the act_movereport command (preferably) or do a act_get for things like step count or ena_status (although performing act_get commands while the actuator is in motion might cause slight interruption or jitter to the motion which is why act_movereport is preferred).
+
+**Note**: If the act_moveto is repeated to the same position (i.e. there are no steps to take because the actuator is already there) then a 'dummy' PMR is set up at the server side to respond to any call to act_movereport. This dummy PMR will just send back all the PMRep variable values as they were last (without changing their values) and also the actuator's duralam and steplam members will not have changed from when the actuator last moved so will not be reliable in those circumstances. In the case of <act_id> = StageXY, this dummy PMR situation will only occur when both the <position> and <posn_y> values result in 0 steps of movement. In the case of <act_id> = StageXYZ, this dummy PMR situation will only occur when all three <position>, <posn_y> and [posn_z] result in no movement.
+
+**Note**: When doing multi-stage motor movements (<act_id> = StageXY or StageXYZ) and 1 or more of the position values result in no movement - and especially if all but 1 of the distance values result in no movement - this may result in different times for motion to complete if you are running speeds that are near the limit of capacity of the breakout board. This is because the breakout board (Arduino) might be able to honour your choice of minimum ISD if only 1 motor is being activated but might not be able to do so and so will effect a longer minimum ISD than you chose or than was possible with only 1 motor activated.
+
+### act_set
+
+act_set <act_id> <info_ID> <varval> [<varval_y> <varval_z>]
+
+This sets the value of the <info_ID> struct member of the actuator defined by <act_id> to be equal to the value of the variable or constant value <varval>.
+
+<act_id> - See undef_actuator for a full description of this.
+
+<info_ID> - an integer corresponding to a writeable member of that actuator’s struct and the value of that member must be compatible with the type of value conveyed by <varval> (string, float or int). Integer values for <info_ID> that can be used for a stepper actuator are all those listed in the section on act_get (which see) with the exception of those labelled 'Read only'.
+
+***Notes for using act_set with Stepper actuators***
+
+**Note:** Once a stepper is created with def_actuator, its default driver type is SD_UNDEF. You will not be allowed to set any property of a stepper actuator until this is changed to one of the defined driver types using act_set with INFO_SD_TYPE. Once the driver type is set, it cannot be changed (you will have to undefine the actuator and create it anew if you want a stepper actuator with the same name to have a different driver type).
+
+**Note**: The driver type will determine what features of the stepper actuator you can read (with act_get) or write (with act_set). Any time in this manual where driver-specific features are mentioned, it must be understood that those features will only be in effect if your stepper actuator is set to use that driver..
+
+**Note**: Physical limit switches may only be associated with analogue pins on the Arduino. You cannot specify 'A' here in any of the varval arguments, like A0 or A4. Instead just use the integer value without the 'A' - it will automatically be treated as if it has an 'A' in front of it. The fact that you are setting the value for a limit switch is what tells the program to interpret this as an analogue pin number. When setting pins for any other purpose the program will interpret the number you give to be be for a digital Arduino pin. Again, do not use 'D', just the integer value and note that values 0 and 1 will be forbidden for digital pins (and so result in an error) because D0 and D1 are reserved for the USB communications that allow the pardserver to communicate with the Arduino. For the limit switch analogue pins you may use 0 and 1 without problem.
+
+**Note**: When setting the names of limit switches (i.e. using info items like INFO_NAME_LS1) the name you set is limited to 31 printable bytes. Longer names will just have the first 31 printable bytes copied over and the rest discarded. Remember that these are bytes - not logical characters (Unicode UTF-8 characters count as 3 bytes each if you use UTF-8).
+
+**Note**: If you want to change the identity of the Arduino pin that an actuator pin member is currently associated with, (e.g. a limit switch pin on a stepper) then you must do this in two act_set commands. In the first one you must pass the value 255 (this causes the pin to be 'unset'). Then you will be allowed to set the new pin by making another call to act_set to assign your new Arduino pin to that actuator pin. You can't just change from one Arduino pin to another in a single act_set command.
+
+**Note**: Be aware that this command may change more than just the member you requested it to change. For example, if you use act_set to set a limit switch pin to 'unset' this command will reassess the homed_to member value and, if it was set to be homed to that limit switch, it will cause the homed_to member to be unset also so you will need to re-home the actuator before you can move it again. Likewise if you use act_set to alter a software limit or the current step count of one or more steppers then the limitstate member will be reassessed and compared to the current step count to see if it needs to change the limstate member and so you might not be able to move the actuator in the direction of the new software limit (these software limit checks only occur if limstate is not currently set to one of the hardware limit switches because they take priority over software limits). Also the backlash steps are recalculated automatically whenever you change the microstep denominator (msdenom), or the maximum values pertaining to those things (maxmsdenom, maxblsteps). This is why the current backlash steps is read-only to the PCS script writer and should not be set manually by altering the C source code of the interpreter.
+
+**Note**: You can supply the three varval arguments in cases where only one is needed. This will not generate an error, the other two variables will just be ignored. However, you must supply the additional two varval arguments in cases where the requested information item requires them or a syntax error will result.
+
+**Note**: For guidance on whether to use float or int varval arguments, see the entry on the command act_unit.
+
+**Note**: The following will be forbidden:
+
+1. setting maxmsdenom to < 1 (i.e. 0),
+2. setting msdenom to anything if maxmsdenom is <= 1
+3. setting msdenom to be greater than maxmsdenom.
+4. setting maxcalibri to <1.0e-3
+5. unless specifically stated to be admissible, setting any value negative.
+
+**Note**: The following only pertains to using TMC2209 drivers. Setting TurboBoost mode with INFO_TURBO_BST to some non-zero number will mark that motor for using extra RMS ampage for its next movement command - whatever that command may be. The TurboBoost setting will take place immediately (the motor must be stationary and an enforced 100 ms delay without any steps will be imposed at the Arduino when making the change) so setting TurboBoost without motion will increase the holding current. After a motion command is executed for that motor the TurboBoost status will automatically be reset to 0 and current will return to normal if and only if the TurboBoost status was previously set to 1 (as opposed to any other non-zero number). If TurboBoost was set to 2 or more then that signals TurboBoost to latch on and so it will not reset to 0 until the PCS programmer deliberately sets it to 0 or until they set it to 1 thereby allowing it to automatically clear back down to 0 after the next motion command. The actual current values for TurboBoost and 'normal' (non-Turbo) current are set in #defines near the start of the Arduino source code. Typical values may be (for non-Turbo) 600 mA RMS during motion and 300 mA at rest and for TurboBoost that will increase to 670 mA RMS during motion and 335 mA at rest but clearly you can change that via the Arduino sketch source code (parduino.ino). Leaving motors on TurboBoost at rest should only be done when necessary and you should manually set TurboBoost to 0 when you no longer need the stronger holding rest current. This is to avoid unnecessary heating of the motors and the drivers.
+
+***Notes for using act_set with M-Level actuators***
+
+**Note**: When you create a new M-Level actuator the only item you will be allowed to set first is its type, with the *INFO_ML_TYPE* info item. Once the type is set it cannot be changed; to use a different type you must undefine the actuator, define it again and set the other type.
+
+**Note**: The bare minimum for maturity of any type of M-Level actuator is that pin 0 (*INFO_PIN_P0*) is defined. For a parallel-type actuator this is sufficient. A PWM-type actuator also needs a translation table with at least one row. Freeing p0 makes the actuator immature again; its translation table is kept.
+
+**Note**: A PWM M-Level actuator operates on one pin only, p0, and you will be forbidden to set any other pin for it. The server refuses such a request (“It is forbidden to set any pin other than P0 for a PWM M-Level actuator”); the firmware refuses it as well, with “Pin number out of range”, should it ever reach the Arduino.
+
+**Note**: To change the Arduino pin of an M-Level pin, you may use the two-step approach (first free the pin (act_set with *FREE_PIN*) and then assign the new pin) or you may change it in one act_set instead - in which case the change is carried out and the old pin is released first (its output stops and it becomes a free, high-impedance input). In either case the new pin is LOW until the next level order that reaches the Arduino; because the server does not resend a level equal to the last one sent, send a different level first, or use act_halt. For a PWM M-Level that is active, a direct change to another pin on the same timer is refused with “Read only”: halt it first. (See also “Changing the pin of an M-Level” in the section on actuator types.)
+
+**Note**: Freeing a pin of a parallel M-Level (act_set with *FREE_PIN*) reduces the number of its pins, and therefore its highest level, at once: with p0 to p3 assigned the levels are 0 to 15, and after p3 is freed they are 0 to 7. The freed pin is released (written LOW, then made a high-impedance input) and becomes available to other actuators; the remaining pins keep their states, and act_halt still clamps them all LOW. Free pins from the highest downwards: freeing a pin below the highest assigned one leaves a gap in the sequence, and the server then refuses every level order for that actuator (with the message “… because there are gaps in its pin definition sequence.”) until the gap is filled again.
+
+**Note**: Freeing p0 of a PWM M-Level (act_set with *FREE_PIN*) stops its output and any effect on its timer, releases the pin (written LOW, then made a high-impedance input with its pull-up off), and sets *INFO_ML_TIMER* to 0. The server then refuses its levels as immature until p0 is assigned again; the translation table and the pre-scaler are kept.
+
+**Note**: For a PWM actuator, the range of frequencies available and how finely frequency and duty cycle can be chosen depend on the timer that drives p0 and on the pre-scaler (Table AS.1, and AS.3 to AS.6 below). The pre-scaler is set in the timer when p0 is assigned, and again with every noise and every plain level that the actuator sets at once (not by a glide or a clean onset), unless a servo shares the timer. So if you want a pre-scaler other than the default (*PWM_PSC_8*), you must set it with *INFO_ML_PSC* before you assign p0 (or after explicitly freeing p0). An *INFO_ML_PSC* order for an actuator whose p0 is assigned is refused, by the server (“You can only set the prescaler for pin 0 if it is unset.”) and, should it ever reach the Arduino, by the firmware (“Read only”). A value that is not one of the seven *PWM_PSC_* codes is refused by the server with “You are attempting to set a pre-scaler to a forbidden value (you chose *n*).”. The server accepts *INFO_ML_PSC* for a parallel M-Level too, where it has no effect. On Timer 2 a noise whose clock is 7813 Hz or more runs on the pre-scaler 8, whatever *INFO_ML_PSC* says; the next plain level sets the actuator’s own pre-scaler again.
+
+| Code | Symbol | *N* | Tick (µs) | 16-bit Timers 1, 3, 4, 5: clock-select bits | Timer 2: clock-select bits | Ceiling, 16-bit (Hz) | Ceiling, Timer 2 (Hz) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | *PWM_PSC_1* | 1 | 0.0625 | CSn0 | CS20 | 8,000,000 | 16,000,000 |
+| 3 | *PWM_PSC_8* (default) | 8 | 0.5 | CSn1 | CS21 | 1,000,000 | 2,000,000 |
+| 5 | *PWM_PSC_32* | 32 | 2 | refused (“Pin number out of range” when p0 is assigned) | CS21, CS20 | — | 500,000 |
+| 6 | *PWM_PSC_64* | 64 | 4 | CSn1, CSn0 | CS22 | 125,000 | 250,000 |
+| 7 | *PWM_PSC_128* | 128 | 8 | refused (as for 32) | CS22, CS20 | — | 125,000 |
+| 8 | *PWM_PSC_256* | 256 | 16 | CSn2 | CS22, CS21 | 31,250 | 62,500 |
+| 10 | *PWM_PSC_1024* | 1024 | 64 | CSn2, CSn0 | CS22, CS21, CS20 | 7,812 | 15,625 |
+
+**Table AS.1.** The pre-scaler codes (*INFO_ML_PSC*), the clock-select bits the firmware writes, and the frequency ceilings [fw: Mlevel_set_pin(), analogEmit()].
+
+The ceiling is the value of *INFO_ML_FREQ*: *F ÷ (2N)* on a 16-bit timer and *F ÷ N* on Timer 2, by integer division (hence 7,812 and not 7,812.5). The code 11, *PWM_PSC_UNDEF*, is not accepted.
+
+**Note**: The pins that may carry a PWM M-Level (and, equally, a servo) are given in table AS.2. On the Mega2560 the firmware defines *FULL_SAFETY* automatically (unless you modify the firmware to prevent this), which locks D2 (the kill-switch input) and D12 (the output that drives the motor-driver Vcc voltage relay) for the safety system; a configuration that comments out the line #define FULL_SAFETY frees those two pins. A pin reported as “Refused” or “LOCKED” is rejected with the error “Pin number out of range”. D0 and D1 (the USB link to the server) are refused on every board, and so are the pins above D13 on the Uno and Nano and above D53 on the Mega2560, for parallel M-Levels as well.
+
+| Board | Pin(s) | Timer (compare output) | *FULL_SAFETY* commented out | *FULL_SAFETY* defined (Mega2560 only) |
+| --- | --- | --- | --- | --- |
+| Uno / Nano | D3 | 2 (OC2B), 8-bit | PWM M-Level and Servo | (*FULL_SAFETY* not used on these boards) |
+| Uno / Nano | D9, D10 | 1 (OC1A, OC1B), 16-bit | PWM M-Level and Servo |  |
+| Uno / Nano | D11 | 2 (OC2A), 8-bit | Refused (OCR2A is the TOP register) |  |
+| Uno / Nano | D5, D6 | 0 | Refused (Timer 0 runs *millis()*, *micros()*, *delay()*) |  |
+| Uno / Nano | D2, D4, D7, D8, D12, D13 | none | Refused (no timer output) |  |
+| Mega2560 | D2 | 3 (OC3B), 16-bit | PWM M-Level and Servo | LOCKED (kill-switch input) |
+| Mega2560 | D3, D5 | 3 (OC3C, OC3A), 16-bit | PWM M-Level and Servo | PWM M-Level and Servo |
+| Mega2560 | D4, D13 | 0 | Refused (Timer 0 runs *millis()*, *micros()*, *delay()*) | Refused |
+| Mega2560 | D6, D7, D8 | 4 (OC4A, OC4B, OC4C), 16-bit | PWM M-Level and Servo | PWM M-Level and Servo |
+| Mega2560 | D9 | 2 (OC2B), 8-bit | PWM M-Level and Servo | PWM M-Level and Servo |
+| Mega2560 | D10 | 2 (OC2A), 8-bit | Refused (OCR2A is the TOP register) | Refused |
+| Mega2560 | D11 | 1 (OC1A), 16-bit | PWM M-Level and Servo | PWM M-Level and Servo |
+| Mega2560 | D12 | 1 (OC1B), 16-bit | PWM M-Level and Servo | LOCKED (motor-voltage relay output) |
+| Mega2560 | D44, D45, D46 | 5 (OC5C, OC5B, OC5A), 16-bit | PWM M-Level and Servo | PWM M-Level and Servo |
+| Mega2560 | every other pin from D14 to D53 | none | Refused (no timer output) | Refused |
+
+**Table AS.2.** The pins of the PWM M-Level (and of the servo).
+
+**Note**: Creating and editing a translation table is done with the *INFO_ML_TTABLE* info item, with the following act_set usage pattern:
+
+act_set <act_id> INFO_ML_TTABLE <row> <freq> <duty>
+
+Where:
+
+<row> is the integer row you wish to create or edit (starting at 0).
+
+<freq> is the integer frequency in hertz, from 0 to 8000000. A frequency of 0 means silence: the pin is disconnected from the timer and held LOW, unless the duty is 1000. For a noise code it is the noise clock; for a code 4000 to 4999 it is ignored.
+
+<duty> is an integer from 0 to 4999. From 0 to 1000 it is the duty cycle in per mille (tenths of a per cent): 0 holds the pin LOW and 1000 holds it HIGH, whatever the frequency. From 1001 to 4999 it is a special-effect code (Table 2 in the section on actuator types, and the formulae below). The values 2000 and 3000 (a noise or burst with *P* = 0) are refused.
+
+All three must be whole numbers of 0 or more, and all three must be given. The table is held on the server only, so this command does not communicate with the Arduino, and a new or edited row changes nothing that sounds until a level selects it. The server refuses a frequency above 8000000 (“The frequency value must be <= 8000000.”) and a duty above 4999, or of 2000 or 3000 (“The duty cycle value must be <= 4999 and exclude 2000 and 3000.”). It accepts a noise code with a frequency of 0, which the Arduino refuses when a level selects the row.
+
+If a table does not already exist, your first call must be for row 0. This is an example of the general rule that rows can only be created by strict appending: if your table already has *n* rows (rows 0 to *n* − 1), you can extend it by setting row *n*; an attempt to set a row index greater than *n* is intercepted by the server and rejected with the message “For a translation table you may only append a new entry or modify an existing entry.”. Rows cannot be deleted; the table is freed only when the actuator is destroyed.
+
+You can edit any existing row with an act_set call to that row; the call overwrites its contents. The server also accepts a table for a parallel M-Level, but never uses it.
+
+**Note**: A level is set with
+
+act_set <act_id> INFO_ML_LEVEL <level>
+
+where <level> is a whole number of 0 or more. For a PWM M-Level it is a row of the translation table. The server checks, in this order:
+
+1. that the type is set (“You must set the type of an M-Level actuator before you set anything else.”);
+2. that the actuator is mature (“… set the level of this M-Level actuator because it is immature.”);
+3. for a parallel M-Level, that its pins have no gap (“… set the level of this M-Level actuator because there are gaps in its pin definition sequence.”);
+4. for a PWM M-Level, that the row exists (“Attempting to access a translation table index that does not exist.”); for a parallel M-Level, that the level is not above 2n − 1 (“… set the level of this actuator to more than *m* because it only has *n* pins set.”);
+5. whether the level is the one last sent: for a PWM M-Level, the same row holding the same frequency and duty as when it was last sent; for a parallel M-Level, the same level. Such a level is not sent, and the command reports success.
+
+It then sends the row’s frequency and duty (for a parallel M-Level, the level) to the Arduino, and records the level as the last one sent when the Arduino reports success. Note the consequence of step 5: a timed noise or a burst selected twice in a row sounds once; select another row in between, or send act_halt. Since the comparison includes the row’s values, a row that you have edited is sent again and a separate row that has the same frequency and duty values as the previous row will be sent.
+
+The firmware then acts as follows. It refuses the level if p0 is unassigned (“Attempt to alter the state of an unset pin.”). A duty above 4999, which the server never sends, is refused with “Invalid/unknown info item.”. A code 4000 to 4999 records the glide time or the attack step and returns, changing nothing audible. A noise code with *P* = 0 is refused with “Invalid/unknown info item.”; any other noise code first ends the effect running on the timer, then starts the noise, which is refused with “Invalid/unknown info item.” if the frequency is 0, and with “Attempt to alter a read only value.” (“Read only”) if a servo is on the timer. A plain duty first ends the effect running on the timer, then either starts a glide or a clean onset or sets the frequency and the duty at once. Every refusal of the firmware reaches the script as the server’s message, which names the Arduino as its source, for example '[PARDUINO] Pin number out of range.'
+
+**Note**: How a requested frequency becomes a produced frequency. A timer can only divide its clock by a whole number, so the frequencies it can produce form a discrete set. The firmware chooses the timer’s “TOP” value by integer division (that is, rounding down), which means that the frequency produced is the nearest achievable frequency **at or above** the one requested, with two exceptions: a request above the highest frequency of the pre-scaler produces that highest frequency, and a request below the lowest frequency of the pre-scaler produces that lowest frequency. The tables AS.3 to AS.5 give the limits; the formulae after them give any particular value exactly.
+
+Table AS.3 is for the 8-bit Timer 2 (Fast PWM mode; all frequencies in hertz; in brackets, the smallest frequency step available at that point: for “Lowest” and “Highest with 10 per-mille duty steps” the gap up to the next higher achievable frequency, and for “Highest” the gap down to the next lower one, since nothing lies above it):
+
+| Pre-scaler | Tick (µs) | Lowest (step) | Highest with 10 per-mille duty steps (step) | Highest (step) |
+| --- | --- | --- | --- | --- |
+| *PWM_PSC_1* | 0.0625 | 62,500 (245) | 160,000 (1,616.16) | 8,000,000 (2,666,666.67) |
+| *PWM_PSC_8* | 0.5 | 7,812.5 (30.6) | 20,000 (202.02) | 1,000,000 (333,333.33) |
+| *PWM_PSC_32* | 2 | 1,953.125 (7.66) | 5,000 (50.51) | 250,000 (83,333.33) |
+| *PWM_PSC_64* | 4 | 976.562 (3.83) | 2,500 (25.25) | 125,000 (41,666.67) |
+| *PWM_PSC_128* | 8 | 488.281 (1.91) | 1,250 (12.63) | 62,500 (20,833.33) |
+| *PWM_PSC_256* | 16 | 244.141 (0.957) | 625 (6.31) | 31,250 (10,416.67) |
+| *PWM_PSC_1024* | 64 | 61.035 (0.239) | 156.25 (1.58) | 7,812.5 (2,604.17) |
+
+**Table AS.3.** Timer 2: the limits of frequency.
+
+Table AS.4 is for the 16-bit Timers 1, 3, 4 and 5 (Phase and Frequency Correct mode; all frequencies in hertz; in brackets, the frequency step as defined for the previous table):
+
+| Pre-scaler | Tick (µs) | Lowest (step) | Highest with 1 per-mille duty steps (step) | Highest with 10 per-mille duty steps (step) | Highest (step) |
+| --- | --- | --- | --- | --- | --- |
+| *PWM_PSC_1* | 0.0625 | 122.072 (0.0019) | 8,000 (8.01) | 80,000 (808.08) | 8,000,000 (4,000,000) |
+| *PWM_PSC_8* | 0.5 | 15.259 (0.00023) | 1,000 (1.00) | 10,000 (101.01) | 1,000,000 (500,000) |
+| *PWM_PSC_32* | — | Refused | Refused | Refused | Refused |
+| *PWM_PSC_64* | 4 | 1.907 (0.000029) | 125 (0.125) | 1,250 (12.63) | 125,000 (62,500) |
+| *PWM_PSC_128* | — | Refused | Refused | Refused | Refused |
+| *PWM_PSC_256* | 16 | 1 at TOP 31,250 (0.000032) | 31.25 (0.0313) | 312.5 (3.16) | 31,250 (15,625) |
+| *PWM_PSC_1024* | 64 | 1.000064 at TOP 7,812 (0.00013) | 7.8125 (0.00782) | 78.125 (0.79) | 7,812.5 (3,906.25) |
+
+**Table AS.4.** The 16-bit timers: the limits of frequency.
+
+In both tables AS.3 and AS.4 the “Tick” is the duration of one count of the timer, *N ÷ 16* µs; “Lowest” is the frequency at the largest TOP value (255 on Timer 2, 65,535 on a 16-bit timer); “Highest with 10 per-mille duty steps” is the highest frequency at which the duty cycle can still be set in steps of 10 per mille, that is 1 per cent (TOP + 1 = 100 on Timer 2, TOP = 100 on a 16-bit timer); “Highest with 1 per-mille duty steps” is the same for steps of 1 per mille (TOP = 1,000 on a 16-bit timer; Timer 2 has no such steps); and “Highest” is the frequency at the smallest TOP value, 1. A table frequency is a whole number of hertz, and 0 means silence, so the lowest frequency of a 16-bit timer with the pre-scaler 256 or 1024 is that of a row of 1 Hz: the timer could count more slowly (0.477 Hz and 0.119 Hz at TOP 65,535), but no table row can ask for it. Likewise a limit that is not a whole number is reached from the whole number below it: at *PWM_PSC_256*, 31 Hz gives TOP 1,008 (31.002 Hz), and at *PWM_PSC_1024*, 7 Hz gives TOP 1,116 (7.0004 Hz). Where the step in brackets is below 1 Hz, the step you can obtain is set by the whole hertz of the table. Pre-scalers 32 and 128 do not exist on the 16-bit timers, and an actuator with either of them is refused a 16-bit pin.
+
+**Note**: How finely the duty cycle can be set also depends on the frequency, because at a higher frequency there are fewer timer ticks in each period. Tables AS.5 and AS.6 give the timer’s smallest step in duty cycle (in per mille, in brackets) at the frequency (in hertz) shown.
+
+| Pre-scaler | Lowest frequency | Highest frequency with 10 per-mille steps | Highest frequency |
+| --- | --- | --- | --- |
+| *PWM_PSC_1* | 62,500 (3.906) | 160,000 (10) | 8,000,000 (0, 500 or 1000 only) |
+| *PWM_PSC_8* | 7,812.5 (3.906) | 20,000 (10) | 1,000,000 (0, 500 or 1000 only) |
+| *PWM_PSC_32* | 1,953.125 (3.906) | 5,000 (10) | 250,000 (0, 500 or 1000 only) |
+| *PWM_PSC_64* | 976.562 (3.906) | 2,500 (10) | 125,000 (0, 500 or 1000 only) |
+| *PWM_PSC_128* | 488.281 (3.906) | 1,250 (10) | 62,500 (0, 500 or 1000 only) |
+| *PWM_PSC_256* | 244.141 (3.906) | 625 (10) | 31,250 (0, 500 or 1000 only) |
+| *PWM_PSC_1024* | 61.035 (3.906) | 156.25 (10) | 7,812.5 (0, 500 or 1000 only) |
+
+**Table AS.5. Timer 2:** the smallest duty step (per mille, in brackets).
+
+| Pre-scaler | Lowest frequency | Highest with 1 per-mille steps | Highest with 10 per-mille steps | Highest with a pulse train (TOP = 2) | Highest frequency (TOP = 1) |
+| --- | --- | --- | --- | --- | --- |
+| *PWM_PSC_1* | 122.072 (0.0153) | 8,000 (1) | 80,000 (10) | 4,000,000 (0, 500 or 1000 only) | 8,000,000 (0 or 1000 only) |
+| *PWM_PSC_8* | 15.259 (0.0153) | 1,000 (1) | 10,000 (10) | 500,000 (0, 500 or 1000 only) | 1,000,000 (0 or 1000 only) |
+| *PWM_PSC_32* | Refused | Refused | Refused | Refused | Refused |
+| *PWM_PSC_64* | 1.907 (0.0153) | 125 (1) | 1,250 (10) | 62,500 (0, 500 or 1000 only) | 125,000 (0 or 1000 only) |
+| *PWM_PSC_128* | Refused | Refused | Refused | Refused | Refused |
+| *PWM_PSC_256* | 1 at TOP 31,250 (0.0320) | 31.25 (1) | 312.5 (10) | 15,625 (0, 500 or 1000 only) | 31,250 (0 or 1000 only) |
+| *PWM_PSC_1024* | 1.000064 at TOP 7,812 (0.128) | 7.8125 (1) | 78.125 (10) | 3,906.25 (0, 500 or 1000 only) | 7,812.5 (0 or 1000 only) |
+
+**Table AS.6.** The 16-bit timers: the smallest duty step (per mille, in brackets).
+
+The duty cycle value is stored as a whole number of per mille, so no step smaller than 1 per mille can be asked for. Where the timer’s step is finer than 1 per mille (TOP above 1,000), every whole per mille is realised to within half a timer tick, and the steps obtained are close to 1 per mille (between 0.99 and 1.01 per mille at TOP 65,535); where it is coarser, the duty produced is the nearest the timer can make. At the highest frequency of a 16-bit pre-scaler (TOP = 1) only 0 and 1000 per mille exist: a request of 1 to 499 per mille gives a constant LOW and 500 to 999 a constant HIGH (the compare value then equals TOP, which keeps the output HIGH), so the pin does not oscillate. At TOP = 2 a 16-bit timer makes 0, 500 and 1000 per mille: 1 to 249 gives LOW, 250 to 749 gives 500, and 750 to 999 gives HIGH. At the highest frequency of a Timer-2 pre-scaler, 0, 500 and 1000 per mille exist: 1 to 249 gives LOW, 250 to 749 gives 500, and 750 to 999 gives HIGH (the compare register then equals TOP).
+
+**Note**: To calculate any particular value, use these formulae. In them *F* = 16,000,000 Hz is the Arduino’s crystal frequency, *N* is the pre-scaler divisor named by the *PWM_PSC_* symbol (1, 8, 32, 64, 128, 256 or 1024), *f* is the frequency stored in the translation table, *d* is the duty stored in the translation table (in per mille), and floor( ) means rounding down to a whole number. These are the calculations the firmware itself performs, in integer arithmetic only.
+
+1. FOR THE 16-BIT TIMERS 1, 3, 4 AND 5 (Phase and Frequency Correct PWM mode)
+
+* Frequency ceiling: *f* is first reduced, if necessary, to *F ÷ (2 × N)* (integer division).
+* TOP value: *TOP = floor(F ÷ (2 × N × f))*, then limited to the range 1 to 65,535.
+* Frequency produced: *f_out = F ÷ (2 × N × TOP)*.
+* Frequency step at that point: *F ÷ (2 × N × (TOP − 1)) − F ÷ (2 × N × TOP)*.
+* Compare value: *OCR = floor((TOP × d + 500) ÷ 1000)*, that is, *TOP × d ÷ 1000* rounded to the nearest whole number. If OCR = 0 the pin is held LOW; if OCR *≥* TOP (and TOP > 1) the pin is held HIGH.
+* Duty cycle produced: *OCR ÷ TOP × 1000* per mille.
+* Pulse width and period: the counter counts up to TOP and down again, and the pin is HIGH while the counter is below OCR, so a period lasts *2 × TOP* ticks and a pulse *2 × OCR* ticks, centred on the BOTTOM of the counter: pulse width = *OCR × N ÷ 8* µs, period = *TOP × N ÷ 8* µs.
+* Number of distinct duty cycles: TOP + 1 (from 0 to TOP), so the timer’s smallest duty step is *1000 ÷ TOP* per mille.
+* On a timer shared with a servo, TOP is the servo’s frame, 20,000, 5,000 or 3,003 for its bands of 50, 200 and 333 Hz, and the pre-scaler is 8; the frequency stored in the row is not used, and only OCR is calculated as above.
+
+2. FOR THE 8-BIT TIMER 2 (Fast PWM mode)
+
+* Frequency ceiling: *f* is first reduced, if necessary, to *F ÷ N*.
+* TOP value: *TOP = floor(F ÷ (N × f)) − 1*, then limited to the range 1 to 255.
+* Frequency produced: *f_out = F ÷ (N × (TOP + 1))*.
+* Frequency step at that point: *F ÷ (N × TOP) − F ÷ (N × (TOP + 1))*.
+* High time in ticks: *H = floor(((TOP + 1) × d + 500) ÷ 1000)*, that is, *(TOP + 1) × d ÷ 1000* rounded to the nearest whole number. If H = 0 the pin is held LOW; otherwise the compare register OCR2B receives *H − 1*, and the pin is high for H of every TOP + 1 ticks (H = TOP + 1, that is OCR2B = TOP, is a constant HIGH).
+* Duty cycle produced: *H ÷ (TOP + 1) × 1000* per mille.
+* Pulse width and period: pulse width = *H × N ÷ 16* µs, period = *(TOP + 1) × N ÷ 16* µs.
+* Number of distinct duty cycles: TOP + 2 (from 0 to TOP + 1 ticks high), so the smallest duty step is *1000 ÷ (TOP + 1)* per mille.
+
+3. FOR THE SPECIAL EFFECTS
+
+* Noise clock: the row’s frequency is first limited to 16,000 Hz. On Timer 2 the pre-scaler 8 is used if the clock is then 7,813 Hz or more, and the actuator’s own pre-scaler otherwise; on a 16-bit timer the actuator’s own pre-scaler is always used. TOP is then calculated as for a plain level at that clock, with the actuator’s own frequency ceiling, and the clock produced is *f_out* as above.
+* Pulse width of a noise on Timer 2: *h = floor(((TOP + 1) × w + 500) ÷ 1000)* ticks, limited to 1 to TOP, where *w* is the width in per mille (*P* for 1001 to 1999 and the hiss of 3001 to 3999; the width class for 2001 to 2999; 500 for the burst). During a noise Timer 2 drives the pin inverted, with OCR2B = TOP − h for a period that carries a pulse (a pulse of h ticks at the end of the period) and OCR2B = TOP for an empty one.
+* Pulse width of a noise on a 16-bit timer: *w_t = floor((TOP × w + 500) ÷ 1000)*, limited to 1 to TOP − 1. The compare value *w_t* makes the pin HIGH for the first and the last *w_t* ticks of a period, and 0 makes it LOW throughout; a pulse is therefore centred on a BOTTOM of the counter, and is 0, *w_t* or *2 × w_t* ticks wide, depending on the decisions of the two periods it straddles.
+* Duration of a timed noise (and of the burst of 3001 to 3999, with 10 ms): *n = floor(t × 16000 ÷ (N × L))* periods, at least 1 and at most 65,535, where *t* is the time in milliseconds, *N* the pre-scaler in force during the noise and *L* the length of a period in ticks (TOP + 1 on Timer 2, *2 × TOP* on a 16-bit timer); the noise lasts *n × L × N ÷ 16* µs.
+* The attack (Timer 2): with *h* the target width in ticks, the pulse starts at *i = ⌈ h ÷ 8 ⌉* ticks and grows by *i* every *a = floor(P × 16000 ÷ (N × (TOP + 1)))* periods (*a* limited to 1 to 255), where *P* is the attack step in ms; the step that would reach or pass *h* lands exactly on *h*. The widths are *i, 2i, …, h*: at most eight, so the attack lasts at most seven steps. A noise of one tick has no attack.
+* The glide (16-bit timers): from the present *(TOP_0, OCR_0)* to the target *(TOP_t, OCR_t)*, calculated as for a plain level, in *s = floor(P × 16000 ÷ (N × (TOP_0 + TOP_t)))* steps, one per period (at most 65,535). Each step adds to TOP and to OCR the whole-number quotient of their total change by *s*, and distributes the remainders evenly, so that both reach their targets exactly after *s* steps. The walk is linear in the period, not in the frequency, and lasts about *P* ms. From a clean silence (a present compare value of 0) the clean onset is made instead of a glide. The level is set at once, without a glide, when either TOP is below 256, when *s* is below 2, when no glide time is set, when the actuator does not own the timer’s effect state or p0 has moved, when the timer carries a servo, when the pin is not on its timer or another output of the timer is connected, when the new row is a silence, a constant HIGH or frequency 0, or when its compare value is 0 or reaches TOP. An order for the timer during a walk leaves the period and the compare value of the step reached.
+
+**Worked example (8-bit)**: pre-scaler *PWM_PSC_128* and a stored frequency of 880 Hz:
+
+TOP = floor(16,000,000 ÷ (128 × 880)) − 1 = floor(142.05) − 1 = 141.
+
+The frequency produced is 16,000,000 ÷ (128 × 142) = 880.28 Hz.
+
+For a stored duty of 500 per mille, H = floor((142 × 500 + 500) ÷ 1000) = floor(71.5) = 71, so OCR2B = 70 and the duty produced is 71 ÷ 142 = 500.0 per mille: a pulse of 71 × 128 ÷ 16 = 568 µs in a period of 142 × 128 ÷ 16 = 1,136 µs. The smallest duty step at this frequency is 1000 ÷ 142 = 7.04 per mille.
+
+**Worked example (16-bit)**: pre-scaler *PWM_PSC_8* and a stored frequency of 440 Hz.
+
+TOP = floor(16,000,000 ÷ (2 × 8 × 440)) = floor(2272.7) = 2272.
+
+The frequency produced is 16,000,000 ÷ (2 × 8 × 2272) = 440.14 Hz. For a stored duty of 500 per mille, OCR = floor((2272 × 500 + 500) ÷ 1000) = floor(1136.5) = 1136: a pulse of 1136 × 8 ÷ 8 = 1,136 µs in a period of 2,272 µs. The smallest duty step is 1000 ÷ 2272 = 0.44 per mille. With 65 Hz and 60 per mille instead, TOP = 15,384, OCR = 923, the frequency produced is 65.0026 Hz and the duty 59.997 per mille, a pulse of 923 µs.
+
+**Worked example (noise on Timer 2)**: a row of 16,000 Hz with the code 2410 (class 4, 10 ms) on D3 of a Nano whose actuator has *PWM_PSC_32*. The clock is 7,813 Hz or more, so the pre-scaler 8 is used: TOP = floor(16,000,000 ÷ (8 × 16,000)) − 1 = 124, a clock of exactly 16,000 Hz. Class 4 is 31 per mille: h = floor((125 × 31 + 500) ÷ 1000) = 4 ticks, a pulse of 2 µs. The noise lasts n = floor(10 × 16000 ÷ (8 × 125)) = 160 periods, 160 × 125 × 8 ÷ 16 = 10,000 µs. With the code 1062 and an attack step of 3 ms set by a row of code 4003, the target is 8 ticks: i = 1, a = floor(3 × 16000 ÷ (8 × 125)) = 48 periods per step, so the pulse grows 1, 2, …, 8 ticks over 7 × 48 periods = 21 ms. With 12,000 Hz and the code 3150: TOP = 165 (12,048.19 Hz), a burst of floor(10 × 16000 ÷ (8 × 166)) = 120 periods (9.960 ms) of 83 ticks, then a hiss of 25 ticks (12.5 µs).
+
+**Worked example (glide)**: with a glide time of 80 ms (code 4080) and *PWM_PSC_8*, a plain level of 55 Hz and 51 per mille (TOP 18,181, OCR 927) that follows one of 65 Hz and 60 per mille (TOP 15,384, OCR 923) takes s = floor(80 × 16000 ÷ (8 × (15,384 + 18,181))) = 4 steps: (16,083, 924), (16,782, 925), (17,481, 926), (18,181, 927), which last 68.53 ms. With a glide time of 4 ms, s would be 0, and the level is set at once.
+
+**Note**: When a PWM M-Level actuator and a servo actuator share a hardware timer (which can happen only on a 16-bit timer, and only by assigning the servo’s pin last: the firmware refuses an M-Level’s p0 on a timer that already carries a servo), the timer runs at the servo’s pre-scaler (8) and frame whatever the M-Level’s *INFO_ML_PSC* says. *INFO_ML_PSC* cannot be changed meanwhile, because it can only be set while p0 is unassigned.
+
+**Note**: When a PWM M-Level actuator and a servo actuator share a hardware timer, the frequency of the M-Level is the servo’s frame frequency (50 Hz, 200 Hz or 333 Hz, according to the servo’s *INFO_SRV_FREQ* band) and cannot be changed by the M-Level. The translation-table rows may contain whatever frequencies you wish, but those frequencies are not used when you set the level. This is not an error, but you should be aware of it, because the duty cycle is then set against the servo’s frame: TOP = 20,000, 5,000 or 3,003 for the three bands, so the timer’s duty step is 0.05, 0.2 or 0.333 per mille, finer than the whole per mille of the stored duty, and every whole per mille is realised to within half a tick (for example, 75 per mille at 50 Hz is OCR = 1,500, a pulse of 1,500 µs). The duty cycle can still be changed by the M-Level, and duty 0, duty 1000 and frequency 0 keep their fixed meanings. A noise code is refused on that timer (“Read only”), and a glide or a clean onset is not made there.
+
+**Note**: When two or more PWM M-Level actuators share a hardware timer (again, this can happen only on a 16-bit timer), assigning the p0 of one of them is refused with a “Read only” violation error while another member of the group is active; de-activate it first (*act_halt*) and repeat the request; a refused request changes nothing. Each member’s pre-scaler is written into the timer when its p0 is assigned, and each member’s TOP and pre-scaler with every plain level and every noise it sets, so the member that last set a level decides the frequency and the pre-scaler of the whole group.
+
+**Note**: When two or more PWM M-Level actuators share a hardware timer, they cannot oscillate at different frequencies at the same time, nor use different pre-scalers. The last frequency set is the one used by every member of the group, and likewise the last pre-scaler. Each member may still set its own duty cycle, but only its own level calculates its compare value: when another member then changes the TOP, this member’s compare value stays as it was, and its duty cycle becomes that compare value divided by the new TOP. The duty-cycle resolution is the same for all members, being fixed by the common frequency and pre-scaler in force on that timer. A level of any member also ends an effect running on the timer, and a glide or a clean onset is not made while another output of the timer is connected.
+
+**Note**: Table AS.7 gathers what the client, the server and the firmware refusal conditions for each M-Level item of *act_set*. The client’s own checks come first: the item must be a whole number from 1 to 54; *INFO_ML_STATE*, *INFO_ML_TIMER* and *INFO_MATURITY* are refused as read only (“… is a read only data item.”); an item the client does not know for an M-Level, such as *INFO_ML_FREQ*, is refused as invalid (“… is an invalid hardware info item.”); a value of one byte must lie from 0 to 255, every value must be 0 or more, and *INFO_ML_TTABLE* needs all three values (“Not enough variables supplied to set data item.”).
+
+| Item | Server | Firmware |
+| --- | --- | --- |
+| *INFO_ML_TYPE* | the type is already set: “… change the type of an M-Level actuator once it has been set.” (the value itself is not checked) | none: the value is stored |
+| *INFO_ML_PSC* | the type is unset: “You must set the type of an M-Level actuator before you set anything else.”; p0 is assigned: “You can only set the prescaler for pin 0 if it is unset.”; not a *PWM_PSC_* code: “You are attempting to set a pre-scaler to a forbidden value (you chose *n*).” | p0 is assigned: “Attempt to alter a read only value.” |
+| *INFO_PIN_P0* | the type is unset: “You must set the type of an M-Level actuator before you set anything else.” | below D2 or above D13 (Uno, Nano) or D53 (Mega2560), a locked pin, the Timer-2 channel-A pin, a pin on Timer 0 or on no timer, or a 16-bit pin with the pre-scaler 32 or 128: “Pin number out of range.”; a pin in use: “Attempt to use a pin that is already in use.”; a timer that carries a servo, or on which a PWM M-Level is active: “Attempt to alter a read only value.” |
+| *INFO_PIN_P1* to *INFO_PIN_P7* | the type is unset (message as for p0); a PWM M-Level: “It is forbidden to set any pin other than P0 for a PWM M-Level actuator” | a PWM M-Level: “Pin number out of range.”; otherwise as for p0, without the timer tests |
+| *INFO_ML_TTABLE* | the type is unset (message as for p0); a frequency above 8,000,000: “The frequency value must be <= 8000000.”; a duty above 4999, or 2000 or 3000: “The duty cycle value must be <= 4999 and exclude 2000 and 3000.”; a row beyond the end: “For a translation table you may only append a new entry or modify an existing entry.”; no memory: “Failed to get memory for new translation table row.” | not involved (the table is held by the server) |
+| *INFO_ML_LEVEL* | the five checks of the note on *INFO_ML_LEVEL* above | p0 unassigned: “Attempt to alter the state of an unset pin.”; a duty above 4999, a noise code with *P* = 0, or a noise code with a frequency of 0: “Invalid/unknown info item.”; a noise code on a timer that carries a servo: “Attempt to alter a read only value.” |
+
+**Table AS.7.** The refusals of act_set for an M-Level actuator. Firmware errors reach the script with the prefix [PARDUINO].
+
+**Example** (PCS). A complete script for a Nano with a speaker driver on D9 (Timer 1) and a noise channel on D3 (Timer 2). The comments give the values the firmware produces, as calculated by the formulae above.
+
+```pcs
+Pardus pcs 1
+verbosity 1
+#include stdpard.pch
+def_func main
+    # ---- the voice: a PWM M-Level on D9, Timer 1 (16-bit) --------------
+    def_actuator ACT_MLEVEL 1 Voice
+    act_set Voice INFO_ML_TYPE MLT_PWM          # the type first
+    act_set Voice INFO_ML_PSC PWM_PSC_8         # the default; only before P0
+    act_set Voice INFO_PIN_P0 9                 # the timer is set up; pin LOW
+    act_set Voice INFO_ML_TTABLE 0 0 0          # row 0: silence (clean on a 16-bit pin)
+    act_set Voice INFO_ML_TTABLE 1 440 500      # row 1: TOP 2272, OCR 1136, 440.14 Hz
+    act_set Voice INFO_ML_TTABLE 2 65 60        # row 2: TOP 15384, OCR 923, 65.0026 Hz
+    act_set Voice INFO_ML_TTABLE 3 55 51        # row 3: TOP 18181, OCR 927, 55.0025 Hz
+    act_set Voice INFO_ML_TTABLE 4 0 4080       # row 4: glide time 80 ms (a setting)
+    act_set Voice INFO_ML_LEVEL 1               # 440 Hz at once
+    sleep 1.0
+    act_set Voice INFO_ML_LEVEL 4               # glide time set; nothing audible changes
+    act_set Voice INFO_ML_LEVEL 2               # glides to 65 Hz
+    sleep 1.0
+    act_set Voice INFO_ML_LEVEL 3               # glides to 55 Hz in 4 steps (68.53 ms)
+    sleep 1.0
+    act_set Voice INFO_ML_LEVEL 0               # clean silence: the pin stays on Timer 1
+    act_set Voice INFO_ML_LEVEL 2               # clean onset: first pulse after 1.5 periods
+    sleep 1.0
+    act_set Voice INFO_ML_LEVEL 0
+    # ---- the noise: a PWM M-Level on D3, Timer 2 (8-bit) ---------------
+    def_actuator ACT_MLEVEL 2 Noise
+    act_set Noise INFO_ML_TYPE MLT_PWM
+    act_set Noise INFO_ML_PSC PWM_PSC_32        # noise clocks of 7813 Hz or more use 8
+    act_set Noise INFO_PIN_P0 3
+    act_set Noise INFO_ML_TTABLE 0 0 0          # row 0: silence
+    act_set Noise INFO_ML_TTABLE 1 0 4003       # row 1: attack step 3 ms
+    act_set Noise INFO_ML_TTABLE 2 16000 1062   # row 2: noise, 8 ticks (4 us), until ended
+    act_set Noise INFO_ML_TTABLE 3 16000 2410   # row 3: class 4, 10 ms (160 periods)
+    act_set Noise INFO_ML_TTABLE 4 12000 3150   # row 4: burst 9.960 ms, then hiss 12.5 us
+    act_set Noise INFO_ML_LEVEL 1               # the attack step; nothing audible
+    act_set Noise INFO_ML_LEVEL 2               # soft start: 1 to 8 ticks over 21 ms
+    sleep 0.5
+    act_set Noise INFO_ML_LEVEL 3               # ends the noise; 10 ms burst, then silence
+    act_set Noise INFO_ML_LEVEL 0               # (row 3 again would need another row first)
+    act_set Noise INFO_ML_LEVEL 4               # burst, then hiss until the next order
+    sleep 0.5
+    act_set Noise INFO_ML_LEVEL 0
+    # ---- release both ----------------------------------------------------
+    act_halt Voice
+    act_halt Noise
+    act_set Voice INFO_PIN_P0 FREE_PIN
+    act_set Noise INFO_PIN_P0 FREE_PIN
+return
+exit
+```
+
+In this script an act_set *Voice INFO_ML_PSC PWM_PSC_64* after the line that assigns p0 would be refused with “You can only set the prescaler for pin 0 if it is unset.”, and a second PWM M-Level given p0 = 10 while Voice is active would be refused with “[PARDUINO] Attempt to alter a read only value.”, because D10 shares Timer 1 with D9.
+
+***Notes for using act_set with Servo actuators***
+
+**Note**: When you create a new servo actuator you cannot set its position until you have assigned its signal pin (pin_srv) to a hardware pin with INFO_SRV_PINS. The pins a servo may use are given in the table of pins in the notes for M-Level actuators above. If you want a frequency band other than the default (SRV_FREQ_MID50), you must set it with INFO_SRV_FREQ before you assign the pin (or after explicitly freeing the pin).
+
+**Note**: You have a choice of three frequency bands. Together with the kind of timer that drives the servo’s pin, the band fixes the timer’s pre-scaler, the frame (the interval at which the pulse repeats) and the resolution with which the pulse width, and so the servo’s position, can be set, according to the following table. The smaller the tick, the finer the positioning.
+
+| Frequency band | Timer | Pre-scaler | Tick (µs) | Frame period (µs) | Frame frequency (Hz) | Longest usable pulse (µs) |
+| --- | --- | --- | --- | --- | --- | --- |
+| SRV_FREQ_MID50 | 16-bit | 8 | 0.5 (pulse resolution 1) | 20,000 | 50 | 19,999 |
+| SRV_FREQ_MID200 | 16-bit | 8 | 0.5 (pulse resolution 1) | 5,000 | 200 | 4,999 |
+| SRV_FREQ_MID333 | 16-bit | 8 | 0.5 (pulse resolution 1) | 3,003 | 333 | 3,000 |
+| SRV_FREQ_MID50 | 8-bit (Timer 2) | 1,024 | 64 | 16,384 | 61.04 | 16,320 |
+| SRV_FREQ_MID200 | 8-bit (Timer 2) | 256 | 16 | 4,000 | 250 | 3,984 |
+| SRV_FREQ_MID333 | 8-bit (Timer 2) | 256 | 16 | 2,992 | 334.22 | 2,976 |
+
+On a 16-bit timer the timer counts in ticks of 0.5 µs but counts up and then down in each frame, so the pulse width is set in steps of exactly 1 µs, and the frame frequencies are the nominal 50 Hz, 200 Hz and 333 Hz. On Timer 2 the 50 Hz band actually runs at 61.04 Hz: the longest frame Timer 2 can produce is 256 ticks of 64 µs, that is 16,384 µs, and 50 Hz would need 20,000 µs. The firmware’s own definition of this band (parddefs.h) gives its safe range as 40 Hz to 70 Hz, so 61.04 Hz lies within it. The 200 Hz and 333 Hz bands run on Timer 2 at 250 Hz and 334.22 Hz.
+
+“Longest usable pulse” is the longest pulse the firmware will deliver, which is always shorter than the frame: a pulse as long as the frame would hold the pin permanently HIGH, which a servo must never receive. A longer command is reduced to it: on a 16-bit timer to the frame less 1 µs (19,999 µs and 4,999 µs for the 50 Hz and 200 Hz bands; for the 333 Hz band the server’s own limit of 3,000 µs is reached first), and on Timer 2 to the frame less one tick. The server accepts INFO_SRV_MAX values up to 20,000 µs, 5,000 µs and 3,000 µs for the three bands whatever the timer; in practice you should keep INFO_SRV_MAX within your servo’s own range, typically 500 µs to 2,500 µs.
+
+**Note**: To obtain accurate motion in response to PCS commands, and accurate angular or microsecond resolution in all the calculations below and in the PCS / PARDUS calibrations and conversions, you must supply accurate values of the following parameters for your servo:
+
+INFO_SRV_MIN - the smallest number of microseconds to which your servo responds linearly. Below this value the servo does not move any further in that direction in a linear manner, for whatever reason (signal processing in the servo, or a physical obstruction). The default is 544 µs.
+
+INFO_SRV_THMIN - the angular position of the servo at a pulse width of INFO_SRV_MIN.
+
+INFO_SRV_MAX - the largest number of microseconds to which your servo responds linearly. Above this value the servo does not move any further in that direction in a linear manner, for whatever reason. The default is 2,400 µs.
+
+INFO_SRV_THMAX - the angular position of the servo at a pulse width of INFO_SRV_MAX.
+
+Failure to supply physically accurate values for these parameters will result in erroneous positioning of servos and possible damage to them or to other hardware. The values may be found by careful experiment and/or from the servo’s data sheet.
+
+When attempting to find the linear range of your servos by experiment, the following signs may help:
+
+1. If you hear humming or buzzing at the frame frequency with your servo at an extreme of its motion, you have probably pushed past its linear range, and the servo is in a constant correction loop fighting the reading of its own potentiometer. Ease your limit back, reducing the range of motion, until the buzz or hum stops.
+
+Set a slow motion with the <duration> parameter of act_accel and make sure the <s_accel> parameter is 0 (slow constant motion without acceleration). If, when the servo starts to move away from one of its limits, it first makes a fast movement before settling into its slow steady motion, the limit it started from is probably beyond its linear range. Ease that limit in until the initial fast phase no longer occurs.
+
+**Note**: With accurate values for the parameters above, you can work out the resolution of your servo with the following equations. First calculate the resolution in steps (the number of distinct steps the servo arm can make across its range; the number of distinct positions is one more than the number of steps):
+
+1. On any 16-bit timer
+
+The firmware writes the commanded pulse width, a whole number of microseconds, straight into the timer’s compare register, and on these timers one unit of that register is exactly 1 µs of pulse. The smallest step is therefore exactly 1 µs, and the number of steps is simply the microsecond span:
+
+Total 16-bit steps = srv_max − srv_min
+
+Example: if a specialised servo accepts pulses from 500 µs to 2,500 µs (a span of 2,000 µs), a 16-bit timer gives exactly 2,000 steps (2,001 distinct positions) across that arc, at 1 µs per step.
+
+2. On the 8-bit Timer 2
+
+The firmware rounds the commanded pulse width to the nearest whole number of ticks, using the tick size of the band (64 µs for SRV_FREQ_MID50, 16 µs for SRV_FREQ_MID200 and SRV_FREQ_MID333). The number of steps is therefore:
+
+Total 8-bit steps = floor( (srv_max + Offset) ÷ Tick_Size ) − floor( (srv_min + Offset) ÷ Tick_Size )
+
+where Tick_Size is given in the table above, and Offset = Tick_Size ÷ 2 is the half tick that turns the firmware’s rounding-down integer division into rounding to the nearest tick.
+
+Example using srv_min = 544 µs, srv_max = 2,400 µs and the SRV_FREQ_MID333 band (Tick_Size 16 µs, Offset 8 µs):
+
+Upper bound ticks = floor((2,400 + 8) ÷ 16) = floor(150.5) = 150 ticks
+
+Lower bound ticks = floor((544 + 8) ÷ 16) = floor(34.5) = 34 ticks
+
+Total 8-bit steps = 150 − 34 = 116 steps, which over a 180° arc is 1.55° per step.
+
+Example using srv_min = 544 µs, srv_max = 2,400 µs and the SRV_FREQ_MID50 band (Tick_Size 64 µs, Offset 32 µs):
+
+Upper bound ticks = floor((2,400 + 32) ÷ 64) = floor(38) = 38 ticks
+
+Lower bound ticks = floor((544 + 32) ÷ 64) = floor(9) = 9 ticks
+
+Total 8-bit steps = 38 − 9 = 29 steps, which over a 180° arc is 6.21° per step.
+
+For comparison, the same servo limits on a 16-bit timer give 2,400 − 544 = 1,856 steps, which over a 180° arc is 0.097° per step.
+
+You can then convert this number of steps into a time or an angular resolution with these formulae:
+
+1. Time-domain resolution (microseconds per step): this is the pulse resolution of the table above, 1 µs on a 16-bit timer and 64 µs or 16 µs on Timer 2. It is a fixed property of the timer and band, independent of srv_min and srv_max (which only fix the range of motion over which this resolution applies).
+2. Angular resolution (degrees per step): divide the servo’s angular travel between its limits by the number of steps found above:
+
+Angular resolution = (theta_max − theta_min) ÷ Total steps
+
+**Note**: On Timer 2 the pulse the servo receives is the commanded width rounded to the nearest tick, and never shorter than one tick. So, for example, on the 50 Hz band a command of 1,500 µs is delivered as 23 ticks of 64 µs, which is 1,472 µs. Commands that the 16-bit timers would deliver exactly can therefore be up to half a tick (32 µs or 8 µs) different on Timer 2, and your calibration (INFO_SRV_MIN, INFO_SRV_MAX, INFO_SRV_THMIN and INFO_SRV_THMAX) should be made on the timer the servo will actually use.
+
+**Note**: Any attempt to assign the servo’s signal pin to a hardware pin is rejected with a “Read only” error if a PWM M-Level actuator that shares that pin’s timer is currently active. You must first de-activate any such M-Level (with act_halt) before assigning the pin with INFO_SRV_PINS.
+
+**Note**: Assigning the signal pin with INFO_SRV_PINS configures the timer (pre-scaler and frame) but does not yet send pulses: the pin is held LOW, and the servo does not move, until the first motion command (act_moveto) for it. From then on the servo is energised and holds its position; you can de-energise it with a separate act_halt call.
+
+**Note**: Several servos may be driven by pins of the same hardware timer, but every servo on that timer **must** have the same INFO_SRV_FREQ band, because the band fixes the timer’s frame. An attempt to assign a servo pin on a timer that already carries servos of a different band is refused with a “Read only” error. On Timer 2 the question does not arise, because each board has only one usable Timer-2 pin.
+
+**Note**: Assigning a servo to a timer that a PWM M-Level actuator already uses is allowed only while that M-Level actuator is inactive; if it is active, the request to set the servo pin is refused with a “Read only” error. If you do assign the servo pin, the servo’s pre-scaler and frame replace whatever the M-Level actuator was using, so the next time you activate that M-Level it will oscillate at the servo’s frame frequency and not at the frequency in its translation table. The other way round (an M-Level’s p0 assigned to a timer that already carries a servo) is refused with a “Read only” error. See the notes for using act_set with M-Level actuators for the other consequences of a servo sharing a timer with PWM M-Level actuators.
+
+**Note**: The INFO_SRV_SPOS option allows you to change or correct the recorded position of a servo without moving it. When a new servo actuator is created (with def_actuator) its Arduino structure records a position of 1,500 µs, and the server’s shadow structure records SERVO_RESET (= INT32_MAX). The 1,500 µs default is an arbitrary choice, a typical mid-point between the default srv_min and srv_max, and it may not be the true position of your servo when its actuator is created. If it is not, the first motion command to the servo may produce a sharp, fast, unpredictable movement, because the range and direction of a motion are calculated like this:
+
+```c
+// Calculate direction and range
+ if (target_us > s->current_us) {
+     target_range = target_us - s->current_us;
+     dirn = 1; // Vector Direction 1: Adding atomic microsecond steps
+ }
+ else if (target_us < s->current_us) {
+     target_range = s->current_us - target_us;
+     dirn = 2; // Vector Direction 2: Subtracting atomic microsecond steps
+ }
+ else {
+     // We are already precisely at the destination.
+     // Exit instantly to prevent target_range from evaluating to 0, which
+     // would crash downstream integer division arithmetic!
+     return PARDU_ERR_NONE;
+ }
+```
+
+where current_us is 1,500 for a newly created servo. The range and direction of the first motion may therefore be quite wrong if the servo is not actually at the position that 1,500 µs represents. With act_set and the INFO_SRV_SPOS option you can silently change this recorded position to one closer to where your servo arm actually is. The value to use can be found by experience with 3-wire servos; with 4-wire servos you can read the reported position with act_get and the INFO_SRV_AFB option and, after converting it into microseconds or degrees according to your current units mode, write it into the Arduino structure with act_set and INFO_SRV_SPOS. If you set a value that does not reflect the true position of the servo arm, you can cause erratic behaviour, so use this option only when it is needed and with physically accurate information.
+
+**Note**: The units for setting a servo position with INFO_SRV_QPOS or INFO_SRV_SPOS are those set with act_unit (which see). A units value of 1 means the server expects the position in degrees (which may be a float with decimal places, not restricted to whole degrees). A units value of 0 means the server expects the position in microseconds (an integer). When the server starts (or restarts) the units value is 0 (microseconds). It is good practice, therefore, always to set the units explicitly in your scripts with act_unit. As discussed in the section on act_get, a value retrieved with INFO_SRV_QPOS or INFO_SRV_SPOS is always in microseconds, whatever the current units value.
+
+**Note**: Managing the servo queue. An act_set with INFO_SRV_QPOS does not move the servo; it lists the servo in the queue for motion at the next act_moveto command. A second act_set with INFO_SRV_QPOS for the same servo, before the act_moveto, simply overwrites its entry with the newer position. To remove a servo from the queue, issue an act_set with INFO_SRV_QPOS and the value SERVO_RESET; the same SERVO_RESET value is used whatever the units (degrees or microseconds). To wipe the whole queue without moving any of the servos in it, issue an act_moveto for servos with the argument OFF (or FALSE, or 0); see act_moveto. As discussed in the entry for act_accel, the <duration> value supplied with act_accel decides whether the motion to the position you queue here is made with or without motion control, and that decision is recorded in the queue entry. You must therefore set the motion-control parameters for servos with act_accel before adding any servo to the queue, and if you change the act_accel <duration> parameter for servos you must refresh any entries already in the queue so that their motion profiles are recalculated. The server keeps a shadow copy of the queue, so act_get calls with INFO_SRV_QPOS do not travel to the Arduino.
+
+**Note**: For 4-wire servos you may assign a pin to sense the position feedback with act_set and INFO_SRV_PINP. This must be an analogue pin; give its number as labelled on the Arduino board but without the “A” prefix. The value on this pin is read with act_get and INFO_SRV_AFB.
+
+When using act_get with INFO_SRV_AFB, bear in mind that the value returned is an integer from 0 to 1023, the 10-bit analogue-to-digital conversion of the voltage of the servo’s internal potentiometer. Because manufacturers scale their feedback voltages differently, you must map this 0 to 1023 range onto servo position in microseconds before using it for positioning (for example, before writing it into the servo’s current_us value with act_set and INFO_SRV_SPOS).
+
+***Notes for using act_set with Sensor actuators***
+
+**Note**: When you create a new Sensor actuator the only item you will be allowed to set (before anything else) is the type of Sensor using the INFO_SEN_TYPE info item. Once the type is set you will not be allowed to change it. You, of course, have the option to undefine the actuator and re-define it then set it to a different type.
+
+### act_unit
+
+act_unit <act_type> <unit>
+
+This sets the way distance and position values (as supplied in motion command arguments) are interpreted for actuators of type <act_type>.
+
+<act_type> - for the options for this integer see def_actuator
+
+<unit> - this is an integer varval the meaning of which depends on the actuator type specified previously. For <act_type> = 1 (stepper motors) the <unit> options are:
+
+0 - For steppers this means the distance or position values (including the specification of software limit positions) supplied in any subsequent stepper motor command are to be interpreted in terms of number of steps at the maxmsdenom microstep size (these are called 'atomic units' or 'atomic steps'). For servos it means units in literal microseconds.
+
+1 - For steppers this means the distance or position values supplied in any subsequent stepper motion command are to be interpreted in terms of calibrated units and so the same distance or position value will result in a different number of steps being done by the motor depending on the current microstep denominator setting and values for maxmsdenom and maxcalibri. For servos it means units are supplied in angular degrees.
+
+**Note**: To read the current value of <unit> from the server you use act_get with the info item INFO_UNIT_TYPE and submit an extant actuator of the <act_type> of interest (the specific actuator index does not matter for this act_get because only the actuator type is used for the look up on the server but the actuator must exists in order to pass the pre-command checks in the interpreter).
+
+**Note**: The units you choose shall also apply to values you send to the server for setting using the act_set command but they do not apply to values you receive back from the server (for example in motor coordinate or 'stepcount' act_get requests). This is why coordinates (e.g. step 'counts' for steppers or the position value of a servo) and distances are supplied via act_get in float variables instead of integers - because these may need to convey integer atomic steps or float-capable calibrated units (for example, a stepper calibrated 'stepcount' may be something like 20156.832 and will be interpreted in the units you have calibrated the stage to e.g. microns). However, when you *receive* such distances and positions with an act_get you will always receive the value as a raw atomic integer so you should supply integer-capable receptacle variables to receive the result regardless of the act_unit status.
+
+**Note**: There are a few specific exceptions to these general rules for steppers:
+
+1. All nhs steps (used for both for null homing and limit switch homing) are always interpreted (supplied and received) as integer number of steps in the current microstep (msdenom) step size, regardless of maxmsdenom or calibration factor.
+2. maxcalibri will always be a float capable number. It does not have to be a whole number of atomic steps. However it must not be <1.0e-3.
+3. blsteps will always be interpreted as literal steps in the motor's current microstep (msdenom) size. This is read-only for client. It is calculated by the server as:
+
+```c
+Stepperlist[ui82]->blsteps = Stepperlist[ui82]->maxblsteps /
+                                                   Stepperlist[ui82]->onestep;
+```
+
+1. maxblsteps will always be interpreted as atomic steps.
+2. tensteps1 and tensteps2 will always be interpreted as atomic steps. The values held in the Arduino will be automatically converted to steps in the current microstep (msdenom) step size as was done for blsteps.
+
+**Note**: The default unit type will be 0 for each actuator type until you call act_unit for that actuator type at least once during a log in session and this choice will remain at what you set it till you deliberately change it or log out (so it is not set back to default at the end or start of any script).
+
+**Note**: For the other actuator types (Binary, M-Level and Sensor) the unit type is not used.
+
+### add_lib
+
+add_lib <file_path>
+
+This instructs the linker to include a library into a program.
+
+<file_path> - a string varval. This must evaluate the name of the file (optionally including its full directory path) to be loaded. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: See the chapter on libs (page 57) for detailed information on usage.
+
+### add_var
+
+add_var <varname> <varval>
+
+This adds a value to a user-defined variable.
+
+<varname> - The name of the variable whose value you want to change
+
+<varval> - The value (or variable containing the value) you want to add to <varname>
+
+**Note**: This is symbolically equivalent to <varname> += <varval> in C.
+
+**Note**: When the data type of <varname> is 'string' then the <varval> argument will be evaluated and that value cast as a string (if it is not already a string) and printed onto the end of whatever string is in <varname> . This feature can be used to print numerical values into strings.
+
+**Note**: The cast follows the rule given under def_var: a constant written in the script is appended exactly as written (`add_var s 007` appends “007”), a numeric variable is appended as a number, and a string variable is appended as it is.
+
+**Note**: Addition can also be done inline using math_var (which see).
+
+### af_ccrit
+
+af_ccrit <max_iterations> <max_difference> <min_true_peak> <timeout>
+
+This sets convergence criteria parameters for the autofocus command search algorithm. Use this command in conjunction with the af_setup command to fully set up the auto focus (AF) system which may then be invoked via the autofocus command.
+
+<max_iterations> - a varval of type int and must be positive (>= 1). This is the maximum number of iterations (without finding an acceptable peak focus) the search algorithm will tolerate before giving up the search as a failure.
+
+<max_difference> is a varval of type float and must be >= 0.0 . This is the maximum distance in Z (in either direction) from the existing best focus Z position that can be accepted as a new best focus after a search (see 'Note' below). If the AF search results in a position further away than this then AF fails and the pre-existing best Z position is preserved. This helps to limit the acceptable search area and prevent the algorithm converging to a local peak that is far off true focus (e.g. for microscopy this would mean focus on debris or pen marks on a coverslip in an image with little tissue contrast). If you do not want to use this limit, set the value to 0.
+
+<min_true_peak> is a varval of type 'float' and must be >= 0.0. This is the minimum peak value (returned from the goodness-of-focus function) acceptable as a success. If, after a search, a maximum in the goodness-of-focus function is found which is less than this value then the procedure is considered a failure even though a peak was found. This is so false peaks / local maxima can be avoided. The optimum value for this criterion will be found by empirical methods because it may vary by the kind of specimen / object being imaged as well as magnification and imaging modality (i.e. how much contrast can be expected in a focussed area) and the goodness-of-focus function used.
+
+<timeout> This is as an integer in milliseconds. If the AF search takes longer than this to complete it will fail. Use 0 if you do not want a timeout to be used.
+
+**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.97). For example, when using atomic steps, if you set <max_difference> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <max_difference> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <max_difference> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+
+### af_setup
+
+af_setup <initial_focus_z> <initial_step_size> <max_retries> <dirn_up> <col_channel> <failure_action>
+
+This sets all but the convergence criteria parameters and focus function for the autofocus (AF) procedure. Use this command in conjunction with the af_ccrit and prv_toggle commands to fully set up an AF search system which can then be called via the autofocus command. Autofocus is a Z motor-specific facility provided as part of the PARDUS standard. See the autofocus command for more details about the actual procedure.
+
+<initial_focus_z> - a varval of type float and is the initial Z axis position (coordinate) of current best focus (must be >= 0.0). After this initial setting, this value is automatically updated every time the autofocus action succeeds so the value supplied here is just the initial value used prior to the first autofocus success. If the autofocus fails the Z axis moves to the last AF-successful value of this position (or to the value provided here if AF has not had any success since its initial attempt) as the fall-back default focus position.
+
+<initial_step_size> - a varval of type float and must be positive (> 0.0). It is the search step distance for Z motion in the hill-climbing search (not to be confused with motor step size).
+
+<max_retries> - a varval of type int that must be a >= 0. If the AF search fails first time round it may succeed if repeated so this specifies how many times to repeat before finally giving up.
+
+<dirn_up> - An integer representing the direction that moves the Z axis up (must be 1 or 0)
+
+<col_channel> - An integer representing which colour channel to use for the focus statistic. These are #defined in pardcapdefs.h as the 'CCHAN_' values. Currently only 2 (= Red), 3 (= Green) and 4 (= blue) are allowed.
+
+<failure_action> - a string keyword that determines how to proceed if the iterative AF ultimately fails. This is one of: ignore, exit.
+
+* ignore - this just carries on regardless - the last best value for focus will be used as best focal position and the program will continue. This can be perfectly legitimate if, for example, the auto-focus attempt took place over an area with no relevant object in the field of view of the camera (e.g. blank area of slide for microscopy).
+* exit - this will terminate the program immediately.
+
+**Note**: All positions / coordinates / distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.97). For example, when using atomic steps, if you set <initial_step_size> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <initial_step_size> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <initial_step_size> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+
+**Note**: The focus function used for AF is selected using the frame grabber settings commands such as prv_toggle with the 'fc_...' (focusser statistic) options. See prv_toggle for details.
+
+### autofocus
+
+autofocus
+
+This causes the Z axis to perform an autofocus iterative hill-climbing focus-function maximisation search that involves taking a preview image, measuring its goodness-of-focus value with a focus-function then moving the Z motor (which is assumed to control focussing motion for this to work) and iterating to find the Z position with the best (maximum) value of the focus function.
+
+This command expects no arguments because all the autofocus settings are set using the af_setup, af_ccrit and prv_toggle commands (which see). These should be called prior to first use of autofocus.
+
+**Note**: If tissue content thresholding is enabled, an autofocus Z-search will only be performed if the tissue content threshold is passed (i.e. if there is tissue detected in the field) - otherwise the autofocus function will exit reporting AF_SUCCESS but without actually doing anything (it is not an error).
+
+### average_scale_means
+
+average_scale_means <ON|OFF>
+
+This determines whether (ON) or not (OFF) to scale the mean of any image (captured as part of a multiframe average series) to the mean of the first image captured in the series.
+
+<ON|OFF> - a binary choice varval.
+
+### beep
+
+beep <duration_ms> <freq_Hz> [amplitude_percent]
+
+This emits a non-blocking sine wave audio tone using the sound system of the PC that pardclient (or pcs-cli) is running on (no request to the pardserver is made).
+
+<duration_ms> - this is an integer varval >= 10 determining the duration of the beep.
+
+<freq_Hz> - this is a float varval representing the frequency in Hz of the beep. The value is not checked for range but see Note below.
+
+[amplitude_percent] - this is an integer varval >= 0 and <=100 determining the amplitude of the sound.
+
+**Note**: If you do not supply an [amplitude_percent] value then 100 (percent) will be used by default. A value of 0 will result in silence. If you supply a value >100 then this will be silently clipped to 100 (no error will be emitted and the script will not terminate).
+
+**Note**: The effector function automatically clips your input values into the following ranges like so:
+
+```c
+if (duration_ms < 10) duration_ms = 10;
+ if (duration_ms > 5000) duration_ms = 5000;
+ if (frequency_hz < 50.0) frequency_hz = 50.0;
+ if (frequency_hz > 5000.0) frequency_hz = 5000.0;
+```
+
+**Note**: This is a non-blocking command. Up to 8 note polyphony is supported. If you want the command to behave in a blocking-like way then just issue a sleep command right after the beep command for the same duration (bear in mind that the sleep argument is in seconds so a beep at 50 (ms) should be followed by a sleep for 0.05 (seconds)).
+
+### call_func
+
+call_func <function_label> [if <varval>]
+
+This calls a function. This command can be simple (i.e. just go to the function) or extended as a conditional call (i.e. only go to the function if some condition is satisfied).
+
+<function_label> - this is a string varval. The string must be a label that is part of a def_func command.
+
+if - If an extended (conditional) function call is required then the second argument must be the word if and must be followed by a varval of a type described below.
+
+<varval> - a binary choice varval. If the value of <varval> evaluates to a non-zero numerical value or to TRUE or ON then the script interpreter will immediately go to the line in the script where the function is defined. Otherwise the script will continue execution from the next coding line immediately following this call_func line.
+
+**Note**: The argument for call_func can be a string variable meaning that the same call_func command in a script can be used to call different functions if the script sets the string variable argument to different values (different function labels) according to some algorithm. That is, <function_label> does not have to be a hard-coded string. For def_func the <function_label> argument must be a hard-coded string, not a variable.
+
+**Note**: Inside the interpreter program this does two things:
+
+1. It creates a new element on the RetPoint[] stack pointing to just after the call_func line in the script.
+2. It sends control of flow to the function defined as <function_label>.
+
+**AI Tip**: For high-performance state machines, store your destination function labels in a string array. This allows you to dispatch control flow using an index (e.g., call_func state_labels[idx]). This 'Jump Table' approach is more efficient for LLMs to manage than complex branching logic.
+
+### camera_get
+
+camera_get <Control_ID> <varval> [info_item]
+
+This requests a the value of a camera setting (called a 'control' in v4l2 terminology) on a v4l2 imaging device connected to the server (such as brightness, contrast, etc. - whatever controls the imaging device may present).
+
+<Control_ID> - a varval of type int that must be >= 0 and be the v4l2 ID number of a video device setting (the setting you want to read the value of). Control ID numbers are those retrieved by the get_camsettings command (which see).
+
+<varval> - a varval of type int that is to receive the value you want to get. .
+
+[info_item] - an optional varval of type int that defines what aspect of that control's value you want to get and must be one of these values as shown in parddefs.h and as included in stdpard.pch:
+
+```c
+#define INFO_CAM_MIN   50                 // LG (on client)
+#define INFO_CAM_MAX   51                 // LG (on client)
+#define INFO_CAM_CURR  52                 // Ask PARDcap using PS_CIID_CAMG
+```
+
+Submitting a value of 50 or 51 gets the reported minimum or maximum permissible value for the control. These values are reported to the client at login and, because they cannot be altered, the values will be retrieved for you from the local client without and network traffic. Submitting a value of 52 will request the current value of the control and so will result in a request being passed to th pardserver and thence to the pardcap server of the current camera to fetch that value.
+
+**Note**: If you do not supply the optional [info_item] argument then the default behaviour is to request the current value of the control.
+
+**Note**: If the value of a control's minimum and maximum entries are identical then that control's value will be read only. Even if the minimum and maximum entries are not identical, a control's current value may be functionally read-only in certain circumstances (e.g. you can't change the exposure while auto-exposure is enabled).
+
+### camera_set
+
+camera_set <Control_ID> <varval>
+
+This requests a change to a setting (called a 'control' in v4l2 terminology) on a v4l2 imaging device connected to the server (such as brightness, contrast, etc. - whatever user-alterable controls the imaging device may have).
+
+<Control_ID> - a varval of type int that must be >= 0 and be the v4l2 ID number of a writeable video device setting (the setting you want to change). Control ID numbers are those retrieved by the get_camsettings command (which see).
+
+<varval> - a varval of type int representing the new value you want the setting to change to. This value must be in the permitted range for the setting as defined by maximum and minimum values shown in the camera settings information (retrieved by the get_camsettings command).
+
+### cat_char
+
+cat_char <STR_VAR> <char_as_int>
+
+This allows you to add a single UTF-8 Unicode compatible character to the end of a string variable by specifying the character's integer reference number.
+
+<char_as_int> - must be an integer in the range 1 to 1114111 inclusive but excluding the surrogate code point range (U+D800 to U+DFFF, that is 55296 to 57343 in decimal). This may be supplied in an integer variable or as an integer constant or a value that may be cast as such.
+
+**Note**: For this command (only) you may supply the <char_as_int> integer constant in a UTF-friendly format that begins with 'U+' in addition to the other formats more generally accepted in PCS (like hexadecimal, octal or decimal). That is, you may specify constants like U+1F600.
+
+**Note**: If you want to add a space or a hash character with this command you cannot use the system variables Space or Hash because those are strings, but you may use this command to the same effect by supplying <char_as_int> as 32 (for space) or 35 (for the hash character: #).
+
+### cat_str
+
+cat_str <STR_VAR> [[str1] [[str2] ...]]
+
+This allows you to add a list of white-space separated words to the end of a user-defined variable of 'string' type.
+
+<STR_VAR> - the string variable to be modified
+
+[[str1] [[str2] ...]] - a list of between 0 and 24 string constants separated by white space. These will be added to the end of (concatenated to) the existing contents of <STR_VAR>
+
+**Note**: Up to 24 <STR_VAR> string arguments may be used in one command. If no [str] arguments are provided the command has no effect. The limitations on what arguments are permitted are the same as for the command set_str (which see).
+
+**Note**: Each [str] argument will be appended to the <STR_VAR> separated by a single space (ASCII character 32) regardless of whatever type or number of white space character(s) was used to separate arguments in the command. No space will be added between the initial value of <STR_VAR> and the first [str] argument. No space will be printed to the end of the list of argument strings.
+
+**Note**: Each [str] argument will be treated as a string constant and not a variable (of any data type). If a variable name is included in these arguments it will be treated just as a string and will not be evaluated (so the variable's name will be concatenated 'as is'). If you want to add the value contained in some variable to the end of a string then use the add_var command instead (which see).
+
+**Note**: The interpreter has a limit on the maximum size of any argument. This is set by the MAX_ARGLEN value in the interpreter source code which, at the time of writing is 64 bytes. It is important to note that bytes do not necessarily equate to characters. While standard ASCII characters are 1 byte each, UTF-8 Unicode characters (such as box-drawing symbols or emojis) typically consume 3 or 4 bytes each. For example, the ═ symbol uses 3 bytes; therefore, a single argument can contain a maximum of 21 of these characters before exceeding the 64-byte limit.
+
+**Caution**: Do not exceed MAX_ARGLEN bytes per argument. If a string exceeds this limit, the interpreter will truncate it at the byte level. This may result in **malformed UTF-8 sequences** for Unicode characters, likely causing the string to fail to render. For ASCII text, the string will simply be truncated.
+
+### cli_path
+
+cli_path <full_path_image_name_root>
+
+This allows you to input the string used to construct the common part of file names generated for saving the latest preview display image. It is mostly of use when running programs in CLI mode.
+
+<full_path_image_name_root> is a string varval specifying a string without white space which will be used to construct the file name of the saved preview p6 ppm image. This string argument may be up to PCS_PATH_MAX bytes long.
+
+**Note**: If the argument is longer than PCS_PATH_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: This may include a path component if you want to store the image in a particular location but the path must not contain any white space.
+
+**Note**: The full preview image name will be constructed as <full_path_image_name_root>_preview.ppm .
+
+**Note**: Preview images will only start to be saved after you first call this command in a script. Images will be saved every time the preview update function is called in the run-engine (via the C function `update_img_preview_picture`). If you do not call this command in a script then no preview images will be automatically saved at all. The default position at the start of any script is to set this as 'un-called'.
+
+**Note**: The image saved will be the final displayed preview image. This means the preview buffer plus any graphics overlay that may be imprinted onto it. If you want to save only the pure preview image or the pure graphics overlay buffer then see the separate command that allow for those to be saved ([preview_save](#__RefHeading___Toc15110_2491002120_Copy_) and [preview_draw_save](#__RefHeading___Toc15110_2491002120_Copy_)).
+
+### cmath_array
+
+cmath_array <rec_re_array> <rec_im_array> <cx_op> [<mod_re_array> <mod_im_array>]
+
+This allows you to do complex maths with arrays (of type float). The index values you supply with the array arguments is respected according to the rules described below.
+
+<rec_re_array> - the receptor real array to be modified
+
+<rec_im_array> - the receptor imaginary array to be modified
+
+<cx_op> - the operation to perform (must be a string varval)
+
+<mod_re_array> - the modifier real array (only required for some operations)
+
+<mod_re_array> - the modifier imaginary array (only required for some operations)
+
+**Note**: Each array argument carries an index, e.g. my_array[idx]. The operation starts at the supplied index of each array and continues for as many cells as ALL the arrays involved (both receptors and, if used, both modifiers) have left from their respective indices to the end of the array, i.e. for the smallest of the residual cell counts. Cells before the supplied indices, and any cells beyond the processed range, are left untouched. For the cyclic shifts, the shift is applied to the processed range only.
+
+**Note**: The options for <cx_op> are as shown below. Any operation that requires a modifier must have the modifier arrays (both of them) present or this will result in an error. In cases where no modifier arrays are required you may still supply them if you wish - they will just not get used.:
+
+= - Assignment equals. Requires the modifiers.
+
+add - Complex addition. Requires the modifiers.
+
+sub - Complex subtraction. Requires the modifiers.
+
+mul - Complex multiplication. Requires the modifiers.
+
+div - Complex division. Requires the modifiers.
+
+conj - Complex conjugate. No modifiers used.
+
+pow - Spectral power. No modifiers used.
+
+pol - Convert to arg and mag. No modifiers used.
+
+cycf - Cyclic re-arrangement (shift) "forwards". No modifiers used.
+
+cycb - Cyclic re-arrangement (shift) "backwards". No modifiers used.
+
+**Note**: The general pattern implemented with this command is:
+
+receptor = operation(receptor)
+
+or
+
+receptor = receptor (operation) modifier
+
+**Note**: As with math_var, the <cx_op> string may be supplied as a compile-time constant or as a variable / array member.
+
+**Note**: Unlike the single variable version of this command (cmath_var) where the modifier arguments may be constants and not user variables, this array version will only allow modifier arguments to be user-defined arrays - not constants.
+
+**Note**: The complex division done here is not naive. It uses Smith's algorithm inside Stewart-Baudin scaling thresholds and branch paths.
+
+**Note**: For the polar coordinate transform, undefined phases are returned as 0.0 and phases may return -0.0 due to the use of atan2 in the implementation code.
+
+**Note**: Aliasing is permitted (you can use the same variable for more than one argument with or without the same index in the various arguments).
+
+**Note**: The designation "forwards" and "backwards" for the cyclic shifts is not some universal terminology so I will explain what I mean. I use "forward" and "backward" from the Fourier perspective (even if the shifts are applied to spatial domain signals). Forward takes the left-most pixel - the pixel at the lowest index (or top left pixel in the 2D case), which represents the DC offset after an FT - and puts it in the middle (so the spectrum is now in 'diffraction pattern order'). "Backward" does the opposite.
+
+**Note**: These operations do not have any multi-dimensional-specific support. They may be used on arrays you are using for 2D data but anything requiring actual multi-dimensional specific features will not be respected. For example, the cyclic shift operations consider the array span in use to be 1-dimensional. See the fourier command for the 2D case.
+
+**Note**: Only arrays of type float can be used with this command.
+
+### cmath_var
+
+cmath_var <rec_re> <rec_im> <cx_op> [<mod_re> <mod_im>]
+
+This allows you to do complex maths with single variables (of type float). See cmath_array for similar operations using array variables.
+
+<rec_re> - the receptor real variable to be modified
+
+<rec_im> - the receptor imaginary variable to be modified
+
+<cx_op> - the operation to perform (must be a string varval)
+
+<mod_re> - the modifier real varval (only required for some operations)
+
+<mod_re> - the modifier imaginary varval (only required for some operations)
+
+**Note**: The modifier arguments must be present when using an operation that requires them. They may also be present for other operations when they will be silently ignored. Modifier arguments may be constants (they do not have to be variables).
+
+**Note**: The general pattern implemented with this command is:
+
+receptor = operation(receptor)
+
+or
+
+receptor = receptor (operation) modifier
+
+**Note**: The <cx_op> options and meanings are the same as for cmath_array so see that section for more details.
+
+**Note**: For this single variable command, the cyclic shift operators may be invoked but they will do nothing (they act as an identity operation).
+
+**Note**: Only varvals of type float can be used as receptors or modifiers with this command.
+
+### corrections_mask
+
+corrections_mask <OFF|ON|image_file>
+
+This determines whether to load and use a corrections mask for flat field and dark field correction during full frame image capture (separate commands exist for preview images).
+
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: If you select to supply an image file for the mask it only loads the file and passes it to the server. It does not set the 'Use mask' flag to ON. Whether to use that file or not depends on you issuing this command again with a specific OFF or ON argument (it defaults to OFF before you first make a definitive choice).
+
+**Note**: Permitted file formats for a corrections mask are pgm (P5), ppm (P6) or bmp (8bpp or 24bpp). For a file name to be acceptable it must have a ipgm, .ppm or .bmp extension (case is not important here).
+
+**Note**: More detail about the use of a corrections mask can be found in the pardcap user manual.
+
+### def_actuator
+
+def_actuator <act_type> <act_index> <name_string>
+
+This defines a new actuator on the pardserver. The actuator structure will be formed in the nascent state with most of its members set to 0 or 'unset' or NULL but it will be given the name you supply here.
+
+<act_type> - an integer defining the type of actuator you are attempting to create. It must have a value of one of these:
+
+1 = Stepper
+
+2 = Binary
+
+3 = Mlevel
+
+4 = Servo
+
+5 = Sensor
+
+<act_index> - an integer representing the actuator index of the actuator you are attempting to create. This which must have a value from 0 to the maximum number of allowed actuators of the type specified in <act_type>, minus 1. That maximum number is specified in the source file parddefs.h and is 10 for all actuator types at the time of writing this manual so the permitted range is 0 to 9 inclusive.
+
+<name_string> - a string varval that will uniquely identify the newly created actuator. This must not have spaces and must be less than or equal to 31 printable bytes. if you supply a name with more characters then only the first 31 printable bytes will be used. Note that these are bytes which are not always the same as 'characters'. For example if you use UTF-8 Unicode then each character is 3 bytes long so counts as 3 bytes to your 31 byte limit.
+
+**Note**: Upon successful completion the system variable CurrActIdx will be set equal to the index number of the newly created actuator and CurrActType will be set equal to the value you supplied as <act_type>.
+
+**Note**: You will not be allowed to create an actuator with a name that is identical to the name of an existing actuator of any type (only the first 31 chars will be checked for identity). An actuator name must be at least one byte long. Otherwise there is no restriction on what you can name it (a number, a name that is identical to a system or user variable name, a name that is identical to a function name or a goto label or a command, etc. - all these are acceptable, even if not good programming practice, and will be distinguished at run-time by context).
+
+**Note**: You will not be allowed to define an actuator with an index number that is identical to the index number of an existing actuator of the same type as the type you are attempting to create.
+
+**Note**: The local list of all defined actuators is automatically undefined at the start of each script check and script run session. This does not undefine any actuators that may have been set up on the pardserver and Arduino by previous script commands during any previous login as well as the current login (only when the Arduino is reset or reboots are those cleared). Thus it is good practice to call the command get_actuators at the start of any script to populate the locally held lists of actuators with whatever happens to be defined on the Arduino or, if you want to start from scratch, you can call the undef_actuator command in wildcard mode for each actuator type to ensure you have a clean sheet to work from.
+
+**Note**: def_actuator and act_getname are the only two actuator commands that require you to input two separate numbers to identify an actuator instead of the single <act_id> argument (the latter is described under undef_actuator).
+
+**Note**: A nascent actuator, such as is created by this command, will not be usable until it is 'matured' by the application of a series of commands to set a range of mandatory properties (using act_set). The rules as to what constitutes the 'range of mandatory properties' will differ for each type of actuator. Any attempt to use activation commands on an immature actuator will result in a script terminating with an 'immature activator' error message.
+
+**Note**: For actuators of type 'Stepper', the range of mandatory motor struct members that must be set before it will be marked as 'mature' (and so be responsive to any kind of motion commands) are:
+
+* In all cases:
+  + driver_type
+  + pin_pul
+  + pin_dir
+  + pin_ena
+  + dirn1
+  + dirn2
+* and at least 1 homing maturity condition:
+  + If you want to do homing to a limit switch:
+    - pin_lim1 and/or pin_lim2
+  + If you want to do null homing you must set these members to a non-zero value:
+    - nhs1
+    - nhs0 and/or nhs2
+* In addition, all steppers using driver type A4988 or DRV8825 must have these set:
+  + pin_ms1
+  + pin_ms2
+  + pin_ms3
+
+In the pardserver, each one of these essential settings contributes a maturity point of 1 to the motor struct's maturity member. Since there are 7 essential settings for steppers that use TMC drivers and 10 for those that use the non-TMC driver, a stepper actuator will only be considered mature by the pardserver if the total maturity score is >= 7 (for TMC drivers) or >= 10 (for non-TMC drivers). This maturity score is updated with every call to act_set so you can 'un-mature' a previously mature stepper (for example by un-setting a required pin).
+
+**Note**: For a newly created stepper actuator, once mature, the only action that it can be commanded to perform is some form of homing - either homing to a physical limit switch (in which case you must have defined pin_lim1 and/or pin_lim2 depending of which limit switch you want to home it to) or null homing (in which case you must have set at least 2 of the nhs members to be >0 as described above). Only after it is successfully homed can other motion commands be enacted.
+
+**Note**: For actuators of type 'Binary', the mandatory struct members that must be set before it will be marked as 'mature' (and so be responsive to the act_set command for its state) are:
+
+* In all cases:
+  + pin_bin
+  + on_val
+  + off_val
+
+The reason you must define the on and off values is that, when a binary actuator is has its state set to 1 (or some positive non-zero value) using the act_set command, the Arduino does not just set its pin 'HIGH'. Rather it sets its pin to the 'on_val' (which you must first have set to be either 1 or 0). Likewise for when you set its state to 0 the Arduino will actually set the pin to off_val and so you must first have defined off_val as being 1 or 0.
+
+The reason for this extra layer of abstraction in binary actuators is that setting an Arduino digital pin to HIGH does not necessarily produce an effect that is intuitively associated with 'ON' or 'ACTIVATE'. For example you may have the pin connected to an NPN transistor switch circuit that turns current flow to some device on only when the Arduino pin signal is LOW. In that case it will make your PCS programs more intuitive to write (and read) and make programming errors less likely if you set the on_val to 0 and the off_val to 1. Usually on_val and off_val will be the complement of each other - but that choice is up to you. At some point in your program you might want to fix a binary actuator in a particular state regardless of whether the rest of the code tries to set its state to ON or OFF. In that case you can achieve this by simply setting the on_val == off_val == to whatever state to want to keep it in.
+
+**Note**: For actuators of type 'M-level', the mandatory struct members that must be set before it will be marked as 'mature' (and so be responsive to the act_set command for its state) are:
+
+* In all cases:
+  + ml_type (This must be set before any other member)
+  + ml_pin[0]
+* For PWM-type M-level actuators
+  + ml_tt (must have at least one entry set in its translation table)
+
+**Note**: For actuators of type 'Servo', the mandatory struct members that must be set before it will be marked as 'mature' (and so be responsive to the act_set command for its state) are:
+
+* In all cases:
+  + pin_srv
+
+**Note**: For actuators of type 'Sensor', the mandatory struct members that must be set before it will be marked as 'mature' (and so be responsive to the act_set command for its state) are:
+
+* In all cases:
+  + type (This must be set before pin_sense)
+  + pin_sense
+
+**Example**: Here is an example PCS script that defines a stepper motor actuator called 'X_Axis' and matures it up ready for homing:
+
+```pcs
+Pardus pcs 1
+verbosity 3
+#include stdpard.pch     # This contains the integer values mapped to the
+                         # capitalised tokens used in commands below. Without
+                         # such a header you would not be able to use (e.g.)
+                         # act_set CurrAct INFO_PIN_PUL  PUL_X
+                         # but would have to write something like this instead
+                         # act_set CurrAct 19 22
+def_func main
+ get_actuators  # Update the local list of extant actuators from the server
+ def_actuator 1 0 X_Axis  # If this succeeds it will automatically set
+                          # CurrAct to the ID of the newly formed actuator
+                          # but if it fails the script will terminate with an
+                          # error automatically.
+ # All these are mandatory for maturity
+ act_set CurrAct INFO_PIN_PUL  PUL_X
+ act_set CurrAct INFO_PIN_DIR  DIR_X
+ act_set CurrAct INFO_PIN_ENA  ENA_X
+ act_set CurrAct INFO_DIRN1 DIRNLFU
+ act_set CurrAct INFO_DIRN2 DIRNRBD
+ # Only one of these is essential for maturity (assuming we will be homing
+ # to a physical limit switch) but I chose to define them both:
+ act_set CurrAct INFO_PIN_LIM1 OPTO_XL
+ act_set CurrAct INFO_PIN_LIM2 OPTO_XR
+  # The motor is now ready to be homed but I will define the diag pin so we
+  # can make use of the TMC2209 StallGuard4 feature - this is optional
+  act_set CurrAct INFO_PIN_DIAG DIAG_X
+return
+exit
+```
+
+By the end of this script, the X_Axis motor may legally be homed to one of its two physical limit switches. Only after successful homing can other motion commands be accepted. Note that you do not need to do the homing itself here - the changes you make with this script will be enacted by the pardserver and parduino to populate the motor struct. These changes will persist even after the script exits and even after you log off the server. This is one of the reasons why you should always perform a get_actuators command at the start of each script - so you know what actuators have already been defined. You can also use the act_get command with the INFO_MATURITY integer value argument to read how mature the motor is.
+
+### def_array
+
+def_array <vartype> <varname> <size> <initial_varval>
+
+This creates and initialises a user-defined 1-dimensional array of variables.
+
+<vartype> - a string varval specifying the data type of the elements in the array. It must be one of these: int, float, string.
+
+<varname> - a string constant defining the name of the array to be created. This is case sensitive and must not be already taken by an extant variable or array, whether a system variable or user-defined variable or array (no two arrays can have the same name as each other or as any single variable), it must not contain spaces or square brackets and must not be a protected name (see p.46).
+
+<size> - a varval that evaluates to the number of elements in the array. It must evaluate to an integer >= 1.
+
+<initial_varval> - the value to initialise every element in the new array to. This must be a value that is compatible with the data type provided as the <vartype> argument.
+
+**Note**: When the new variable is a string, <initial_varval> is cast to a string as follows. A string variable or string constant is copied as it is. An int or float variable (or system value) is written out as a number, an int in whole digits and a float with up to 9 significant figures (so a float holding 1.5 gives “1.5”). A constant that you write in the script is copied exactly as you wrote it, even if it looks like a number: `def_var string s 007` gives “007” (not "7"), `def_var string s 1.50` gives “1.50” (not "1.5"). The same rule applies to def_array with a string <vartype>.
+
+**Note**: All arrays are global but can only be used from the point in the script at which they are defined. They can no longer be used ***as variables*** after they are destroyed by a call to undef_var (which see). Thus arrays can have manually managed temporal scope. See p.39 for more details on variable scope.
+
+**Note**: The qualifier '***as variables***' in the note above is important because you may still use the name of an undefined (non-existent) variable in a script but if you do this name (and its dereferencing bracket expression) will simply be treated as a string constant argument rather than a variable that can be evaluated. This might be perfectly legal depending on the context and so might not raise any syntax error during the checking phase or runtime error. However, you may get undesired behaviour during run-time if you do this inadvertently. For example the following code will just print 'myarr[3]' as a string literal and will not print the value '20' - there will be no errors or warning because this is perfectly legal PCS code:
+
+```pcs
+def_array int myarr 5 20 # myarr is brought into existence (all values = 20)
+undef_var myarr          # myarr ceases to exist as an array variable.
+print_value myarr[3] 2   # 'myarr[3]' is treated as a string literal.
+```
+
+If you comment out the undef_var line, then the output would be '20'. This works without error because print_value does not require its argument to be a variable (although it may be). Other commands have more stringent criteria for their arguments such as set_var which expects its first argument to be a variable that can be written to. So this script would not pass even the syntax checker:
+
+```pcs
+def_array int myarr 5 20 # myarr is brought into existence (all values = 20)
+undef_var myarr          # myarr ceases to exist as an array variable.
+set_var myarr[3] 2       # ERROR: myarr[3] is not a writeable variable.
+```
+
+**Note**: PCS supports runtime dynamic allocation for arrays. The <size> argument in def_array may be a variable that is evaluated at the moment of execution of the def_array command. This allows you to create arrays whose size is determined by previous calculations or data inputs. The maximum size of an array is limited only by the available system RAM. However, for high-reliability robotics, it is recommended to keep array sizes within predictable bounds to avoid RAM allocation failure errors at runtime.
+
+**Note**: The size of an array may also be changed at run time by undefining the array (with the command undef_var) and then re-defining the array with the new size. Undefining the array variable will delete all its current contents so if you want to re-size an array without loosing its contents you must first make a backup copy (e.g. in another array variable) before calling undef_var and then restore the contents to the newly (re)created array from your backup.
+
+**Note**: All variables are treated as arrays in PCS so variables created using def_var are just arrays of size 1.
+
+**Note**: Array members are accessed using a square bracket syntax like this:
+
+my_array[<index_varval>]
+
+These are the rules for indexing (accessing) members of an array with this system:
+
+* The value of <index_varval> must be reducible to a non-negative integer that is within the bounds of the array.
+* Array indices always start from 0 (as in the C programming language)
+* As per the above rules the legal, 'in-bounds' range for an index value is from 0 to <size>-1 inclusive. Anything more than this will results in an error that will terminate the script.
+* The <index_varval> may be a constant number or a variable, including another array variable with an index of its own.
+* The value of <index_varval>, if not natively of type int, will be automatically attempted to be cast to an integer using the PCS rules of (casting described on p.14). This means that even string variables may be used to index an array provided that the string value can be cast to an integer with a value in the bounds of the array.
+* It is forbidden to use expressions as an index value. For example, the following are illegal and will result in an error that will terminate the script or fail the initial script-checking phase:
+
+my_array[3 + 1]
+
+my_array[ind1[idx] != idx]
+
+* It is forbidden to use any indexing brackets at all in an array that is of <size> 1. This includes all variables created with the def_var command. In all such cases the following will be illegal:
+
+def_array int my_array 1 0
+
+set_var my_array[0] 3 # This is illegal
+
+# The correct way is simply to use it like a
+
+# a scalar variable, thus:
+
+set_var my_array 3 # This is correct.
+
+* It is forbidden to use the name of an array of <size> greater than 1 on its own, without square brackets. So this would be illegal:
+
+def_array int my_array 5 0
+
+set_var my_array 3 # This is illegal
+
+**Note**: While only 1-dimensional arrays are permitted (i.e. you cannot do things like my_array[idx][idy]) you can always use your own raster indexing system to use a 1-dimensional array as if it were a multi-dimensional array. Just bear in mind that any calculations of the index value must be done separately and stored in a variable before using that index value in the array brackets. For example, to implement an equivalent of a 2D array of size2d=height*width, you can create a 1-D array of <size> = size2d. Then, where idy is the y coordinate and idx is the x coordinate, you may access the value at position (x,y) in the array by doing something like this:
+
+set_var posxy idy
+
+mul_var posxy width
+
+add_var posxy idx
+
+set_var my_array[posxy] # Here, posxy = y*width + x
+
+**Note**: In general, problems may occur if you use def_var, def_array or undef_var inside loops or blocks of code that are conditionally accessed (by do_if, else or any block that is the target of a conditional jump etc.). Such usage is not forbidden and may well pass the syntax checking phase (where conditions are not evaluated and jumps or loops are not enacted) but may results in errors or unforeseen behaviour during run time. Sometimes such placement may be desirable but it is left to the programmer to determine when this is appropriate according to their intended logic. For example, it is almost never a good idea to use these commands inside a loop_while loop but it might be acceptable if you need to read large amounts of data into an array from a file and the size of that array might need to change on each iteration of the loop. In such cases using def_array for dynamic allocation of the array to the appropriate size followed, after reading and using the data, by undef_var before the loop repeats might be a resource efficient way to code this and would be perfectly safe provided the loop can never be exited by a non-local jump that comes between def_array and undef_var.
+
+**Note**: Because all variables, even single variables, can be created with def_array, this makes def_var superfluous. While def_var is technically superfluous, it is kept as an option because it makes the PCS script coder's intention clear and makes it clear that any variable defined with it cannot be indexed with square brackets.
+
+### def_func
+
+def_func <function_label>
+
+This defines the entry point line to a function.
+
+<function_label> - a string constant (not a variable), which must be unique to any function in the script and must not contain white space.
+
+**Note**: There is no equivalent of 'declaring' a function separately to defining it. The def_func line
+
+must be the first line of the actual function itself.
+
+**Note**: Every def_func command starts a code block that must be terminated with one - and only one - return command. In between the def_func line and its return line you may have any legitimate script text except that you cannot have another def_func command (this implies that functions cannot be nested inside other functions).
+
+**Note**: If a script contains any functions at all it must define a function called main before any other function is defined. When main returns, the script ends.
+
+### def_tracker
+
+def_tracker <tracker_type> <tracker_name> <template_dim> <search_dim> <cell_dim>
+
+This creates a tracker to track objects on the VGA canvas of the current preview buffer. Trackers follow the position of a target defined by a square template window of <template_dim> x <template_dim> pixels. The zmncc, hog, com and ght trackers look for the target in a square search area of <search_dim> x <search_dim> pixels centred on the most recently identified template position, while the klt tracker uses the whole VGA canvas (and ignores <search_dim>).
+
+<tracker_type> - a string varval specifying the type of tracker (its algorithm). It must be exactly one of these (lower case): com, ght, hog, klt, zmncc.
+
+<tracker_name> - a string varval defining the name of the tracker to be created. This is case sensitive and must not be already taken by an extant tracker. It must be at least 1 printable character long and must not be a proper number (integer or float).
+
+<template_dim> - an integer varval that is the length of one side of the square target template window. It must evaluate to an integer >= 16.
+
+<search_dim> - an integer varval that is the length of one side of the square search area. It must evaluate to an integer > <template_dim> and <= 480. The klt tracker ignores the value but it must still be supplied and obey these rules. For more specific information about the allowed ranges, see the notes below.
+
+<cell_dim> - an integer varval that is the length of one side of a histogram of oriented gradients (HOG) cell. For the hog tracker it must be one of 8, 16 or 32. For all other tracker types it is not used but it must still be supplied (to keep the argument count correct) and it must be an integer >= 8.
+
+**Note**: The name of a tracker has more liberal rules than for a variable. No rules are imposed other than those described above. This means you may use the names of existing variables, system variables, punctuation marks (like '.') or even PCS commands - the run-engine will not get confused because it interprets by context. However, using any of those former examples may well confuse a human code reader so are best avoided as a point of good programming practice.
+
+**Note**: The name and type of a tracker may be supplied in string variables (similar to how the names of actuators may be supplied). This differs from the rules for defining the names of variables and arrays where only string constants are allowed (a variable's type may be supplied as a variable, but not its name).
+
+**Note**: The <tracker_type> argument string refers to the following algorithms:
+
+* com - Centre-of-Mass. Follows the centroid (the intensity-weighted centre) of the bright pixels (or the dark pixels, see TKSET_COM_POLARITY) in the search area.
+* ght - Generalised Hough Transform (translation only). Matches the pattern of strong edges of the template. It does not allow for rotation or size change.
+* hog - Histogram of Oriented Gradients using 9 bins for orientation. Matches the pattern of edge directions of the template.
+* klt - Sparse pyramidal Kanade-Lucas-Tomasi with background compensation. Follows corner features and cancels background motion.
+* zmncc - Zero-Mean Normalised Cross correlation. Matches the brightness pattern of the template (which adapts slowly to changes).
+
+**Note**: Argument range rules applied for specific algorithms are as follows:
+
+hog:
+
+* <template_dim> must be an exact multiple of <cell_dim> and it must be at least twice the size of <cell_dim>.
+* <search_dim> must be >= <template_dim> + <cell_dim>.
+
+zmncc, com and ght:
+
+* <search_dim> must be at least <template_dim> + 8 pixels so that there is a little room for the template window to move.
+
+klt:
+
+* No additional rule: <search_dim> is not used.
+
+**Note**: A new tracker is not yet able to track: it has no target until you use init_tracker. Its status flag is TRKS_UNSEEDED until then.
+
+**Note**: Trackers have certain parameters that may be adjusted for optimum use with various target types. Upon creation, a new tracker is given a set of default values for those parameters but you can change them using the set_tracker command (which see). A tracker's type cannot be changed.
+
+**Note**: A tracker holds memory until you destroy it with undef_tracker. A klt tracker uses several megabytes.
+
+### def_var
+
+def_var <data_type> <varname> <varval>
+
+This creates and initialises a user-defined variable.
+
+<data_type> - a string varval specifying the data type of the variable and must be one of these: int, float, string.
+
+<varname> - a string constant defining the name of the variable to be created. This is case sensitive and must not be already taken by an extant variable or array, whether a system variable or user-defined variable (no two variables can have the same name), it must not contain spaces or square brackets and must not be a protected name (see p.46).
+
+<varval> - the value to initialise the new variable to. This must be a value that is compatible with the data type of the new variable.
+
+**Note**: When the new variable is a string, <varval> is cast to a string as follows. A string variable or string constant is copied as it is. An int or float variable (or system value) is written out as a number, an int in whole digits and a float with up to 9 significant figures (so a float holding 1.5 gives “1.5”). A constant that you write in the script is copied exactly as you wrote it, even if it looks like a number: `def_var string s 007` gives “007” (not "7"), `def_var string s 1.50` gives “1.50” (not "1.5"). The same rule applies to def_array with a string <vartype>.
+
+**Note**: All variables are global but can only be used from the point in the script at which they are defined. They can no longer be used ***as variables*** after they are destroyed by a call to undef_var (which see). Thus arrays can have manually managed temporal scope. See p.39 for more details on variable scope.
+
+**Note**: The qualifier '***as variables***' in the note above is important because you may still use the name of an undefined (non-existent) variable in a script but if you do this name will simply be treated as a string constant argument rather than a variable that can be evaluated. This might be perfectly legal depending on the context and so might not raise any syntax error during the checking phase or runtime error. However, you may get undesired behaviour during run-time if you do this inadvertently. For example the following code will just print 'myvar' as a string literal and will not print the value '20' - there will be no errors or warning because this is perfectly legal PCS code:
+
+```pcs
+def_var int myvar 20   # myvar is brought into existence with a value 20
+undef_var myvar        # myvar ceases to exist as a variable.
+print_value myvar 2    # myvar is treated as a string literal.
+```
+
+If you comment out the undef_var line, then the output would be '20'. This works without error because print_value does not require its argument to be a variable (although it may be). Other commands have more stringent criteria for their arguments such as set_var which expects its first argument to be a variable that can be written to. So this script would not pass even the syntax checker:
+
+```pcs
+def_var int myvar 20   # myvar is brought into existence with a value 20
+undef_var myvar        # myvar ceases to exist as a variable.
+set_var myvar 2        # ERROR: myvar is not a writeable variable.
+```
+
+**Note**: All variables are treated as arrays in PCS so variables created using def_var are just arrays of size 1. Arrays of size 1 (whether created by def_var or def_array) cannot use square brackets to 'dereference' or 'index' them - i.e. you cannot do this: my_var[0]. See the section on def_array for more about indexing rules.
+
+**Note**: In general, problems may occur if you use def_var, def_array or undef_var inside loops or blocks of code that are conditionally accessed (by do_if, else or any block that is the target of a conditional jump etc.). Such usage is not forbidden and may well pass the syntax checking phase (where conditions are not evaluated and jumps or loops are not enacted) but may results in errors or unforeseen behaviour during run time. Sometimes such placement may be desirable but it is left to the programmer to determine when this is appropriate according to their intended logic. For example, it is almost never a good idea to use these commands inside a loop_while loop but it might be acceptable if you need to read large amounts of data into an array from a file and the size of that array might need to change on each iteration of the loop. In such cases using def_array for dynamic allocation of the array to the appropriate size followed, after reading and using the data, by undef_var before the loop repeats might be a resource efficient way to code this and would be perfectly safe provided the loop can never be exited by a non-local jump that comes between def_array and undef_var.
+
+**Note**: While def_var is technically superfluous, it is kept as an option because it makes the PCS script coder's intention clear and makes it clear that any variable defined with it cannot be indexed with square brackets.
+
+### df_correction
+
+df_correction <OFF|ON|image_file>
+
+This determines whether to load and use a dark field correction image for full frame image capture (separate commands exist for preview images).
+
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the dark field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: If you select to supply an image file this command only loads the file and passes it to the server. It does not set the 'Use df correction' flag to ON. Whether to use that file or not depends on you issuing this command again with a specific OFF or ON argument (it defaults to OFF before you first make a definitive choice).
+
+**Note**: A dark field correction image can only be of raw doubles format but may be mono (specify the a file name ending in _y.dou or _i.dou) or colour (specify one file name of a triplet that end in _r.dou, _g.dou, _b.dou. For example if you have these files on disc: mydfimg_r.dou, mydfimg_g.dou, mydfimg_b.dou then you could use mydfimg_g.dou as your file name argument here.). Ensure each file has its associated .qih external header file also on disc.
+
+**Note**: More detail about the use of a dark field image can be found in the pardcap user manual. More information about raw doubles format images (the .dou and .qih conventions) can be found in the Biaram user manual.
+
+### div_var
+
+div_var <varname> <varval>
+
+This divides the value of a user-defined variable by a value.
+
+<varname> - The name of the variable whose value you want to change
+
+<varval> - The value (or variable containing the value) you want to divide <varname> by.
+
+**Note**: This is symbolically equivalent to <varname> /= <varval> in C.
+
+**Note**: Divide by zero will result in script termination with an error.
+
+**Note**: Division can also be done inline using math_var (which see).
+
+### do_if
+
+do_if <varval>
+
+When the script encounters do_if command it evaluates the <varval> argument. If that has a value of 0 the program jumps to the associated else line if one exists otherwise it jumps directly to the associated enddo line.
+
+<varval> - a binary choice varval. If it evaluates to 0 (or OFF or FALSE) then the do_if block is skipped. If it evaluates to non-zero (or ON or TRUE) then the do_if block is entered.
+
+**Note**: It is often useful (but not mandatory) to use the do_if functionality in combination with conditional expressions. See set_condexp for more information on how to use conditional expressions.
+
+**Note**:
+
+* Every do_if must have one, and only one, associated enddo command.
+* Every do_if may (optionally) have one, and only one, associated else command.
+* An else must always come before the line containing the associated enddo
+* You can have nested do_if block up to a maximum of INT_MAX deep if your available computer resources allow it.
+
+**Note:** The main difference between a do_if and a loop_while is that do_if specifies a one-off execution of its block of code but a loop_while must always re-assess its condition before moving on (unless the user breaks out of the loop with a goto which is one way how a loop_while can be used as a kind of do_if - but without the added convenience of an optional associated else). So, while all the logical branching functionality of the if/else system can be achieved with loop_while plus other lines of code, the if/else system does the same thing but with fewer lines of code and makes the control of flow easier to follow by a human reader.
+
+### else
+
+else
+
+This is an optional component of the PCS do_if ... enddo code block. See do_if for details.
+
+### enddo
+
+enddo
+
+This is a mandatory component of the PCS do_if ... enddo code block. See do_if for details.
+
+Note: A do_if command does not have to be in the same loop block or even the same function block as its matching enddo. This code is perfectly legal:
+
+```pcs
+def_var int idx 3
+def_func main
+loop_while TRUE
+ do_if idx
+   print_value idx 2
+   sub_var idx 1
+endloop
+return
+def_func close_if
+enddo
+return
+exit
+```
+
+and will output:
+
+3
+
+2
+
+1
+
+### endloop
+
+endloop
+
+This is a mandatory component of the PCS loop_while ... endloop code block. See loop_while for details.
+
+**Note**: A loop_while command does not have to be in the same function as its terminating endloop. This code is perfectly legal:
+
+```pcs
+def_var int idx 3
+def_func main
+loop_while idx
+ print_value idx 2
+ call_func close_loop
+return
+def_func close_loop
+sub_var idx 1
+endloop
+return
+exit
+```
+
+and will output:
+
+3
+
+2
+
+1
+
+### eval_char
+
+eval_char <string> <position> <receptacle>
+
+This allows the user to extract the integer byte value of any character in a character string and put it into the receptacle variable. That value will be in the range 0 to 255.
+
+<string> - a string that may be a string constant or a string variable.
+
+<position> - a varval that must evaluate to a non-negative integer that is not greater than the number of printable characters in <string> minus 1 (so if <string> contains Hello then <position> must be no greater than 4). The position is based on a zero being the first character in a string.
+
+<receptacle> - a writeable (user) variable that may hold an integer value.
+
+**Note**: This is for byte-level exploration of strings held in memory. For byte-level parsing of file IO data see fset_var and fput_var.
+
+### execute_daemon
+
+execute_daemon <progname> [<arg1> ...]
+
+This allows the user to execute a custom command or external program on the client computer asynchronously. This method allows the command to execute without the script stalling or waiting for the command to complete execution, facilitating rapid parallel processing (the client computer processes the background task while the script carries on running).
+
+It is managed natively by an internal, asynchronous process queue within the PARDUS interpreter engine. It limits the number of simultaneous parallel background tasks to the current value set by the max_daemons command (which see) to safeguard the CPU and memory from being overloaded. If the execution pool is full, extra commands are placed securely in a lightweight memory queue and execute automatically the when the GUI loop next runs and an active background task finishes.
+
+<programe> - a string which is the name of the executable file of the command to pass to the operating system's process manager.
+
+[<arg1> ...] - an optional list of space-separated arguments for the program to be executed. If any of the arguments to be passed is the name of the most recently saved image, this must be specified within the argument list as [img] (case sensitive and including the square brackets). The PARDUS script interpreter will automatically replace [img] with the absolute, clean path name of the last saved image. If tissue content thresholding is active and no image was captured due to lack of tissue content, the [img] symbol will be replaced with the literal text NoTissue. Your external program should check for this specific NoTissue string to handle tissue-less iterations gracefully. If no image is saved yet at the time of reaching this command then [img] will be replaced with an empty string.
+
+**Note**: For example if the name of the last saved image was myframe_0342_rgb.bmp in folder C:msys64homeparduser and you specify the execute_daemon command as this:
+
+execute_daemon myprog.exe -i [img] -o outfile.txt
+
+then the Pardus script processor will convert that into:
+
+myprog.exe -i C:msys64homepardusermyframe_0342_rgb.bmp -o outfile.txt
+
+and pass that to the Pardus daemon. If tissue thresholding prevents an image being captured then it will be:
+
+myprog.exe -i NoTissue -o outfile.txt
+
+**Note**: On MS Windows (even when running from an MSYS2 MINGW shell) do not use "./" i.e. NOT "./prog.exe", or any other *nix-style paths but use Windows style paths or just "prog.exe" if the program to execute is in the same directory as the PARDUS client program. Full paths to the executable must be specified in the MS Windows style i.e. C:msys64homeparduserprog.exe
+
+**Note**: Apart from [img] all the other arguments are used 'as is' - they are not interpreted or resolved or cast to anything. So, for example, if you use the name of a variable like myvar1 this will be used as the literal string 'myvar1' and it will not be evaluated.
+
+### execute_system
+
+execute_system <progname> [<arg1> ...]
+
+The execute_system command attempts to execute a custom command directly via the host operating system. Unlike execute_daemon, this command runs synchronously: script execution will pause while the target program executes, continuing only after the program terminates. No checks are made as to whether the custom command executes correctly or exits with an error. However, upon completion, the PCS system variable Sysval will be assigned the integer exit code returned by the executed program. Script authors can read Sysval to handle program success, failure, or custom termination states. If the program fails to start or crashes abruptly, Sysval will be assigned a value of -1.
+
+<programe> - a string which is the name of the executable file of the command to pass to the command processor
+
+[<arg1> ...] - an optional list of arguments for the program to be executed. The details are the same as for the command execute_daemon (which see).
+
+**Note**: On MS Windows (even when running from MSYS2 MINGW shell) do not use "./" i.e. NOT "./prog.exe", or any other *nix-style paths but use Windows style paths or just "prog.exe" if the program to execute is in the same directory as the PARDUS client program. Full paths to the executable must be specified in MS Windows style i.e. C:msys64homeparduserprog.exe
+
+**Note**: Unlike older legacy engines, this command executes binaries directly without spawning an intermediary shell processor (like /bin/sh or cmd.exe). This significantly increases execution speed and completely eliminates shell-injection vulnerabilities.
+
+**Note**: Apart from [img] all the other arguments are used 'as is' - they are not interpreted or resolved or cast to anything. So, for example, if you use the name of a variable like myvar1 this will be used as the literal string 'myvar1' and it will not be evaluated.
+
+### exit
+
+exit
+
+This terminates the script. All scripts and header files must have an exit command to mark the end of coding lines. The script checker will reject the script or header file if it does not find one. An exit command must be present even in scripts that use formal functions where the return of the function main will effectively act as an exit point at run time.
+
+**Note**: The interpreter does not check for arguments for the exit command. So if you supply arguments they will simply be silently ignored, not flagged as a syntax error.
+
+**Note**: The interpreter stops parsing and interpreting as soon as it comes across exit. So if you put an exit command in a loop or function, all the code after it will be considered free text comments, not code. This means that an exit inside a loop results in an unclosed loop error at syntax check time. Likewise an exit inside a function results in an unclosed function error at syntax check time (e.g. "Syntax error. Function main (opened on line 11) has no 'return'.") because, as far as the interpreter is concerned, any command you type after that exit line (like endloop or return) simply does not exist.
+
+### fbyte_mode
+
+fbyte_mode <varval>
+
+This is a latching command. If this is set to ON/TRUE/non-zero then, when integer variables are being dealt with via fset_var (or fput_var), the file will be read (or written) 1 byte at a time and into (or from) the integer variable - each integer variable value will be treated as an unsigned char. In the case of fput_var the lowest 8 bits of the integer variable will be written to the file as an unsigned char. The default value for fbyte_mode at the start of any script run is 0 (OFF).
+
+<varval> - a binary choice varval.
+
+### ff_correction
+
+ff_correction <OFF|ON|image_file>
+
+This determines whether to load and use a flat field correction image in full frame image capture (separate commands exist for preview images).
+
+<OFF|ON|image_file> - a string varval. This must evaluate to either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the flat field correction image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: If you select to supply an image file this command only loads the file and passes it to the server. It does not set the 'Use ff correction' flag to ON. Whether to use that file or not depends on you issuing this command again with a specific OFF or ON argument (it defaults to OFF before you first make a definitive choice).
+
+**Note**: A flat field correction image can only be pgm (P5), ppm (P6), bmp, or raw doubles (mono or colour). For a file name to be acceptable it must have an extension or name ending appropriate to its format (case is not important here) and must be one of: .pgm, .ppm, .bmp, _y.dou, _i.dou, _r.dou, _g.dou, _b.dou . For more information about the use of raw doubles images see the section on df_correction.
+
+**Note**: More detail about the use of a flat field image can be found in the pardcap user manual. More information about raw doubles format images (the .dou and .qih conventions) can be found in the Biaram user manual.
+
+### fput_var
+
+fput_var <varname> <append?> <file>
+
+This reads data from the variable <varname> and writes it to a file. The PCS system variable NWrites is set to the number of data items written into the file from the variable or to a negative number if there was an error. Note: The NBytes system variable reports the total number of raw bytes written to the file during the execution of fput_var. It is calculated as the difference between the file position before and after the writing phase.
+
+<varname> - the name of the variable to be read.
+
+<append?> - an binary choice varval that specifies whether the file to be written to should be created (and that will overwrite and pre-existing file with that name) or appended to. If the append option is selected and the file does not exist then the file will be created.
+
+<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be written to. File names and paths must not contain spaces. Purely numerical file names will only be accepted if they are presented inside string variables (see note under fset_var for details). This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to access them.
+
+**Note**: If <varname> is an array of size > 1 then ensure you specify the start point with the usual PCS square brackets dereferencing syntax. Data will be read from the array from that point onwards till then end of the array. If <varname> is a single variable then only one data item will be read from it into the file (you should not use dereferencing brackets for single variables and that include variables that were defined as an array but with a size of 1).
+
+**Note**: The file writing process will stop when one of the following conditions is encountered:
+
+* The end of the variable or array is reached
+* There is an error accessing or writing to the file
+
+In the case of an file write error, the script will not terminate but the system variable NWrites will be set to a negative value. So the programmer should check the value of NWrites after each call to fput_var for good defensive programming. Here are the meanings of the value of NWrites after a call to the fput_var command:
+
+-1 = access denied (fopen failed).
+
+-2 = This should never occur.
+
+-3 = file IO error (ferror was set).
+
+-4 = the default value at the start of any script. Thus this will be the value before any call to fput_var is made or, after any call to fput_var, it means 'Error, not otherwise specified'.
+
+>= 0 = The number of data items written into <file>.
+
+**Note**: The data type and content of the file will be assumed to be the same as the data type of <varname> according to the following rules:
+
+<varname> is of type string: A 'data item' will be defined as a character string. Thus the file will be written as a text file of strings. Only the data in each string variable is output. If you wish your output to be separated by white space or have a new line character at the end then it is your responsibility to add that separator to the end of your string variable prior to calling the fput_var command or consider using the print_file and print_value commands for more managed (formatted) output of text to a file.
+
+<varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be written as a raw binary file.
+
+<varname> is of type int: A 'data item' will be defined as an int32_t and the file will then be written as a raw binary file. The foregoing is the default behaviour that occurs at the start of any script run. However, the size of a 'data item' may be changed to a single byte by means of the fbyte_mode command. If byte mode is enabled, only the lowest 8 bits (the least significant byte) of each int are written to the file as an unsigned char. This allows for the creation of binary files with byte-level precision.
+
+**Note**: See also fset_var and fbyte_mode.
+
+### frame_number
+
+frame_number <number>
+
+This sets the value of the frame counter number for the file name of the next captured image. Each image captured by the frame grabber will have a number as part of its file name - this is the frame number.
+
+<number> - an integer which sets the frame number. The frame number in the name of a captured image file will start from this value and increment by one with each subsequent image captured (until and unless this value is changed by the using this command again). See the grab_image and xyzs_scan commands for more information on the names of captured image files.
+
+### frames_to_average
+
+frames_to_average <number>
+
+This sets the number of frames to average when a grab_image command is executed.
+
+<number> - an integer, >= 1, that specifies the number of frames to average.
+
+### frames_to_skip
+
+frames_to_skip <skip>
+
+This sets the number of frames for the frame grabber to grab and discard prior to saving a frame when the grab_image command is issued. This allows any frames stored in the grabber's frame buffer cache to be expunged to ensure that only the most recently 'seen' frames are grabbed.
+
+<number> - an integer, >= 0, that specifies the number of frames to skip.
+
+### fset_var
+
+fset_var <varname> <skip> <file>
+
+This reads data from a file and puts the values it reads into the variable <varname>. The PCS system variable NReads is set to the number of data items read into the variable from the file or to a negative number if there was an error. The NBytes system variable is set to the number of bytes consumed from the file after the <skip> process. The NewLines system variable reports the number of logical line endings encountered on the input stream immediately following a string-based fset_var operation. See notes below for more details.
+
+<varname> - the name of the variable to be set.
+
+<skip> - an integer, >= 0, that specifies the number of ***data items*** to skip.
+
+<file> - a string varval that evaluates to the name (optionally to include the full path) of the file to be read. File names and paths must not contain spaces. Purely numerical file names will only be accepted if they are presented inside string variables (see note below). This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: Due to the PCS autocasting rules, string literal file names cannot be numbers because string literals that can resolve to a numerical value will always be treated as a number (with a few exceptions detailed elsewhere in this manual). So literal names like 123 or 123.4 will be rejected but a file called 123.d will be accepted if the name is supplied as a literal constant because that will not resolve to a numerical value by the PCS autocast engine. However, files with purely numerical names can be read if those names are contained inside string variables and you pass the variable's name to the command. So this is perfectly legal and a file called "123" will be read and processed (if it exists) as shown in the following example:
+
+```pcs
+def_array string sa 2 _
+def_var string fname 123
+fset_var sa[0] 0 fname
+```
+
+but this will throw an error at script check time:
+
+```pcs
+def_array string sa 2 _
+fset_var sa[0] 0 123
+```
+
+of the type "fset_var: 123 is not a string variable."
+
+**Note**: If the <file> argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: If <varname> is an array of size > 1 then ensure you specify the entry point with the usual PCS square brackets dereferencing syntax. Data will be read into the array from that point onwards. If <varname> is a single variable then only one data item will be read into it (you should not use dereferencing brackets for single variables and that includes variables that were defined as an array but with a size of 1).
+
+**Note**: The file reading process will stop when one of the following conditions is encountered:
+
+* The file runs out of data (EOF)
+* There is an error accessing or reading from the file
+* The variable runs out of space to accept new data
+
+In the case of a file read error, the script will not terminate but the system variable NReads will be set to a negative number. So the programmer should check the value of NReads after each call to fset_var for good defensive programming. Here are the meanings of the value of NReads after a call to the fset_var command:
+
+-1 = access denied (fopen failed).
+
+-2 = file is shorter than the <skip> number of data items.
+
+-3 = file read error (ferror was set).
+
+-4 = the default value at the start of any script. Thus this will be the value before any call to fset_var is made or, after any call to fset_var, it means 'Error, not otherwise specified'.
+
+>= 0 = The number of data items read into <varname>.
+
+**Note**: The data type and content of the file will be assumed to be the same as the data type of <varname> according to the following rules:
+
+<varname> is of type string: A 'data item' will be defined as a character string separated from any other data items by white space. Thus the file will be scanned looking for strings separated by white space (not by any other delimiters) and each such string will count as 1 data item for the purposes of reading (and also for the purposes of skipping <skip> data items before assignments begin). During the <skip> phase, there is no limit on the size of strings skipped. During the reading phase there is a limit put on the size of each string read into each element of <varname> of 1023 non-white-space characters. If a string is encountered that is longer than this, then the first 1023 characters will be read into the current location in <varname> (i.e. it will read a truncated version of that string) and an error warning will be printed to the script console but the program will not terminate and NReads will not go negative. The rest of the truncated string will be ignored and the next data item in the file will be read to the next position in <varname> (if it is an array of of size > 1). For <skip> purposes (but not reading purposes) the definition of a 'data item' can be modified by the fskip_size command. See below for details.
+
+<varname> is of type float: A 'data item' will be defined as double (usually 64 bits on most PCs). The file will then be treated as a raw binary file and read as such - each 64 bits of the file being read as a double. For <skip> purposes (but not reading purposes) the definition of a 'data item' can be modified by the fskip_size command. See below for details.
+
+<varname> is of type int: A 'data item' will be defined an int32_t and the file will then be treated as a raw binary file and read as such - each 32 bits of the file being read as an int32_t. For <skip> purposes (but not reading purposes) the definition of a 'data item' can be modified by the fskip_size command. See below for details. For reading purposes the size of a 'data item' may be changed to a single byte by means of the fbyte_mode command. If byte mode is enabled, the file is read one byte at a time. Each byte is stored in an individual int variable slot as an unsigned char; the lower 8 bits represent the byte value, while the upper 24 bits are set to 0. This effectively treats each int as a single unsigned 8-bit value. This allows for the precise reading of binary files where the file data is not an exact multiple of 4 bytes.
+
+**Note**: The value of a 'data item' as described above will only pertain when the fskip_size is 0. If the value set by the command fskip_size is > 0 then the 'data item' will be measured in units of fskip_size bytes, regardless of the data type of the variables to be written to.
+
+**Note**: The NewLines system variable reports the number of logical line endings encountered on the input stream immediately following a string-based fset_var operation. It has the following behaviour:
+
+* *Trigger*: NewLines is reset to 0 at the start of any fset_var call targeting a string variable or array. It is updated only after the reading phase is complete and at least one item was successfully read (NReads > 0).
+* *Normalization*: The interpreter recognizes Unix (n), Windows (rn), and legacy Mac (r) line endings. Each represents a single count.
+* *Scope*: The count includes all line endings between the last string read and the very next non-whitespace character (the start of the next potential data item).
+* *Horizontal Whitespace*: Spaces and tabs encountered during this look-ahead are consumed but do not affect the NewLines count.
+* *Binary Safety*: The counting process stops immediately if a null character (0) or any non-whitespace data is encountered, ensuring that subsequent binary data is not accidentally consumed.
+
+**Note**: Use NewLines to detect structural breaks in files where whitespace is otherwise ignored. For example, in PNM (P2/P3) files, a NewLines value >= 1 after reading the header can indicate the end of a comment line or the transition to the pixel data block.
+
+*Caution (Binary Data)*: If a binary data block immediately follows a string block, ensure there are no trailing spaces or tabs before the binary data. The NewLines look-ahead logic consumes horizontal whitespace (Space/Tab) while searching for line endings. If the first byte of your binary data is value 32 or 9, it will be consumed and included in the NBytes count.
+
+**Note**: The NBytes system variable reports the total number of raw bytes consumed from the file during the "reading phase" of the last fset_var command. The behaviour is as follows:
+
+*What it counts:*
+
+* For Numeric Types (int/float): The total bytes read into the variable(s). For example, if fbyte_mode is ON, NBytes will equal NReads. If OFF, NBytes will be NReads * 4 (for ints).
+* For String Types: The total number of bytes consumed starting from the first character of the first string read, through to the last byte consumed by the NewLines look-ahead logic. The count includes all data characters, whitespace before the first string, internal whitespace between tokens, and all trailing whitespace (spaces, tabs, r, n) consumed while the interpreter was updating the NewLines system variable.
+
+*What it ignores:*
+
+* NBytes does not include any bytes skipped during the <skip> phase of the fset_var command.
+
+**Note**: NBytes is the bridge between ASCII and Binary data. By adding NBytes to a tracking variable after reading a text header, you can determine the exact byte-offset where the binary data begins. This offset can then be used with fskip_size 1 to perform a byte-precise binary <skip> for the next fset_var call.
+
+**Note**: See also fput_var, fskip_size and fbyte_mode.
+
+### fskip_size
+
+fskip_size <nbytes>
+
+This is a latching command. If <nbytes> is > 0 then, whenever a fset_var command is issued, the <skip> value is measured in that number of bytes regardless of the data type of the variable to be set (in other words, the total bytes that will be skipped in <skip>*<nbytes>). Otherwise (if <nbytes> is 0 ) the <skip> value is measured in 'data items' as described in the description for fset_var. The default fskip_size value at the start of any script will be 0 meaning that 'data items' with be the unit of <skip>.
+
+<nbytes> - an integer varval that must be >= 0.
+
+### fourier
+
+fourier <action> <forward?> <height> <width> <in_re> <in_im> [<out_re> <out_im>]
+
+This performs one of a selection of processes (called 'actions') related to Fourier analysis on 1D or 2D data - not just the Fourier transform itself. The indices of the supplied arrays is respected according to the rules described below.
+
+<action> - a string varval defining what process to do.
+
+<forward?> - a binary choice varval dictating the direction of a process
+
+<height> - an integer capable varval defining the height in pixels of a 2D array
+
+<width> - an integer capable varval defining the width in pixels of an array
+
+<in_re> - an array of real values used as input
+
+<in_im> - an array of imaginary values used as input
+
+<out_re> - an array of real values used to receive the results (for actions that need it)
+
+<out_im> - an array of imaginary value to receive the results (for actions that need it)
+
+**Note**: The dimension arguments specify not only the dimensions and dimensionality of the action but also determine the minimum number of cells that must be available in all used arrays to avoid an error (with subsequent script termination). Each array argument carries an index, e.g. my_array[idx]. The operation acts on the <height> x <width> cells that start at the supplied index of each array. Every array involved must therefore have at least <height> x <width> cells from its supplied index to its end (the arrays need not be the same size as one another). Cells before the supplied indices, and any cells beyond the <height> x <width> block, are left untouched.
+
+**Note**: If you want to perform an action on a 1D dataset then you must set the <height> to 1 (not the <width> ). Fourier transforms (in either direction) can never use fewer than 4 elements so, if the action is 'transform' then <height> must be either 1 or a value >=4 and <width> must always be >= 4.
+
+**Note**: The string data type cannot be used for input or output arrays. Only floats and ints are allowed.
+
+**Note**: The string must be one of the following (and may be supplied either as a compile-time constant or as a string variable):
+
+transform - an in-situ operation, no output arrays are used.
+
+fvpow - an in-situ operation, no output arrays are used.
+
+cyclise - the output arrays take the result so must be present.
+
+power - the output arrays take the result so must be present.
+
+vpower - the output arrays take the result so must be present.
+
+They have the following meanings:
+
+transform - perform a Fourier transform, direction dictated by the <forward?> argument.
+
+cyclise - perform a quadrant re-arrangement (Fourier shift), in the direction dictated by the <forward?> argument. The meaning of 'forwards' is that the top left pixel is shifted such as to be placed in the centre of the output and 'backwards' reverses that shift.
+
+power - produce a power spectrum.
+
+vpower - produce a visual power spectrum. Similar to 'power' but it uses a fast approximation to a log2 operation and scaling to make the output spectrum easier for visual inspection as a bitmap image with pixels in the range 0-255. The scaling assumes that the input real and complex arrays (from which the spectrum is calculated) was the result of a previous forward Fourier transform on a real image of 8-bit depth using the Fourier transform functions of PCS.
+
+fvpow - This takes in a real 8-bit image in <in_re> and it expects <in_im> to be all 0s. It then performs a forwards Fourier transform on them (if you supply <forward?> as 0 this will produce a script-halting error). It then produces visual power spectrum with the same processing a for vpower . It then performs a forward cyclise operation to put that power spectrum in diffraction pattern order and writes the result back into the input <in_re>. You can therefore use this to get a rapid visual Fourier spectrum on an input real image such as may be useful for fast real-time video frame processing because it saves you having to do all the separate steps in separate PCS commands. Because this is an in-situ process it can be performed directly on an 8bpp raw bitmap inside an integer graphics array (see preview_draw_array). Note that you must use separate array variables for <in_re> and <in_im> arguments for this action. The output in the <in_re> argument will be in diffraction pattern order and the output in the <in_im> argument will be the same data but in native Fourier order.
+
+**Note**: Aliasing is permitted in all but one case. So even those operations that require output array arguments can be converted to in situ commands by supplying the same input array variables for the outputs. Generally it makes no sense to use the same variable for real and imaginary inputs but you are not forbidden from doing so except in the case of <action> = fvpow. In that case the input real and imaginary arrays must be different variables.
+
+### get_actuators
+
+get_actuators
+
+This returns information about what actuators currently exist (are defined) on the pardserver. This information comprises:
+
+4 integers which will update the value of the 4 system variables: NSteppers, NBinaries, NMlevels, NServos. This allows the script programmer to know how many of each type of server exist.
+
+A name string and an index number for each type of actuator that exists. These identify what specific actuators exist in each type category. With this information you can query the server with an act_get command to retrieve any other information you may need to know for each extend actuator.
+
+This information also lets you know what names and index numbers to avoid when calling def_actuator so as to avoid duplication errors.
+
+Example: The following script calls get_actuators then proceeds to check if specific actuators exist with the names X_Axis, Y_Axis and Z_Axis. It only goes on to issue the act_halt command to those actuators that actually exist - thereby avoiding a fatal error by attempting to address an non-existent actuator:
+
+```pcs
+Pardus pcs 1
+#include stdpard.pch
+verbosity 1
+def_func main
+get_actuators    # Get info on all extant actuators on the server
+act_getid X_Axis  # act_getid will set  CurrActIdx to -1 if the specified
+                  # actuator does not exist - a 'safe' way to check.
+set_condexp CurrActIdx >= 0
+do_if Condexp
+  act_halt CurrAct
+  act_set CurrAct INFO_ENA_STATE 0
+enddo
+act_getid Y_Axis
+set_condexp CurrActIdx >= 0
+do_if Condexp
+  act_halt CurrAct
+  act_set CurrAct INFO_ENA_STATE 0
+enddo
+act_getid Z_Axis
+set_condexp CurrActIdx >= 0
+do_if Condexp
+  act_halt CurrAct
+  act_set CurrAct INFO_ENA_STATE 0
+enddo
+return
+exit
+```
+
+### get_camsettings
+
+get_camsettings
+
+This is a pardclient GUI update command. The very first time this is called will be automatically by the pardclient program upon any new login and, at that time, this will gather information from the server on each camera in turn in order to populate the client's internal 'CPlist' of all cameras and their parameters. The script writer will not be able to use this command in that way. Instead, when this command is issued in a script, because all the settings and resolutions data have already been gathered from the server, all it will do is ensure the GUI pages and lists of the client program have their displays and combo lists updated with the information relating to the current camera.
+
+Thus the user should call this command after any call to select_camera if they want to ensure the GUI is updated to reflect the values of the camera they select.
+
+Alternatively call this command right at the end of your script to ensure that the GUI is appropriately set if that is important to you. You don't need to call this command at all if all you want to do is run scripts from the script tab and have no intention of using the other GUI tabs for any camera functions.
+
+**Note**: This command works in conjunction with the get_resolutions command. Not having these GUI update commands run automatically with a script-originating call to select_camera was a deliberate design decision because users may want to do rapid switching / multiplexing between cameras in a script and wasting time automatically setting GUI controls if the user doesn't need that will just reduce the maximum frequency of multiplexing. Hence these GUI update commands are separate commands to be run if and when the user needs them (when doing a select_camera from the Manual GUI drop-down combo list in pardclient, these GUI update commands *are* called automatically each time).
+
+### get_preview
+
+get_preview <ON|OFF> <centre_x> <centre_y> [Display?]
+
+This causes the frame grabber to capture a preview image and send it to the client.
+
+<ON|OFF> - a binary choice varval. It determines whether the preview is zoomed (ON) or not (OFF). A zoomed preview is a crop of the full-size image, cropped to the dimensions of the preview image, and so will appear zoomed if the dimensions of the full-size image are larger than the dimensions of the preview image. An un-zoomed preview showing a scaled version of the full-size image, scaled to fit in the dimensions of the preview image whilst maintaining its original aspect ratio.
+
+<centre_x> - a varval of type int. This is the centre X coordinate of the crop in the full resolution image for a zoomed preview.
+
+<centre_y> - a varval of type int. This is the centre Y coordinate of the crop in the full resolution image for a zoomed preview.
+
+[Display?] - a binary choice varval. If this evaluates to non-zero then the obtained preview image is immediately displayed. Otherwise it is acquired but not displayed. The default is for this to be treated as true so a loaded image is displayed unless you provide this argument and set it to something that evaluates to 0.
+
+**Note**: If you want to display the preview at any time after calling this command with the [Display?] option set to false/0 then you can do that with the command preview_show. The reason you may want to acquire the image but not show it is that this allows you to do processing on the loaded preview before displaying it (like tracking and adding an overlay). If you display the preview as soon as loaded, the processing would commence, the overlay drawn and then the preview will be re-displayed with overlay. If this all happens before the preview is immediately refreshed with a new preview image, then the that new image will be immediately drawn replacing your previous annotated image which will therefore not stay on display for long enough to be visually appreciated - most of the time the user will see either the a naked preview image with only a brief flash of the overlaid version. This can cause flickering of the preview overly and also unnecessary GUI ops. Thus, having manual control over when a newly acquired preview image gets put out to the GUI display allows you to prevent this.
+
+**Note**: ***Special features of a preview frame grab***. Taking a preview image activates the frame grabber in a modified way (as opposed to extracting a preview image from a capture that is initiated by the grab_image command, but that only occurs in pardcapture running in stand-alone mode so never pertains to preview requests initiated by PCS commands). In this case, the 'From_preview_timeout' global variable is set in pardcapture which does this in the pardcapture grab_image() function:
+
+```c
+if(From_preview_timeout){
+      skipframe=skiplim; // This ignores any 'frames_to_skip' value and
+                                 // just process the very first frame grabbed.
+      frame_timeout_sec  = 0;    // These overrule any grabber_timeout
+      frame_timeout_usec = 100;  // value currently in effect
+      goto just_the_one;         // Skip any averaging - just get one frame.
+  }
+```
+
+Thus any value you may have set for grabber_timout, frames_to_average and frames_to_skip will be totally ignored when capturing a preview image for any purpose (this includes for the PCS commands get_preview_focus, get_preview_stats and get_preview_tc). The consequences of this are as follows:
+
+1. Overruling frames_to_skip means your preview image (or stats, focus value or tissue content value derived from it for the get_preview_focus, get_preview_stats and get_preview_tc commands) will be based on the next image in the v4l2 image buffer queue. Thus, to be certain you image or stats are based on what is currently under the camera lens, you should perform a skip_frames command before calling any of the get_preview commands. Set the argument of the skip_frames command to at least the value of the number of buffers used in the pardcapture v4l2 buffer (at the time of writing this number is 2).
+
+2. Overruling the grabber_timeout means there is a higher chance that the get_preview command (or any of the related get_preview commands that are set to grab a fresh preview image) may fail with a timeout error. This is particularly likely if the save_resolution is set higher than VGA or if you have just used the frame grabber to grab a full image immediately before attempting the preview grab. To deal with this you may impose a delay prior to issuing any of the get_preview commands using the sleep command (about 200 ms or higher should be sufficient).
+
+Because the frame grab may fail, and because failure to grab a preview image need not mean that your script, as a whole, needs to terminate, failure of any of these commands: get_preview, get_preview_focus, get_preview_stats and get_preview_tc will not be always fatal to your script. It *might* be fatal, for example failure to activate the camera, failure to properly allocate memory and some other errors will always be fatal and your script will terminate - you have no say in that. However, for those errors that will not corrupt the memory states and that might be recoverable (for example, timeout errors that may be fixed by simply waiting or ignoring) the initial internal 'failure' flag will get transformed into a 'non-fatal' flag and your program will continue. You will still see an error report in the logs and script and/or server consoles (with a sufficient Verbosity level) but the program will not terminate.
+
+***The PreviewReport system variable***
+
+Because error messages to logs, etc. are only detectable interactively by you reading them, there is also a system variable whose value you can access in your script to read and see if a particular preview capture event succeeded completely or experienced a non-fatal error. This is the PreviewReport variable. This variable pertains to all preview image capture events regardless of which command requested the preview image (get_preview, get_preview_focus, etc.). At the start of any preview capture process the PreviewReport variable is assigned a value of GRAB_ERR_NONE indicating complete success. If a non-fatal error occurred its value will change to indicate the type of error. The complete set of possible values this reporter variable may take are these (these values are correct at the time of writing but the very latest values can be found in the pardcapdefs.h header file):
+
+```c
+// Values that the image grabber function returns
+#define GRAB_ERR_NONE       1 // Success!
+#define GRAB_ERR_SELECT     2 // Error selecting a frame from the stream
+#define GRAB_ERR_TIMEOUT    3 // Too long getting a frame from the stream
+#define GRAB_ERR_NOSTREAM   9 // The camera is not streaming images
+#define GRAB_ERR_BUSY      10 // The grabber is being used by another
+                              // program or function - try again later.
+#define PS_CB_E_PFC       138 // Preview failure - colour convert failed
+#define PS_CB_E_PFZ       139 // Preview failure - zoom settings failed
+```
+
+This gives you informed control for any preview capture command. Simply read the value of PreviewReport after the get_preview (or related) command and code what do do according to the value. For example you may decide to exit the script, re-try the grab immediately or after a delay or some other intervention, or just ignore it (which may be reasonable in a high speed 'live' preview loop where dropping the odd frame is not important).
+
+### get_preview_focus
+
+get_preview_focus
+
+This captures a new preview image and retrieves the RGB focus stats (only) using whatever focus measure was previously set using prv_toggle.
+
+The preview image itself is not sent over to the client. This is a more streamlined and quicker function than a call to get_preview_stats (which see) because the latter will update all the preview stats values, not just focus. On successful completion of this command, the user-accessible system variables Ps_Focus_R, Ps_Focus_G, and Ps_Focus_B will be updated but the other stats variables will not be updated.
+
+This command is designed for fast access to the latest focus stats for those wishing to implement their own custom autofocus algorithm at script level (instead of using the standard PCS autofocus command which operates on the pardserver). See the autofocus command for more detail about that.
+
+**Note**: See 'Special features of a preview frame grab' on p.Error: Reference source not found.
+
+### get_preview_stats
+
+get_preview_stats <ON|OFF>
+
+This retrieves stats for a preview image.
+
+<ON|OFF> - a binary choice varval. If the argument evaluates to ON then it takes a new preview image (using the settings last used to take a preview e.g. zoomed or not and, if zoomed, the last XY coordinates used will be used again this time) and sends over the stats calculated on that new image. If it evaluates to OFF then it sends over the stats calculated for the last preview image that was taken (so it assumes that at least one prior call to get_preview was done).
+
+In both cases (ON or OFF) the preview image itself is not sent over to the client. Thus a call to get_preview_stats OFF after a call to get_preview should get the stats of the preview image received from that get_preview command.
+
+**Note**: If all you want are the current preview focus stats then use the command get_preview_focus. That is a leaner version of this command that will only receive and parse the focus values. See that command for more details.
+
+**Note**: See 'Special features of a preview frame grab' on p.Error: Reference source not found.
+
+### get_preview_tc
+
+get_preview_tc <ON|OFF>
+
+This does one of two things in regards to tissue content (tc) measurements depending on the argument. Regardless of the argument value it takes a new preview image without applying your chosen LUT, Laplacian or median filtering options. It does, however, use other settings that were last used to take a preview e.g. zoomed or not and, if zoomed, the last XY coordinates used will be used again this time and it does carry out your choice of whether to invert intensities. However, regardless of your colour channel choices for the previous it uses the Y channel data. Using this Y preview image data it then performs one of the following two operations (only using pixels under any preview mask you supplied and only using pixels within the upper and lower histogram limits you previously set if you selected to only calculate variance within limits).
+
+<ON|OFF> - a binary choice varval. If it evaluates to ON it calculates the tissue content value using the NDL (Normalised Differential Laplacian) on the 3x3 median filtered Y pixel data as:
+
+```c
+tissue_content_ndl = (MALcurr / MALref) * log10(VARcurr / VARref)
+```
+
+where MAL = mean absolute Laplacian and VAR is the variance.
+
+It then updates the local system variable, CurrTC, with the result and, if the tc_threshold <lower> value is >= 0.0 (see the tc_threshold command for details), also sets the local system variables NoTissue and HasTissue according to whether CurrTC falls within or on the boundaries set by tc_threshold. The <upper> value set by tc_threshold will only be applied to the thresholding if it is non-negative.
+
+If the argument evaluates to OFF then it performs the 3x3 median filter on the Y pixel data and calculates the MAL and VAR but, instead of using these to calculate the NDL, it simply stores them in the preview stats struct members as the NDL reference values for future tissue content calculations - the values MALref and VARref in the above formula. The local system variables mentioned above will not be altered after this call.
+
+**Note**: You should call get_preview_tc OFF on a reference field (usually a blank field of illuminated background) before you call get_preview_tc ON in any given login session to a pardcap server after the pardcap server first starts up. Unless the background illumination changes or you move to a new objective or camera there should be no need to call get_preview_tc OFF again.
+
+**Note**: Unless you call get_preview_tc OFF on, at least once in any given login session to a pardcap server after the pardcap server first starts up, the reference values MALref and VARref will not be set. Their default values when a pardcap server first starts are -1.0 (for each of them). If VARref is negative it means the tc reference values have not yet been set and so tc measurements (let alone tc thresholding) will not be possible.
+
+**Note**: Any currently visible preview image is not altered, no preview image is sent back to the client and the general preview stats are not updated.
+
+**Note**: See 'Special features of a preview frame grab' on p.Error: Reference source not found.
+
+### get_resolutions
+
+get_resolutions
+
+This is a pardclient GUI update command. The very first time this is called will be automatically by the pardclient program upon any new login and, at that time, this will gather information from the server on each camera in turn in order to populate the client's internal 'CPlist' of all cameras and their parameters. The script writer will not be able to use this command in that way. Instead, when this command is issued in a script, because all the settings and resolutions data have already been gathered from the server, all it will do is ensure the GUI pages and lists of the client program have their displays and combo lists updated with the information relating to the current camera.
+
+Thus the user should call this command after any call to select_camera if they want to ensure the GUI is updated to reflect the values of the camera they select.
+
+Alternatively call this command right at the end of your script to ensure that the GUI is appropriately set if that is important to you. You don't need to call this command at all if all you want to do is run scripts from the script tab and have no intention of using the other GUI tabs for any camera functions.
+
+**Note**: This command works in conjunction with the get_camsettings command. Not having these GUI update commands run automatically with a script-originating call to select_camera was a deliberate design decision because users may want to do rapid switching / multiplexing between cameras in a script and wasting time automatically setting GUI controls if the user doesn't need that will just reduce the maximum frequency of multiplexing. Hence these GUI update commands are separate commands to be run if and when the user needs them (when doing a select_camera from the Manual GUI drop-down combo list in pardclient, these GUI update commands *are* called automatically each time).
+
+### get_tracker
+
+get_tracker <tracker_name> <tracker_item> <receptacle>
+
+This allows you to read the current state of a tracker: its status, whether it is initialised, its last known position and some diagnostic counts.
+
+<tracker_name> - a string varval defining the name of the tracker to query. This is case sensitive and must pertain to an extant user-defined tracker.
+
+<tracker_item> - an integer varval whose value specifies the item to read. This is one of the constants #defined in stdpard.pch as shown below. A number that is not in the range 1 to 11 is a script error and terminates the script.
+
+<receptacle> - a writeable user-defined variable that will receive the information. Every item is a whole number, so an integer variable is ideal but any data type may be used and the PCS casting rules will apply.
+
+**Note**: The current list of acceptable <tracker_item> values is this. Items that belong to one tracker type give 0 for the other types:
+
+| **Constant** | **Value** | **Meaning** |
+| --- | --- | --- |
+| TKGET_OCCLCOUNT | 1 | Occlusion counter: the number of tracks judged occluded since the tracker was last initialised (or since you set it with TKSET_OCCLCOUNT). |
+| TKGET_ERRSTATUS | 2 | The status flag: one of the TRKS_ codes (see init_tracker). |
+| TKGET_SEEDED | 3 | Is the tracker initialised and able to track? 1 = yes, 0 = no. |
+| TKGET_ROW | 4 | Last known top row of the template window (the position last returned by track, or set with TKSET_ROW). |
+| TKGET_COL | 5 | Last known left column of the template window. |
+| TKGET_NPOINTS | 6 | klt: the number of feature points currently being followed (inside the box and in the background band). |
+| TKGET_NINLIERS | 7 | klt: the number of box points that agreed on the target's motion in the last track (0 if the track was lost). |
+| TKGET_LOSTFRAMES | 8 | klt: the number of consecutive tracks in which the target has been lost (0 while tracking normally). |
+| TKGET_NREFEDGES | 9 | ght: the number of edge pixels recorded from the template at initialisation. |
+| TKGET_VOTES | 10 | ght: the number of votes (whole number, after smoothing) for the winning position in the last track. |
+| TKGET_IMGEDGES | 11 | ght: the number of edge pixels found in the search area in the last track. |
+
+### goto
+
+goto <label> [if <varval>]
+
+This causes the script to jump to the specific line in the script that is marked by a goto label. This command can be simple (i.e. just go to the labelled line) or extended as a conditional goto (i.e. only go to the labelled line if some condition is satisfied).
+
+<label> - a text string (or a variable containing a text string) where the string is without white space and must be identical to a goto label that is defined somewhere in the script on its own separate line (excluding the terminal colon character - the latter is part of the syntax that identifies the label as a goto label but is not part of the label's name).
+
+if - If an extended (conditional) goto is required then the second argument must be the word if and must be followed by a varval of a type described below.
+
+<varval> - a binary choice varval. If the value of <varval> evaluates to a non-zero numerical value or to TRUE or ON then the script interpreter will immediately go to the line in the script marked by <label>. Otherwise the script will continue execution from the next coding line immediately following this goto line.
+
+**Note**: A goto label itself (i.e. the token that marks the destination position in the script of a goto jump) is a string without white space followed immediately by a colon with no space between the label string and the colon - similar to goto labels in the C programming language - and that goto label must be on its own separate line. This goto label must be a string constant and not a string variable and must be unique amongst all other goto labels in the entire script. The 'string' used for a goto label may be a number (so '1234:' is a valid goto label). There is nothing in the PCS language interpreter rules that prevents you from using a protected name (see p.46) or the name of an extant user variable or actuator for a label but it can make a program potentially confusing to read if you do that.
+
+**Note**: Using the Condexp system variable as the <varval> argument in conjunction with the set_condexp command allows conditional expressions to dictate the control of flow (see set_condexp for detail).
+
+**Note**: This goto command is context-aware. You may jump to any label in the script, even those outside the current function or inside/outside nested blocks. The interpreter automatically manages the following:
+
+*Function Stack Management*:
+
+If you jump to a label in a calling function (a parent), the interpreter will "unwind" the call stack, automatically closing all recursive or nested function calls between your current position and the target.
+
+If you jump to a "foreign" function (one not currently in your active call path), the interpreter will reset the stack to the main function level. Upon reaching a return in that new function, that return will be treated as if it were the return of main (i.e. it will exit the script).
+
+*Loop and Block Synchronization*:
+
+If you jump out of nested loop_while loops or do_if blocks, the interpreter automatically resets the nesting counters. You do not need to manually "close" loops you have jumped out of.
+
+If you jump into a loop or block, the interpreter will correctly identify the new nesting level. When an endloop or enddo is reached, it will behave as if you had entered that block normally.
+
+*Intra-Function Jumps*:
+
+Jumps within the same function block are "stack-neutral" and do not affect your function return path, though they will still synchronize your loop_while/do_if nesting depth.
+
+*Note on Jumping into do_if-else Blocks*:
+
+Jumping into the 'If' portion: If a goto lands between a do_if and an else (or enddo), the block is marked as entered. When the else or enddo is reached, the interpreter will treat the block as completed and skip to the end of the structure.
+
+Jumping into the 'Else' portion: If a goto lands between an else and an enddo, the block is marked as not entered. The code will execute until the enddo is reached. This is functionally equivalent to the original do_if condition having been FALSE.
+
+Safety Warning: Avoid jumping directly into the middle of a conditional block if that block relies on variables that were supposed to be set at the start of the do_if. The interpreter will manage the control flow, but it is the programmer's responsibility to ensure the global variable state is valid for the landing point.
+
+**Note**: If a script contains no formal functions (that is, functions defined by def_func) or only the main function then goto labels may be be placed anywhere. If you have more than just the main function defined in a script (even if that / those other functions are never called) then all goto labels must be placed either within a function block (def_func ... return) or between the very last return command and the exit command of the script. That is to say, labels cannot exist in "No-Man's Land" (the space between function definitions). The script checker will flag these as syntax errors before the script runs, but only when the script contains at least one goto; otherwise they are accepted, and the code there never runs.
+
+**Note**: The fact that the goto command can accept a <label> argument that is a variable of the string data type and not just a string constant allows for the implementation of informal 'functions' (subroutines) that can be 'called' from anywhere in the code and that can be made to return either to whence they were called or to anywhere else. This is achieved by altering the string value of the 'return' goto's <label> argument just prior to calling the subroutine.
+
+For example, let's say I want a subroutine to do 100 frames of live preview. I can set it up and call it like this:
+
+```pcs
+# pre-branching code ....
+# Create a string variable to determine where the subroutine returns to
+# when done:
+def_var string  return_point _
+# Set the value of that return point to some valid script goto label
+set_var return_point return_point_1
+# 'Call' the subroutine by simply going to a label just before it:
+goto live_preview
+# Set the return point label
+return_point_1:
+# post-return code ....
+# [rest of main program here]  - and we can also call live_preview
+# after we set_var the return_point variable to a label (like
+# return_point_2, return_point_3, return_point_4, etc.) where each
+# return point label is placed just after the call, as we did above]
+goto end_of_script  # This is effectively the end of the main program
+# All goto-based subroutines start after here and must end with a goto
+# that acts as a 'return' command to return control of flow to some
+# return point
+# The live preview subroutine entry point goto label
+live_preview:
+# ... [live preview code]
+# Now we return to wherever the string in the variable return_point points
+# to (assuming that string is a valid goto label somewhere in this script).
+# This subroutine itself might alter the string value contained in the string
+# variable 'return_point' so this subroutine does not necessarily have to
+# return to the place that called it.
+goto return_point
+# Any other subroutines go here, then finally we have:
+# The exit goto label (note that it would be illegal to place a goto label
+# here if the script had more than 1 formal function defined because this
+# would be an instance of a goto label being placed outside a
+# def_func ... return block).
+end_of_script:
+exit
+```
+
+**AI Tip**: For high-performance state machines, store your destination labels in a string array. This allows you to dispatch control flow using an index (e.g., goto state_labels[idx]). This 'Jump Table' approach is more efficient for LLMs to manage than complex branching logic.
+
+### grabber_predelay
+
+grabber_predelay <seconds>
+
+This sets the number of seconds to wait before activating the frame grabber after the command to grab_image is given
+
+<seconds> - an integer between 0 to 172800 inclusive
+
+**Note**: A frame capture operation may be a single image capture or a multi-frame averaging series. In the latter case, this delay is applied only before the very first image in the average sequence.
+
+### grabber_retries
+
+grabber_retries <number>
+
+When commanded to capture an image the frame grabber may fail to deliver an image in the allotted time before declaring a timeout failure. This command sets the number of such failed attempts to ignore (and so just trying again) before finally giving up and reporting an error.
+
+<number> - an integer between 0 to 4096 inclusive
+
+**Note**: The grabber will wait a certain amount of time for each frame in this set before giving up and going onto the next try (see grabber_timeout).
+
+### grabber_timeout
+
+grabber_timeout <seconds>
+
+This sets the number of seconds for the frame grabber to wait for a frame to be delivered from the camera driver after requesting one before it gives up and either retries (see grabber_retries) or reports an error.
+
+<number> - an integer between 0 to 4096 inclusive
+
+### grab_image
+
+grab_image
+
+This activates the camera frame grabber with the intent of capturing a full-size image.
+
+This command takes no arguments but the user must have previously prepared the parameters of image capture using these commands: save_format, save_resolution, save_root, frames_to_skip, frame_number and frames_to_average. While the former settings are mandatory before calling grab_image there are many other optional settings as well as described elsewhere in this manual. For example, the use of correction images (dark field, flat field, corrections mask) and your choice for tissue content thresholding (tc_threshold) and whether or not to also save a coordinates text file with the image (save_coords).
+
+### gui_buffer
+
+gui_buffer <varval>
+
+This allows drawing to the script console to be performed in an 'off-screen' fast text buffer and then drawn all-at-once in a fast loop buffer flush. This allows the drawing of complex layouts to the script view console with minimal flicker or lag compared to not using a buffer. You can choose between two types of buffering: 1. General XY aware, 2. Continuous stream.
+
+<varval> - an integer from 0 to 2. See notes below.
+
+**Note**: Selecting 1 diverts all text and graphics emissions intended for the script console to a block buffer that also records any cursor re-positioning. This is the 'General XY aware' buffer.
+
+**Note**: Selecting 2 diverts all text and graphics emissions intended for the script console to a block buffer that expects all emissions to be strictly contiguous without cursor re-positioning. This is the 'Continuous stream' buffer.
+
+**Note**: Selecting 0 causes any stored data in a buffer to be instantly flushed to the script console window in a fast loop.
+
+**Note**: Once you have initiated a type 1 buffer you cannot initiate a type 2 buffer until the type 1 buffer has been flushed - and *vice versa*.
+
+**Note**: Issuing a repeat command has no effect and will not cause an error (for example if a 'gui_buffer 1' command follows a previous 'gui_buffer 1' command without an intervening 'gui_buffer 0' command, this will have no effect).
+
+**Note**: The continuous stream buffer (type 2) is faster to render than the general XY aware buffer (type 1) but either is a lot faster than no buffering at all.
+
+**Note**: The general XY aware buffer (type 1) may be used in any printing and drawing use case but the type 2 buffer will only give correct output if your input did not use any cursor re-positioning commands. The increased rendering speed of this type 2 buffer can be particularly useful if you are outputting a continuous block of printing such as a bitmap image made out of block characters.
+
+**Note**: Any data in the buffer at the time of script termination will just be discarded - it will not be drawn to the script console.
+
+**Note**: This will also buffer output to console when used in CLI mode although many native consoles are so fast that you probably won't need buffering (won't notice the difference) unless using a slow console emulator or network terminal.
+
+### gui_update
+
+gui_update
+
+This causes an immediate 'one-off' top level GUI refresh loop to execute. This can be uses in cases where the automated GUI updates are turned off or kept at a low frequency using the gui_update_period command (which see) but where you need to perform a manual GUI update for any reason.
+
+### gui_update_period
+
+gui_update_period <varval>
+
+This sets the frequency with which a top-level GUI refresh is carried out during the running of a script. The period is the number of PCS command lines that are executed before a GUI update is performed.
+
+<varval> - an integer >= 0. The values 1 to 16 represent the power of 2 exponent of the period. The value 0 means no periodic updates at all. Any value >= 17 means trigger a GUI update with every single line. See notes below.
+
+**Note**: The default setting at the start of each script run is effectively 17 - meaning that a GUI update will be performed with every line of PCS code. This gives maximum GUI responsiveness but at a cost of about 150x slower execution of local commands.
+
+**Note**: Using a value of 0 turns off all automatic top-level GUI updates. This can make the script completely unresponsive to mouse clicks and other GUI actions while it is running.
+
+**Note**: The PCS programmer is free to issue this command and change the frequency of GUI updates at any point in their script.
+
+**Note**: If you need to terminate a script that is unresponsive to GUI input (such that you cannot click the 'Interrupt' button) then you may interrupt the script at the OS level by switching focus to the OS command prompt window from which pardclient was run and issue a Ctrl+c interrupt. This will terminate a running script the same way clicking the 'Interrupt' button would have done and you may continue with your pardclient session as normal. However, performing this Ctrl+c action when a PCS script is not running will abruptly terminate the whole pardclient program without warning.
+
+**Note**: Even when the gui_update_period is set to 0 (and the script avoids all automatic GUI updates), the poll_user PCS command will safely inject its own lightweight 'input only' event loop flush to capture keyboard input. However, because complex graphical actions (such as focus switching, text selections, and clearing pending text view printouts) require full layout recalculations, you should issue a manual 'gui_update' command right before polling, or maintain a low positive gui_update_period, to ensure the input widget states draw correctly.
+
+**Note**: In practice you will find that setting the gui_update_period value to a particular number will work just fine but setting it to one higher will make the program too unresponsive to manipulate with the GUI. In that case choose the value that just allowed good responsiveness (choosing a lower value to get even more frequent polling will not materially improve GUI responsiveness but will slow down execution of the script).
+
+### init_tracker
+
+init_tracker <tracker_name> <temp_r> <temp_c> <colchan>
+
+This initialises (or re-initialises) a tracker so it can begin tracking. Here 'initialise' refers to training the tracker on the pixels in the current preview image within the template window region defined by top left coordinates <temp_r> <temp_c>. The dimensions of the square template window were supplied upon tracker creation with def_tracker (or later changed with set_tracker). Use it again at any time to point the tracker at a new target or to recover a lost one.
+
+<tracker_name> - a string varval defining the name of the tracker to initialise. This is case sensitive and must pertain to an extant user-defined tracker.
+
+<temp_r> - an integer varval defining the top of the template window area. The allowed range is between 0 and 480-<template_dim> (inclusive).
+
+<temp_c> - an integer varval defining the left extreme of the template window area. The allowed range is between 0 and 640-<template_dim> (inclusive).
+
+<colchan> - an integer varval defining the colour component of the underlying RGB preview image pixels to use for calculating the tracking measure and must be in the range 1 to 4 (inclusive). These numbers refer to the following constants #defined in stdpard.pch:
+
+```pcs
+#define CCHAN_Y 1  # The mean of all three colour channels.
+#define CCHAN_R 2  # The red channel value
+#define CCHAN_G 3  # The green channel value
+#define CCHAN_B 4  # The blue channel value
+```
+
+The tracker remembers this colour channel and uses it for all later track and match_tracker commands. Use the channel in which the target stands out best from its surroundings.
+
+**Note**: What initialisation does depends on the tracker type:
+
+* zmncc - records the template window pixels as the target pattern.
+* hog - records the pattern of edge directions in the template window.
+* com - records only the starting position (the template window just has to contain some variation).
+* ght - records the strong edges of the template and their directions. It fails with TRKS_FLAT_TEMPLATE if it finds fewer edge pixels than TKSET_GHT_MINEDGES (default 20).
+* klt - finds corner features inside the template window (preferring the centre) and in a band around it (to measure the background motion). It fails with TRKS_FLAT_TEMPLATE if it finds fewer than TKSET_KLT_MINPTS (default 3) features inside the window.
+
+**Note**: For every tracker type, a template window that is nearly uniform (essentially no grey level variation) fails with TRKS_FLAT_TEMPLATE. A successful initialisation sets the status to TRKS_OK, resets the occlusion counter to 0 and leaves all your settings unchanged. A failed initialisation leaves the tracker un-initialised (even if it was previously initialised), so track will not work until you initialise it successfully.
+
+**Note**: The tracking sub-system is designed to fail without terminating the script (except for catastrophic memory failures or invalid argument errors). In the event that your initialisation attempt is unsuccessful, the command will set the status flag of your tracker to one of the tracker error codes contained in stdpard.pch. Invalid arguments (for example <temp_r>, <temp_c> or <colchan> out of range) are different: they are script errors and terminate the script. The status codes are:
+
+| **Constant** | **Value** | **Meaning** | **Set by** |
+| --- | --- | --- | --- |
+| TRKS_OK | 0 | The last init or track succeeded. | init_tracker, track |
+| TRKS_UNSEEDED | 1 | No target: never initialised, or the initialisation failed, or a setting change has discarded it (see set_tracker). | init_tracker, set_tracker, track, match_tracker |
+| TRKS_BAD_WINDOW | 2 | The tracker could not make a search at all because the template window or the search area could not be placed inside the preview image (for klt: because the preview image size is not the one it was initialised with). This has nothing to do with whether the target can be found - compare TRKS_OCCLUDED, where a search was made. Because every coordinate is range-checked and the preview image is always 640 x 480, this should never occur in practice: it is a safeguard. | init_tracker, track, match_tracker |
+| TRKS_BAD_CHANNEL | 3 | Invalid colour channel at initialisation. Not normally seen because an out-of-range <colchan> terminates the script first. | init_tracker |
+| TRKS_FLAT_TEMPLATE | 4 | The template region is featureless (klt: too few corners found; ght: too few edges found). match_tracker also uses it when a klt window has no usable feature points or a ght tracker has no stored edges. | init_tracker, match_tracker |
+| TRKS_OCCLUDED | 5 | A search was made but the best match was not good enough: its confidence was below the occlusion threshold (klt: or the track was lost). The target may be hidden, may have moved out of the search area or may have changed appearance. | track |
+| TRKS_BAD_SETTING | 6 | A set_tracker value was rejected; nothing was changed. | set_tracker |
+
+You may read the current value of the status flag with the get_tracker command (which see).
+
+**Note**: The status flag is not reset automatically by every successful command, so an old error can still be there after a command that worked. The commands which change it are these:
+
+* init_tracker and track always replace it with the outcome of that command (TRKS_OK, TRKS_OCCLUDED or an error code), so after them the flag always describes that command.
+* match_tracker sets it only when it fails. A successful match_tracker leaves it exactly as it was.
+* set_tracker sets TRKS_BAD_SETTING when it rejects a value. When it accepts a value it leaves the flag alone, except that it clears TRKS_BAD_SETTING and that a few settings un-initialise the tracker (TRKS_UNSEEDED). TKSET_STATUS sets the flag to the value you give.
+* get_tracker never changes it.
+
+**Note**: To be certain whether a command failed, reset the flag first and read it afterwards, in the same way that a C programmer clears errno before a call:
+
+```pcs
+set_tracker t1 TKSET_STATUS TRKS_OK
+match_tracker t1 row col score
+get_tracker t1 TKGET_ERRSTATUS status
+# status is TRKS_OK only if the match_tracker succeeded; otherwise it says why it failed
+```
+
+**Note**: All tracking activity is based on the VGA preview buffer - even if that buffer is displaying multiple images or images that are not of VGA dimensions (i.e. non 4:3 aspect ratio). For non-4:3 aspect ratio preview images, the grey zones of padding (used to pad the preview image to fit in the 4:3 display zone) will be used as if they were image pixels for all tracking purposes.
+
+### jpeg_quality
+
+jpeg_quality <number>
+
+This sets the compression level of files saved in the jpeg format on the client. The lower the number the more the compression (and so the lower the image quality).
+
+<quality_integer> - an integer from 1 to 100 (100 = best image quality).
+
+**Note**: This is a local command (it does not get communicated to the pardserver) and only affects files saved by the client to their chosen location. It does not affect the quality of any JPEG stream coming from the camera at the server end.
+
+### loop_while
+
+loop_while <varval>
+
+This allows for while-loop functionality. This marks the beginning of a block of code which must be terminated by the command endloop (which see). The contents of this block will be executed only if the <varval> evaluates to a non-zero value and, if the endloop command is reached, the control of flow will return back to its associated loop_while test line.
+
+<varval> - a binary choice varval. This will be evaluated to test whether the block of code is entered for execution or skipped. If it evaluates to 0 (or OFF or FALSE) then the block is skipped, otherwise it is entered.
+
+**Note**: While loops may be nested up to a maximum of INT_MAX deep.
+
+**Note**: The maximum number of while loops allowed in a script is UINT_MAX.
+
+**Note**: You may use the goto command to break out of a while loop block at any stage.
+
+### make_lib
+
+make_lib
+
+This instructs the archiver to turn your program into a library.
+
+**Note**: See the chapter on libs (page 57) for detailed information on usage.
+
+### match_tracker
+
+match_tracker <tracker_name> <row> <col> <receptacle>
+
+This uses a tracker's own algorithm to score a template-sized window of the current preview image at a position you choose, against what the tracker is following (its reference). It gives you the same kind of measure that track gives for the position it finds, but for a window that you specify. Its main purpose is to let you write your own search when tracking has failed: step a window over the likely region, score each position and, when you find a good one, use set_tracker (TKSET_ROW and TKSET_COL) or init_tracker to redirect the tracker. It is equally valid while tracking is going well, for example to gather information about other positions.
+
+<tracker_name> - a string varval defining the name of the tracker whose algorithm and reference are to be used. This is case sensitive and must pertain to an extant user-defined tracker. The tracker must have been initialised for this command to succeed.
+
+<row> - an integer varval defining the top of the template window area you want to test. The allowed range is between 0 and 480-<template_dim> (inclusive).
+
+<col> - an integer varval defining the left extreme of the template window area you want to test. The allowed range is between 0 and 640-<template_dim> (inclusive).
+
+<receptacle> - a writeable user-defined variable of float type (not int or string) that will receive the score.
+
+**Note**: The tracking sub-system is designed to fail without terminating the script (except for catastrophic memory failures or invalid arguments). If no score can be produced, the <receptacle> is set to -1.0 and the tracker's status flag is set to say why. A successful match_tracker leaves the status flag unchanged. The causes of failure are: the tracker is not initialised (TRKS_UNSEEDED); the preview image size has changed since the tracker was initialised (TRKS_BAD_WINDOW, klt); no feature point of a klt tracker can be compared at this position (TRKS_FLAT_TEMPLATE).
+
+**Note**: This command does not interfere with the tracker's tracking: it never un-initialises a tracker and it leaves the tracker's position, template, occlusion counter and everything else unchanged. You may use it while a tracker is tracking.
+
+**Note**: The score is a value between 0 and 1 (1 = a perfect match), calculated as follows for each type:
+
+* zmncc: correlation of the window with the tracker's current (adapted) template. This is the same quantity as the confidence returned by track.
+* hog: how much the window's edge-direction histograms overlap those of the template. The same as the score returned by track.
+* ght: the number of the template's edge pixels that find an edge of a similar direction at the corresponding place in the window (smoothed, see TKSET_GHT_SMOOTH) divided by the number of template edge pixels, limited to 1. The same as the confidence returned by track. Because the score is limited to 1, positions within a pixel or two of the true position can all score 1.0: when scanning, take the middle of the positions that share the highest score.
+* com: the amount of bright (or dark) "mass" inside the window divided by the amount in the whole search area centred on the window. This is close to (but not exactly) the confidence track would return. It rewards windows that capture the most of the blob rather than windows centred on it.
+* klt: a klt tracker does not search for a stored picture of the template; it follows corner features that were chosen inside the template window when it was initialised. The score is the average correlation (0 to 1) between the small patches around the target points as they were in the reference image and the same patches shifted to this window position in the current image. It is not on the same scale as the confidence returned by track, so compare it with other match_tracker scores, not with the occlusion threshold.
+
+**Note**: match_tracker works on the current preview image, so load the image you want to examine first.
+
+**Note**: Because a successful match_tracker leaves the status flag unchanged, an error from an earlier command may still be showing. To know whether this command failed, set the flag to TRKS_OK with set_tracker (TKSET_STATUS) before it and read it afterwards.
+
+### math_array
+
+math_array <array_receptor> <math_func> [array_modifier]
+
+This is the array version of math_var (which see for more detail). Array indices are respected according to the rules below.
+
+<array_receptor> - a user-defined array variable capable of receiving the numerical result and, for non-string data types, initially containing a numerical value used as an argument for the mathematical function to be performed.
+
+[array_modifier] - a varval that may be a constant, a system variable, a user-defined single variable or a user-defined array variable containing a numerical value if it is to be used with non-string receptors. If this is to be used with a string receptor and it is also a string then it does not have to be numerical.
+
+<math_func> a varval of type string that evaluates to one of the values described in the section for math_var - so see that section for a detailed description.
+
+**Note**: Unlike the single value version of this function, the modifier (if present) must be a user-defined array and not a constant.
+
+**Note**: The operation will take place from the indexed receptor array member to the end of the receptor array if no modifier is used. If a modifier is required then the number of elements from the index of the receptor to the end of the receptor will be compared to the number of elements from the index of the modifier to the end of the modifier. If either one of those numbers is smaller than the other then the smaller number of elements will dictate the range over which the operation will be performed and the operation will start at the index of each array and continue for that many elements. Any elements not in the operated range will be unchanged.
+
+**Note**: If a mathematical function requires a modifier then the modifier argument must be supplied. Otherwise it may be supplied as an option without generating errors - it will just be silently ignored.
+
+**Note**: All data types may be used but, if the receptor is of string type then only an assignment equals ('=') operation may be performed. That is why string arrays need not contain numerical values for the case of '='.
+
+**Note**: Aliasing is permitted - you may use the same variable as receptor and modifier with the same or different index in each instance.
+
+### math_var
+
+math_var <var_receptor> <math_func> [varval]
+
+This performs a mathematical function, <math_func>, on the argument <var_receptor>. If the mathematical function requires a second argument it uses [varval]. It puts the result into <var_receptor> replacing its original value.
+
+<var_receptor> - a variable capable of receiving the numerical result and initially containing a numerical value used as an argument for the mathematical function to be performed.
+
+[varval] - a numerical constant or a variable containing a numerical value.
+
+<math_func> a varval of type string that evaluates to one of the following string values:
+
+add
+
+sub
+
+mul
+
+div
+
+=
+
+sin
+
+cos
+
+tan
+
+asin
+
+acos
+
+atan
+
+atan2
+
+sinh
+
+cosh
+
+tanh
+
+exp
+
+log
+
+log10
+
+pow
+
+sqrt
+
+ceil
+
+floor
+
+abs
+
+imod
+
+fmod
+
+norls
+
+norl1
+
+norl2
+
+**Note:** The option of using a string variable for <math_func> gives the PCS programmer great flexibility because the same math_var line in a script can be made to perform different mathematical operations by varying the contents of the variable used as <math_func> according to some logic.
+
+**Note**: This command is symbolically the equivalent of doing this: <var_receptor> = math_func(<var_receptor>,[varval]) in C.
+
+**Note**: The meaning of the functions are as described in the C programming language with the exceptions / modifications described below. In cases where the mathematical function requires two arguments names 'x' and 'y' in the book 'The C Programming Language' by Kernighan and Ritchie, the 'y' argument shall be the [varval] argument specified here. Otherwise the sole argument of the function shall be the <var_receptor> argument supplied here.
+
+Exceptions / Modifications:
+
+The abs operator will return the absolute value of either a float or an int value input.
+
+The imod operator is the integer modulus of the input values equivalent to the '%' operation of the C programming language.
+
+The operators beginning 'norl' are normalisation operators. This means that for an array of numbers, they first make a calculation as to the total accumulated value (TAV) of those numbers on one pass, then, on the second pass they modify each element in the array by dividing it by that TAV. They differ in the exact details of how TAV is calculated as follows:
+
+norls - This is the signed L1 normalisation operator. TAV is the sum of all values in the array, respecting the sign of each value in the sum. For an array of size 1 (single value operation) the result will always be +1.0.
+
+norl1 - This is the strict mathematical L1 normalisation operator. TAV is the sum of the absolute value of each value in the array. For an array of size 1 (single value operation) the result will be either +1.0 (if the value is positive) or -1.0 (if the value is negative).
+
+norl2 - This is the L2 normalisation operator. TAV is the square root of the sum of the squares of each value in the array. For an array of size 1 (single value operation) the result will be either +1.0 (if the value is positive) or -1.0 (if the value is negative).
+
+**Note**: For all operators except for the basic arithmetic operators (add, sub, mul, div and =), the value of <var_receptor> and [varval] shall be cast to a float (double) in the script interpreter if they are not already of float type for all but the imod function (when a cast to an int will be performed if the input arguments are not already int). If <var_receptor> is an int for any of the functions that return floating point values then the result will be attempted to be cast into an int with a 0.5 added for rounding positive values i.e.: int_result = (int)(0.5 + float_result) or subtracted for rounding negative values i.e.: int_result = (int)(float_result - 0.5). For add, sub, mul, div and = on an int receptor, the [varval] is first cast to int, and the operation is exactly that of the separate commands add_var, sub_var, mul_var, div_var and set_var: division truncates, and integer over#ow wraps. However, add_var, when used with a string variable as receptor will treat the RHS-value as a string and concatenate it to the receptor's string instead of performing numerical arithmetic.
+
+**Note**: An error (such as a range error or failure to cast float to int) will result in script termination with an error message. A run-time error will be called if you specify a <math_func> that requires two arguments but fail to supply [varval] - this is not checked for at syntax check time because the <math_func> may vary as the program progresses because it may be held in a string variable. However, no error will result if you supply the optional [varval] for functions that only require 1 argument - in that case the 'extra' [varval] argument will just be ignored and not used. This allows the use of a string variable for <math_func> where the value of the string in that variable may take on the value specifying any of the allowed mathematical functions that require only one argument on some occasions and two arguments on others.
+
+**Note**: You can make extensive multi-step mathematical calculations by successive application of these maths primitives, possibly contained in a function (see def_func) but if you need significantly more complex or extensive mathematical operations then it might be more convenient to do these in an external program and call it using the PCS commands execute_system or execute_daemon, which see.
+
+**Note**: For simple arithmetic that does not require the metaprogramming flexibility of math_var, see the commands add_var, sub_var, mul_var, div_var and set_var.
+
+**Note**: When using operands that are numerical types (float and/or int) then the math_var operation with the assignment equals operator (`=`) will have the same effect as using set_var with numerical types. However using set_var with a string variable as the receptacle is not the same as using math_var with string variables as operands because math_var always will attempt to cast string operands to numerical values as described below (and failure of such casting will terminate the script). However set_var may be used with strings and if the receptor is a string variable then the RHS-value will be attempted to be cast to a string.
+
+**Note**: If using string variables an automatic cast to a numerical value will be done for you provided the string variable contains a string that is consistent with a numerical value. String variables used here must initially contain a numerical string at the time of definition otherwise the script checker will reject it because the script checker will not perform any set_str commands in the script.
+
+For example, if you define a string like this: 'def_var string str1 _' and then go on later to do this 'set_str str1 -1.3' before using it in a math_var, the script checker will only have the original defined string value to work with (that is '_') and so this is not a valid number and so it will raise an error. Even though you did a set_str to make it a number, that set_str will only be executed during run-time, not check-time, so the checker will only see '_'. To avoid this, define any string variable that may, at any time, be used as a numerical argument as a number at definition - for example like this: 'def_var string str1 0.0' - then the script checker will not complain.
+
+### max_daemons
+
+max_daemons <number>
+
+This sets the maximum number of asynchronous background commands (invoked via execute_daemon or xyzs_process - which see) that are allowed to execute simultaneously on the client host computer. This command serves as a dynamic throttle to protect system memory and CPU cores from thrashing during high-density operations like automated XY scans or tight loops in scripts.
+
+<number> - a varval of type int that evaluates to between 1 and 100 (inclusive) specifying the parallel process ceiling.
+
+**Note**: If a script does not explicitly invoke this command, the interpreter defaults to a value of 1. This forces background commands to run in an orderly, sequential, one-by-one queue.
+
+**Note**: This parameter can be modified dynamically at any point within a script. If max_daemons is increased, the internal queue manager will instantly pump and fire extra pending background tasks to fill the newly opened processing slots. If max_daemons is decreased below the number of currently executing processes, running tasks are permitted to finish safely without corruption, but the queue will halt spawning new tasks until the active count drops below the newly defined threshold.
+
+**Note**: It is advisable to keep the max_daemons number to just below your total number of CPU cores so you don't over-work the CPU and end up slowing down the whole system.
+
+### milliduration
+
+milliduration <start_millis> <receptor>
+
+This calculates the monotonic time in milliseconds from the value provided in <start_millis> to the current time (the time the command is issued).
+
+<start_millis> - a varval of type int >= 0 representing a monotonic millisecond count
+
+<receptor> - a variable capable of receiving an int that will receive the duration time (in milliseconds) between <start_millis> and the time the command is executed.
+
+**Example**:
+
+```pcs
+Pardus pcs 1
+verbosity 1
+def_var string msg _
+def_var int idx 0   # Loop index
+def_var int millidur 0 # Testing the milliduration command
+def_var int startmillis 0
+def_func main
+  print_clear
+  set_str msg --- Starting milliduration test ---
+  print_value msg 2
+  set_var startmillis Millis
+  set_str msg Starting the stop watch at:
+  add_var msg Space
+  add_var msg startmillis
+  print_value msg 2
+  set_condexp idx == 0
+  loop_while Condexp
+      sleep 0.25
+      milliduration startmillis millidur
+      set_str msg milliseconds elapsed:
+      add_var msg Space
+      add_var msg millidur
+      print_value msg 2
+      add_var idx 1
+      set_condexp idx < 5
+  endloop
+return
+exit
+```
+
+The result of running this will look something like this:
+
+--- Starting milliduration test ---
+
+Starting the stop watch at: 763205
+
+milliseconds elapsed: 272
+
+milliseconds elapsed: 527
+
+milliseconds elapsed: 782
+
+milliseconds elapsed: 1036
+
+milliseconds elapsed: 1290
+
+### mul_var
+
+mul_var <varname> <varval>
+
+This multiplies the value of a user-defined variable by some value.
+
+<varname> - The name of the variable whose value you want to change
+
+<varval> - The value (or variable containing the value) you want to multiply <varname> by.
+
+**Note**: This is symbolically equivalent to <varname> *= <varval> in C.
+
+**Note**: Multiplication can also be done inline using math_var (which see).
+
+### null_command
+
+null_command
+
+This just skips to the next command. Although no arguments are shown, this may have any number of arguments as long as you don't overshoot the line length or argument count limits. Any supplied arguments will not be validated or used. Thus, you may replace any command with null_command without altering the remaining arguments on that line if you want the interpreter to skip that line. Likewise you can put null_command in front of any command and that line will be skipped. In this capacity it acts as a comment marker that survives pre-processing. However, its main intended use is not for the PCS programmer but for the linker. It is designed so that the linker can 'blot out' any add_lib commands after they have been implemented (after the lib code has been added to the main program) to avoid libs being linked multiple times with each run of the program (which is what would happen if the add_lib command(s) were left 'as is' after linking - and that would always result in duplicate code errors).
+
+### poll_user
+
+poll_user <wait> <return> <varval>
+
+This gets a value from the user input edit box in pardclient and puts it into <varval>.
+
+<wait> - a binary choice varval. If it evaluates to ON then the interpreter will wait for at least one character to be entered into the ext box before allowing the PCS script execution to continue. If it evaluates to OFF then the edit box will be checked immediately and any character or characters in it will be read and processed and the PCS script execution will continue regardless of whether there was anything in the edit box or not.
+
+<return> - a binary choice varval. If it evaluates to OFF then the polling function will not wait for the user to hit the return key on the keyboard before reading the contents of the edit box. If it evaluates to ON then it will only read the contents of the box once return has been hit. However, even if <return> is ON, the script will not wait for the user to enter anything, let alone hit return unless <wait> is also ON. If <wait> is OFF when <return> is ON then the interpreter will simply register that it must not read the contents of the entry box until the user hits return and it will carry on with the script. If, during script execution, the user enters something and hits return then it will set a flag to say return has been hit and if (and only if) the script polls the user again at some point after this will the interpreter read the contents of the entry box. If <wait> is ON and <return> is OFF then the interpreter will wait for the user to enter something in the entry box and, as soon as something has been entered, the interpreter will read it and carry on executing the script - without waiting for the user to hit return. This means that if the user is typing with the keyboard they will only have time to enter one character before the interpreter reads it and carries on. If the user wants to enter multiple characters in this 'automatic' mode then they need to copy the characters into the general clipboard and paste them all in one go to the entry box. This might be inconvenient, in which case the following configuration will help. If both <wait> and <return> are ON then the interpreter will wait for a user to enter something and, furthermore, it won't carry on till the user hits return. This configuration allows a user to manually type however many characters they like (up to a maximum of PCS_PATH_MAX) at their leisure.
+
+**Note**: While an earlier call is still waiting for Return, a new call reads into the earlier call's variable
+
+**Note**: Non-numeric input for a numeric variable, or an empty Return, ends the wait and leaves the variable unchanged without any indication.
+
+**Note**: The behaviour described above can be briefly summarised in this table:
+
+|  |  |  |
+| --- | --- | --- |
+| **<wait>** | **<return>** | **Behaviour** |
+| ****OFF**** | ****OFF**** | Immediate check; reads input box contents instantly regardless of content. |
+| ****OFF**** | ****ON**** | Continues execution immediately; reads data only if a future poll_user call occurs after the user hits Return. |
+| ****ON**** | ****OFF**** | Pauses execution until at least one character is entered, reading instantly without waiting for Return. |
+| ****ON**** | ****ON**** | Pauses execution until user enters characters and hits Return. |
+
+**Note**: The user can use the GUI direction and focus buttons to provide the input to the entry box if they select the 'Divert to script' check box option on the 'Manual' tab. In this mode the buttons will emit a single character to the entry box when they are clicked, that character being their main label excluding any '[' or ']'. So if you want your script to react to these GUI button click you must set (in your PCS script) the inputs to respond to the single characters '<', '>', '^', 'v', '+' and/or '-'. This provides a convenient ready-made way to allow the user to use a GUI to interact with a script instead of having to type in or copy-paste in text manually. One advantage of using this method for 'manual' control of the microscope stage motors (for example) is that with an interactive script you can enact a real-time preview while responding to motion button clicks but you can't do that using the direction buttons natively in the 'Manual' tab to move the stage. While the 'Divert to script' option is ticked the outline around the button groups will turn red and the buttons will have no other effect so can't be used to effect motor motion from the Manual tab in the usual way.
+
+**Note**: After the script interpreter reads the entry box it will always clear its contents.
+
+### preview_clear
+
+preview_clear
+
+Clears the full VGA preview display area.
+
+### preview_copy
+
+preview_copy <height> <width> <receptacle> <colchan>
+
+Copies a rectangular portion of the current preview image into an integer array. The copy begins at a top left corner of the preview image defined by the current value of the system variable PreviewPos. The index of the receptacle array is respected - any writing will occur from that point onwards.
+
+<height> - an integer varval with value between 1 and 480 inclusive.
+
+<width> - an integer varval with value between 1 and 640 inclusive.
+
+<receptacle> - an array variable of any data type to receive the copied byte values
+
+<colchan> - a varval with value between 0 and 4 inclusive.
+
+**Note**: The supplied dimensions are the size of the area to be copied in pixels. The <receptacle> must have at least that many cells available from the index you supply to its end. Any <receptacle> values before this index or after the last read of pixel data will not be altered.
+
+**Note**: If the dimensions you supply overshoot the VGA limit of the preview image an error will occur (the script will terminate) but lateral wrapping will be allowed (the right boundary of the preview image array is not checked prior to copy).
+
+**Note**: The acceptable values for <colchan> and their meaning are as follows:
+
+0 - All three colour channel bytes per preview pixel will be copied, each colour channel byte will be copied to a separate array cell (the values will not be packed). This means that the number of available array cells from your supplied index must be at least <height>*<width>*3 .
+
+1 - The calculated intensity values only will be read, each pixel's value will be read into a separate int cell in the array. This means that the number of available array cells from your supplied index must be at least <height>*<width> . In stdpard.pch this value is defined as the macro CCHAN_Y. The calculation is Y=(R+G+B)/3.
+
+2 - The red channel values only will be read, each pixel's value will be read into a separate int cell in the array. This means that the number of available array cells from your supplied index must be at least <height>*<width> . In stdpard.pch this value is defined as the macro CCHAN_R.
+
+3 - The green channel values only will be read, each pixel's value will be read into a separate int cell in the array. This means that the number of available array cells from your supplied index must be at least <height>*<width> . In stdpard.pch this value is defined as the macro CCHAN_G.
+
+4 - The blue channel values only will be read, each pixel's value will be read into a separate int cell in the array. This means that the number of available array cells from your supplied index must be at least <height>*<width> . In stdpard.pch this value is defined as the macro CCHAN_B.
+
+**Note**: Using a string receptor variable is allowed but will incur more overhead than using an integer or a float and so will take longer.
+
+### preview_draw_angles
+
+preview_draw_angles <angle1> <angle2>
+
+This is one of the preview overlay graphics commands. This sets the angle parameters for any ellipse that is subsequently drawn using the preview_draw_shape command (which see).
+
+<angle1> - an integer between 0 and 360 inclusive. This specifies the starting angle boundary in degrees.
+
+<angle2> - an integer between 0 and 360 inclusive. This specifies the ending angle boundary in degrees.
+
+**Note**: Angles are interpreted thus: 0 degrees points directly to the right (3 o'clock position) along the horizontal X-axis, and angles increase sequentially in a clockwise direction. To render a full, complete 360-degree circle or closed ring shape, set <angle1> to 0 and <angle2> to 360 (this is the default condition at the start of any script).
+
+### preview_draw_array
+
+preview_draw_array <int_array>
+
+This is one of the preview overlay graphics commands. This executes a batch of drawing commands stored sequentially within an in-memory integer array. This allows a script to pre-compile complex graphical scenes, custom fonts, animation states, or UI layouts into a single variable array and emit them to the preview overlay canvas in a single high-speed processing loop.
+
+<int_array> - an integer array variable with at least 2 members. At run-time, the contents of the array must conform to the correct format for a drawing interpreted by the Graphics Sub-Interpreter (GSI) otherwise an error will terminate the script. The format rules are defined below.
+
+**Note**: The rules for interpreting graphics commands stored in an array variable are:
+
+1. The first element of the array will be a value representing the *type of command* to execute and will dictate what values must follow it.
+2. After this will follow one or more parameter values as specified by the initial 'type of command' value
+3. This pattern can be repeated indefinitely till the array is properly terminated with the GSI_TYPE_END termination code value (see below).
+
+**Note**: This command does respect the index you provide in your integer array argument. So if you provide an array as mydrawing[idx], the mydrawing array will always be read from index 0 regardless of the values of idx.
+
+**Note**: The permitted 'Type of command' constants are those shown in the table below. In your PCS code you may use either the raw numerical value or the #defined constant if you have a header file included that includes those constants such as stdpard.pch:
+
+|  |  |  |
+| --- | --- | --- |
+| **#defined constant** | **Literal value** | **Meaning** |
+| GSI_TYPE_ENV | -1 | Set global behaviour modifiers like colour, cursor position, etc. |
+| GSI_TYPE_PLOT | -2 | Enact drawing of a shape (pixel, line, rect, ellipse) |
+| GSI_TYPE_STRING | -3 | Enact drawing of a text string |
+| GSI_TYPE_MGLYPH | -4 | Paint a pixel map in two colours (packed bits) |
+| GSI_TYPE_CGLYPH | -5 | Paint a general colour pixel map (packed bits) |
+| GSI_TYPE_CBITMP | -6 | Paint a general colour 24 bpp pixel map (raw) |
+| GSI_TYPE_GBITMP | -7 | Paint a general monochrome 8 bpp pixel map (raw) |
+| GSI_TYPE_END | -8 | No more graphics sub-interpreter tasks follow |
+
+Thus the very first element of a graphics array must be negative.
+
+**Note**: After a GST_TYPE_ENV value, the GSI expects to see one of the following values:
+
+|  |  |
+| --- | --- |
+| **#defined constant** | **Literal value** |
+| OP_PREVIEW_DRAW_LWIDTH | 3 |
+| OP_PREVIEW_DRAW_CHAMFER | 4 |
+| OP_PREVIEW_DRAW_ANGLES | 5 |
+| OP_PREVIEW_DRAW_BLEND | 6 |
+| OP_PREVIEW_DRAW_COLOUR | 9 |
+| OP_PREVIEW_DRAW_CURSOR | 10 |
+| OP_PREVIEW_DRAW_DESTTYPE | 17 |
+
+Any other value here will result in an error. After each of the above values, the GSI expects to see exactly the following integer arguments:
+
+|  |  |
+| --- | --- |
+| **#defined constant** | **Arguments that must follow it** |
+| OP_PREVIEW_DRAW_LWIDTH | <pixels> |
+| OP_PREVIEW_DRAW_CHAMFER | <pixels> |
+| OP_PREVIEW_DRAW_ANGLES | <angle1> <angle2> |
+| OP_PREVIEW_DRAW_BLEND | <truefalse> |
+| OP_PREVIEW_DRAW_COLOUR | <R> <G> <B> |
+| OP_PREVIEW_DRAW_CURSOR | <X> <Y> |
+| OP_PREVIEW_DRAW_DESTTYPE | <truefalse> |
+
+For a detailed description of what those arguments mean, see the entry for the corresponding command in this manual.
+
+**Note**: After a GSI_TYPE_PLOT value, the GSI expects to see one of the following values:
+
+|  |  |
+| --- | --- |
+| **#defined constant** | **Literal value** |
+| PDS_PIXEL | 0 |
+| PDS_LINE | 1 |
+| PDS_RECT | 2 |
+| PDS_ELLIPSE | 3 |
+
+Any other value here will result in an error. After each of the above values, the GSI expects to see exactly the following integer arguments:
+
+|  |  |
+| --- | --- |
+| **#defined constant** | **Arguments that must follow it** |
+| PDS_PIXEL | No arguments at all |
+| PDS_LINE | <filled?> <X_dest> <Y_dest> |
+| PDS_RECT | <filled?> <X_dest> <Y_dest> |
+| PDS_ELLIPSE | <filled?> <X_radius> <Y_radius> |
+
+For a detailed description of what those arguments mean, see the entry for the corresponding command in this manual.
+
+**Note**: After a GSI_TYPE_STRING value, the GSI expects to see all of the following argument values:
+
+<size> <bg_R> <bg_G> <bg_B> <invert?>
+
+For a detailed description of what those arguments mean, see the entry for the preview_draw_string command in this manual but note that, unlike with the stand-alone command, all these parameters must be included in the array, none of them are optional. For this reason you are allowed to set any of the background colour channel values to a number > 255 and, if you do that, then all the supplied background colour values supplied here and the invert value will be ignored - it is the equivalent of making them 'optional' in terms of actioning them, even though you must supply them. All supplied values must be >= 0.
+
+After the <invert?> the array may contain 0 or more integer values representing the ASCII value of the characters of the string to be printed. There is no need or expectation to supply a null termination character. In fact, the only thing that terminates the string will be to pass a negative number that is one of the GSI_TYPE_ constants.
+
+**Note**: After a GSI_TYPE_MGLYPH value, the GSI expects to see all of the following argument values:
+
+<R0> <G0> <B0> <R1> <G1> <B1> <height> <width>
+
+Where the first 3 specify the colour of 0-value pixels in the glyph, the next three specify the colour of 1-value pixels in the glyph and the <height> and <width> are the dimensions of the glyph in pixels. After this must come one or more integer values specifying the bits in the glyph. Each integer represents a packed horizontal sequence of up to 32 pixels, read sequentially from left to right (from the most significant bit, bit 31, down to the least significant bit).
+
+Each horizontal row of the glyph is processed independently and must be padded out to a full 32-bit boundary. This means a single row will consume exactly (width + 31) / 32 integers before the next row begins. Pixels are rendered from the top row down to the bottom row.
+
+Pixels assigned a colour code where R, G, and B are all 0 are treated as completely transparent and will not overwrite the background buffer canvas. The entire glyph sequence block is concluded immediately after the final packed row integer is read; unlike text strings, it does not require a trailing negative termination token, as its exact array footprint is predetermined by its height and width properties. However, a negative GST_TYPE_ value must follow the last pixel for the array to be considered correctly formatted.
+
+**Note**: After a GSI_TYPE_CGLYPH value, the GSI expects to see all of the following argument values:
+
+<height> <width>
+
+No colour arguments are expected because each pixel value carries its own colour information. Following the <width> value must come one or more integers containing the glyph pixel information.
+
+Each subsequent integer represents a single individual pixel, organized sequentially in rows from the top-left to the bottom-right of the glyph boundary. The total number of colour integers expected is exactly equal to the height multiplied by the width (i.e. <height> * <width>).
+
+The colour data within each integer must be encoded as a packed 24-bit RGB value (which, if using the hexadecimal format would be 0x00RRGGBB). The individual colour channels are extracted by the engine using bitwise shifts: bits 16–23 specify the Red channel, bits 8–15 specify the Green channel, and bits 0–7 specify the Blue channel.
+
+Any pixel encoded as a literal 0 (0x00000000, representing pure black) is treated as completely transparent and will not overwrite the background canvas buffer. The entire glyph sequence block concludes automatically once the pre-calculated number of pixel elements has been fully parsed; it does not depend on a trailing negative command to terminate it (although a negative GST_TYPE_ value must follow the last pixel for the array to be considered correctly formatted).
+
+Note: When no more graphics commands are to follow you must supply the value GSI_TYPE_END. If the end of the array is reached before encountering the GSI_TYPE_END token this is an error - malformed graphics array - and will be reported as such.
+
+**Note**: After a GSI_TYPE_CBITMP value, the GSI expects to see all of the following argument values:
+
+<height> <width> <use_alpha?>
+
+<use_alpha?> is either 0 or non-0 if 0 then it will not treat black (0,0,0) as transparent when rendering over other drawings and it will also change any in-coming pixel from (0,0,0) to (0,0,1) (very dark blue) so that it will not show up as transparent when the graphics buffer is finally overlain onto the preview image for display. If this argument is non-0 then the usual transparency rules will be followed.
+
+Each 3 subsequent integers represents a single individual pixel's red, green and blue values and each will range from 0 to 255. The pixels are ordered sequentially from top left to bottom right in raster fashion. The total number of pixel integers expected is exactly equal to the height multiplied by the width multiplied by 3 (i.e. <height>*<width>*3). This is the same format as is captured by the command preview_copy (with <colchan> = 0) so you can copy a rectangle of the current preview image directly into this part of the graphics array using that command (which see).
+
+**Note**: After a GSI_TYPE_GBITMP value, the GSI expects to see all of the following argument values:
+
+<height> <width> <R> <G> <B> <use_alpha?>
+
+<use_alpha?> is either 0 or non-0 if 0 then it will not treat black (0) as transparent when rendering over other drawings and it will also change any in-coming pixel from (0) to (1) (very dark grey) so that it will not show up as transparent when the graphics buffer is finally overlain onto the preview image for display. If this argument is non-0 then the usual transparency rules will be followed.
+
+Each subsequent integer represents a single individual pixel value and each will range from 0 to 255. The pixels are ordered sequentially from top left to bottom right in raster fashion. The total number of pixel integers expected is exactly equal to the height multiplied by the width (i.e. <height>*<width>). This is the same format as is captured by the command preview_copy (with <colchan> > 0) so you can copy a rectangle of the current preview image directly into this part of the graphics array using that command (which see).
+
+### preview_draw_blend
+
+preview_draw_blend <truefalse>
+
+This is one of the preview overlay graphics commands. This determines whether any subsequent drawing are simply drawn over existing pixel colours, completely over-writing them, or whether newly drawn pixels merge with the colours of any pre-existing drawings to give a kind of semi-transparent effect.
+
+<truefalse> - a binary choice varval. If this evaluates to non-zero the semi-transparent blending effect will be activated, otherwise drawing will simply overwrite any pre-existing pixels they write to.
+
+**Note**: When blending is active (ON), the graphics engine activates a highly optimised, cross-platform SWAR (SIMD Within A Register) blending routine. This routine averages the colour channels of the incoming drawing pixel and the destination background buffer pixel via bitwise transformations. This creates a semi-transparent, translucent vector overlay effect, allowing details on the primary application viewport underneath to remain visible through drawn blocks, text fields, or glyph segments.
+
+### preview_draw_buffer
+
+preview_draw_buffer <mode>
+
+This is one of the preview overlay graphics commands. This command determines how all other preview_draw_### graphics commands behave.
+
+<mode> - an integer from 0 to 4
+
+**Note**: The effect of each value is as follows:
+
+0 - ignore all preview_draw_### commands except preview_draw_buffer
+
+1 - enable commands but push them to the display as soon as each command is carried out (no buffering)
+
+2 - store all preview_draw_### commands in the buffer and only push to display on receipt of a preview_draw_show command or after a get_preview command and do not clear the drawing buffer after showing. 'Push to display' means drawing over whatever is currently in the preview bitmap image and displaying the preview bitmap image in the preview display area.
+
+3 and 4 - as for 1 and 2 but clear the preview drawing buffer after showing.
+
+**Note**: In CLI mode, 'pushing to display' entails burning the current preview draw buffer data into the actual preview buffer itself, so will change the pixel values of the current preview buffer. This does not happen when a PCS program is run via the pardclient GUI - in that case the preview buffer overlay is burnt into a transient copy of the preview buffer image that is only used to update the display and the preview buffer pixel values themselves are unaltered.
+
+### preview_draw_chamfer
+
+preview_draw_chamfer <pixels>
+
+This is one of the preview overlay graphics commands. This sets the corner rounding (chamfer) radius for all subsequent drawings of rectangles.
+
+<pixels> - an integer from 0 to 479
+
+**Note**: Selecting 0 turns off chamfering so all rectangles will have sharp, 90-degree, corners. This is the default setting at the start of any script run.
+
+**Note**: If a requested chamfer dimension exceeds half the width or height of a drawn shape, the graphics engine safely caps the corner blending threshold internally to prevent layout corruption or inverse vector crossing artefacts.
+
+### preview_draw_clear
+
+preview_draw_clear
+
+This is one of the preview overlay graphics commands. This clears the preview drawing overlay buffer of all drawings. There are no arguments.
+
+### preview_draw_colour
+
+preview_draw_colour <R> <G> <B>
+
+This is one of the preview overlay graphics commands. This sets the foreground colour for any subsequent drawings.
+
+<R> - an integer from 0 to 255 representing the red channel content.
+
+<G> - an integer from 0 to 255 representing the green channel content.
+
+<B> - an integer from 0 to 255 representing the blue channel content.
+
+Note: Full black is not possible because 0,0,0 will be treated as 'transparent'. So 1,1,1 is the darkest paintable colour.
+
+### preview_draw_cursor
+
+preview_draw_cursor <X> <Y>
+
+This is one of the preview overlay graphics commands. This sets the starting point for drawing any shape or text on the preview overlay buffer.
+
+<X> - an integer from 0 to 639 representing the X position from the left of the VGA drawing area.
+
+<Y> - an integer from 0 to 479 representing the Y position from the top of the VGA drawing area.
+
+**Note**: For drawing single pixels this is where the pixel will be drawn. For lines this is the starting point of the line. For rectangles this it eh starting corner position of the rectangle. For ellipses this is the centre of the ellipse. For text strings, characters are drawn from the cursor point downwards and to the right. This means the specified cursor XY coordinate forms the absolute top-left boundary of the first character in the drawn string. As each character row is parsed, row increments add positive offsets to the Y coordinate, driving the font blitter down towards the bottom of the screen.
+
+### preview_draw_desttype
+
+preview_draw_desttype <truefalse>
+
+This is one of the preview overlay graphics commands. This determines how destination values for drawing rectangles or lines are interpreted.
+
+<truefalse> - a binary choice varval. If this evaluates to non-zero then the <X_dest> and <Y_dest> values are interpreted as dimensions (in pixels) from the current cursor position so they may be negative. Otherwise they are interpreted as absolute coordinates and so must be 0 or positive.
+
+**Note**: This setting only affects the drawing on lines and rectangles. Single pixels are plotted at the current cursor position always, regardless of this setting, and ellipses use the equivalent arguments as the length of radii always, regardless of this setting.
+
+**Note**: The default setting at the start of every script run is false (use absolute coordinates).
+
+### preview_draw_file
+
+preview_draw_file <file_path>
+
+This is one of the preview overlay graphics commands. This reads a P6 ppm image from disc and paints it to the preview overlay graphics buffer.
+
+<file_path> - a string varval. This must evaluate the name of the file (optionally including its full directory path) to be loaded. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: The image is rendered at native 1:1 pixel scale, with its top-left corner anchored precisely at the active cursor coordinates.
+
+**Note**: Because the GSI engine interprets a colour value of 0,0,0 strictly as a "transparent" alpha-mask layer, any absolute black pixels embedded within your source PPM image will render as completely transparent, exposing the background buffer or camera feed underneath. To ensure black image regions paint as opaque, solid shapes, pre-process your source PPM file assets so that their darkest pixels use a colour signature of 1,1,1 instead of 0,0,0.
+
+**Note**: Memory boundary safeguards natively clip image data overflowing past the 640x480 VGA display limits without raising an error.
+
+**Note**: See preview_draw_save for the inverse procedure (saving the graphics buffer to disc). See also preview_load and preview_save.
+
+### preview_draw_lwidth
+
+preview_draw_lwidth <pixels>
+
+This is one of the preview overlay graphics commands. This effectively sets the 'brush size' or pixel size for all subsequent drawings except text and bitmap blitting.
+
+<pixels> - an integer from 1 to 16 specifying the total width of the drawing line in pixels.
+
+**Note**: A <pixels> value of 1 routes graphics drawings through a separate fast route. For the fastest performance therefore - such as for tracking moving objects at speed - you may wish to set this to 1 if larger values are too slow.
+
+**Note**: The specified <pixels> value represents the total thickness (diameter) of the drawing brush, meaning a line will expand symmetrically outward from its true mathematical coordinate path.
+
+### preview_draw_pcg
+
+preview_draw_pcg <char_number> <int_array>
+
+This is one of the preview overlay graphics commands. This allows you to program a custom character shape into one of the 256 graphics text font positions (i.e. it imparts the functionality of a programmable character generator - pcg).
+
+<char_number> - an integer from 0 to 255 specifying which of the font characters you want to program.
+
+<int_array> - an integer array variable with at least 8 members from the index you provide.
+
+**Note**: The graphics text font characters are 8x8 meaning 8 rows of one byte (8 bits) per row. You program a character row-by-row from top to bottom in successive integer values from the input integer array. The 8 bits for each row are provided in the lowest 8 bits of an integer from the <int_array>.
+
+**Note**: Unlike the command preview_draw_array, which uses the integer positions in the input array starting at array index 0, regardless of what index you specify in the command argument, this preview_draw_pcg command *does* respect the index you provide. So if you provide an array as mychars[idx] then your array mychars must have at least 8 members free from the member idx, not from index 0 (unless idx == 0).
+
+### preview_draw_save
+
+preview_draw_save <file_path>
+
+This is one of the preview overlay graphics commands. This saves the current graphics overlay buffer as a P6 ppm image to disc.
+
+<file_path> - a string varval. This must evaluate the name of the file (optionally including its full directory path) to be loaded. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: See preview_draw_file for the inverse procedure (loading an image from file into the graphics buffer). See also preview_load and preview_save.
+
+### preview_draw_shape
+
+preview_draw_shape <type> [<filled?> <X_dest/radius> <Y_dest/radius>]
+
+This is one of the preview overlay graphics commands. This allows you to plot a pixel or draw a shape at the current cursor position using the current values of the graphics environent variables set by other commands (such as print_draw_colour and print_draw_lwidth, etc.)
+
+<type> - an integer from 0 to 3 specifying what shape to draw.
+
+<filled?> - a binary choice varval. If this evaluates to non-zero then the shape is drawn solid, otherwise it is drawn in outline.
+
+<X_dest/radius> - an integer from -639 to 639 specifying the width radius of an ellipse or the X position of the destination of a rectangle or line (the start position is determined by the current X value of the graphics cursor set by the last call to preview_draw_cursor or its default value, 0).
+
+<Y_dest/radius> - an integer from -479 to 479 specifying the height radius of an ellipse or the Y position of the destination of a rectangle or line (the start position is determined by the current Y value of the graphics cursor set by the last call to preview_draw_cursor or its default value, 0).
+
+**Note**: The options for <type> are those PDS_ constants shown in the table under the entry for preview_draw_array. If PDS_PIXEL is chosen (value 0) then the remaining arguments are optional and they will not be used if supplied. For all other shapes you must supply all arguments.
+
+**Note**: Ellipses are drawn from the current cursor position being their centre point.
+
+**Note**: When the value for preview_draw_lwidth is set to 1, all shapes (and individual pixels) are drawn via a separate fast-path algorithm, otherwise a slower general algorithm is used.
+
+**Note**: The negative options for <X_dest/radius> and <Y_dest/radius> are only valid for rectangles and lines and, even then, only if the destination type is set to true (e.g. via the preview_draw_desttype command). Otherwise only 0 or positive numbers will be valid at run-time.
+
+### preview_draw_show
+
+preview_draw_show
+
+This is one of the preview overlay graphics commands. This pushes the overlay graphics buffer to the display. It updates the GUI to show the current preview image and the overlay graphics buffer. It also updates any other pending GUI events. See also the command preview_show.
+
+**Note**: In CLI mode, the updated preview image will be saved to disc if you have set the CLI save root and path string with the command cli_path.
+
+### preview_draw_string
+
+preview_draw_string <size> <varval> [<bg_R> <bg_G> <bg_B> <invert?>]
+
+This is one of the preview overlay graphics commands. This draws a text string onto the preview overlay graphics buffer.
+
+<size> - an integer from 0 to 63. It represents a scale factor - not a "point size".
+
+<varval> - The text to be rendered. This does not have to be a string variable - any data type will do (it will be cast to a string by the PCS autocasting rules).
+
+<bg_R> - an integer from 0 to 255 representing the red channel content for background colour.
+
+<bg_G> - an integer from 0 to 255 representing the green channel content for background colour.
+
+<bg_B> - an integer from 0 to 255 representing the blue channel content for background colour.
+
+<invert?> - a binary choice varval. If this evaluates to non-zero then the string is rendered with background and foreground colours reversed.
+
+**Note**: A colour of 0,0,0 means 'transparent' and that is the default font rendering background colour.
+
+**Note**: The newline character (ASCII 10) will be respected when rendering (text will break to a new line when this is encountered) but not carriage return.
+
+**Note**: The safeguards to ensure text can overflow the VGA boundaries without causing a problem mean that text rendering (and string reading) cease when the render encounters a boundary. This therefore means that any character, including newline characters, will not be read or acted on if they occur outside the boundaries of the 640x480 drawing area).
+
+**Note**: The <size> value is a multiplicative scale factor. The font will be rendered that many times its natural pixel size. Setting a value of 0 for this will effectively prevent the text render function from running so the text will not be printed.
+
+### preview_file
+
+preview_file <file_path>
+
+Sets the file path and file name which will be used to save preview images with the command preview_save (which see).
+
+<file_path> - a string varval. This must evaluate the name of the file (optionally with full path) to be saved. No white space is allowed. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: You must call this command at least once for any camera from which you wish to save a preview image or the command preview_save will have no effect when you are connected to at least one camera server.
+
+**Note**: This command may be called when you are not connected to any camera servers. In that case it will set the file name (+/- full path) for saving the current preview image to your disc. The default name for such an image is "OfflinePreview.ppm" so that is what any saved preview image will be called if you do not call this command to change it at least once after start of the pardclient program. The offline name reverts to "OfflinePreview.ppm" at the start of every script run.
+
+### preview_load
+
+preview_load [Display?]
+
+If you are connected to at least one camera server then this reads a p6 ppm image from disc and loads it into the preview display buffer replacing whatever was in it. It will only accept an image of a resolution that matches the preview resolution of the currently selected camera. If the current camera is currently set for full VGA previews then only a full VGA image will be allowed. If the current camera is set to QGVA then either QVGA or QQVGA images will be allowed and if the current camera is set for QQVGA resolution previews then, again, either QVGA or QQVGA images will be allowed. The file name / path used to locate the image on disc will be the one set using the command preview_file (which see). If you are not connected to any camera server then only full VGA images can be read. Issuing this command triggers a refresh of the displayed preview image.
+
+[Display?] - a binary choice varval. If this evaluates to non-zero then the loaded image is immediately displayed. Otherwise it is loaded but not displayed. The default is for this to be treated as true so a loaded image is displayed unless you provide this argument and set it to something that evaluates to 0.
+
+**Note**: If you want to display the preview at any time after calling this command with the [Display?] option set to false/0 then you can do that with the command preview_show.
+
+### preview_save
+
+preview_save
+
+If you are connected to at least one camera server then this saves the last retrieved preview image to disc as a p6 ppm image. This uses the file name and path set using the command preview_file (which see). This saves either the full 640x480 VGA PreviewImg buffer or it saves the PreviewQ buffer that stores the QGVA and QQVGA previews. Which one is saves depends on the preview resolution setting of the camera that is currently selected at the time of issuing this command. If you are not connected to any camera server then this saves the full VGA preview image to disc. This image may contain the last displayed image from any task (like viewing a scan from disc or an image retrieved from a camera that you might have previously been connected to) and/or any drawings you may have made onto the preview using the preview_draw_### commands.
+
+**Note**: This command will have no effect if the preview save path has not been set for the current camera using the preview_file command.
+
+### preview_show
+
+preview_show
+
+This causes the current preview image buffer (together with any preview graphics overlay buffer waiting to be drawn) to be display in the GUI preview display area. It also updates any other pending GUI events.
+
+**Note**: The command preview_draw_show performs the same actions but only if the preview overlay buffer is active. The preview_show command will do them regardless.
+
+**Note**: In CLI mode, the updated preview image will be saved to disc if you have set the CLI save root and path string with the command cli_path.
+
+### preview_tile
+
+preview_tile <number>
+
+This determines (more precisely, 'suggests') whereabouts in the 640x480 main preview area to begin drawing a preview image whenever the get_preview command succeeds. The <number> you supply here will be valid for previews obtained from the currently selected camera. Thus each camera can have its own preview_tile number.
+
+<number> - An integer from 0 to 15 inclusive which determines where the top left pixel of the preview image is placed within the standard VGA preview area of the client program. The positions 0 - 15 map to jumps of QQVGA dimensions in X and Y with 0 being the top left corner of the main VGA display area, 1 being (row,col) = (0,160), 2 being (0,320), 3 being (0,480), 5 being (120,0), 6 being (120,160) and so on, in raster fashion, till we get to 15 being position (360,480).
+
+**Note**: This is called a 'suggestion' because the interpreter will not allow preview images to spill-over the boundaries of the VGA main preview area or to overlap each other. So if the preview image retrieved from the server is of size VGA then the preview_tile value will be ignored and the preview image will be displayed starting at (0,0) and filling the whole main preview area. If the preview image from the server is of size QVGA then only preview_tile values of 0, 2, 8 and 10 will be honoured - anything else will be overridden with 0 and 0 will be used. If the preview image coming from the server is of size QQVGA then all possible <number> values will be honoured.
+
+### print_clear
+
+print_clear
+
+This clears the text buffer in the script console, including anything out of sight (i.e. ant text that would have needed scrolling to be seen).
+
+### print_colour
+
+print_colour <R/P> [<G> <B>]
+
+This sets the foreground colour of any subsequent print_value prints to the script console. This is a latching command - the colour you set here remains active until either you change it with another print_colour command or the script terminates. At the start of each script run, the default foreground colour for print_value output will always be white.
+
+<R/P> - an integer varval >= 0 and <= 255 and is the red component of a 24 bit colour or a 256 colour palette entry.
+
+<G> - an integer varval >= 0 and <= 255 and is the green component of a 24 bit colour
+
+<B> - an integer varval >= 0 and <= 255 and is the blue component of a 24 bit colour
+
+**Note:** 8-bit Palette Mode (1 argument): This selects a colour from a fixed RGB332 mapping:
+
+Red: Bits 7-5 (8 levels)
+
+Green: Bits 4-2 (8 levels)
+
+Blue: Bits 1-0 (4 levels)
+
+**Note**: In 8-bit palette mode a <R/P> value of 0 is black and 255 is white.
+
+**Note**: 24-bit True Colour Mode (3 arguments): The three input values are the red, green and blue components of a 24 bit colour. This allows for precise control to select over 16.7 million colours.
+
+### print_cursor
+
+print_cursor <X> <Y>
+
+This sets the position of the cursor in the script console such that the next print_value command will commence an overwrite print from that position.
+
+<X> - an integer varval >= 0 which marks the number of character positions from the left
+
+<Y> - an integer varval >= 0 which marks the number of lines up from he bottom
+
+**Note**: Take care to avoid new lines in your print_value command formatting when using this command (unless the effect of a newline is a deliberate design choice on your part).
+
+**Note**: The print_cursor positioning is non-latching - it will default back to 0,0 (bottom left) after any text is printed at the set coordinates.
+
+### print_file
+
+print_file <exclusive?> <file_path>
+
+This allows the print_value output to be diverted to a file. This acts as a behaviour modifier for the print_value command (which see) - it does not actually print anything itself.
+
+<exclusive> - a binary choice varval. If this evaluates to non-zero (ON) it will cause any print to file output to be printed to the chosen file in <file_path> only and will block any printing to the console or log file. If this evaluates to zero (OFF) then the print_value output will be printed to both the log file +/ script console as well as to the chosen file.
+
+<file_path> - a string varval that evaluates to the file name (or full path including file name) of the file to be written to (without white space), or the word NULL (all in capitals). If this is not NULL then the interpreter will assume it is a file name and will attempt to print the print_value output to that file. If this is NULL then no attempt will be made to print the print_value output to a file.
+
+**Note**: Any printing to a file will be done with the 'a' (append) option. This means that if the file does not already exist a new file will be created otherwise any existing file will have the new output appended to it.
+
+**Note**: The printed string will not automatically have a newline character added to the end of it. It will be the user's responsibility to add any required formatting as per the print_value formatting options.
+
+**Note**: This command acts as a latching behaviour switch for the print_value command. All print_value commands that follow a print_file command will show the behaviour dictated by that print_file command until another print_file command is issued, at which point the behaviour of all subsequent print_value commands will follow the new behaviour. Thus you can switch on and off printing to a file by issuing a print_file command with a valid file name at the start (to turn on file printing) and, when you have finished printing to file, issue another print_file command with NULL as your file path to switch off printing to file.
+
+**Note**: Each time you call print_file, any currently open file for printing (from a previous call to print_file) will be closed first before the new file is opened (even if the 'new' file is the same as the previous one). Only one file can be open for printing to at a time.
+
+**Note**: If the <file_path> is not NULL but is also not openable for writing in append mode, then an information notice will be printed to the script console but the program will continue and no file printing will be done until you call print_file again with a valid, usable <file_path>.
+
+### print_graphics
+
+print_graphics <varval>
+
+This sets whether printing of text and graphics characters will be done in graphics mode or not. Graphics mode means that a special square font will be used for all text and UTF8 graphics characters and that the space between lines will be zero. The square font ensures all characters have an aspect ratio of 1:1 and the lack of space between lines means that all drawing or plots using those characters will also have an aspect ratio of 1:1. This avoids the vertical elongation of characters and plots made in 'normal' mode (with the standard monospace font and line spacing). However, in normal mode, multiline text will be easier to read.
+
+<varval> - a binary choice varval. If the value of <varval> evaluates to a non-zero numerical value or to TRUE or ON then all printing from this point on will be done in graphics mode. Otherwise printing from this point on will be done in normal mode.
+
+**Note**: The default mode when the the pardclient starts up is to have graphics mode off. Likewise graphics mode will automatically switch off at the end of a script (whether the script ends normally or is prematurely terminated by clicking the interrupt button on the GUI).
+
+**Note**: When using PCS in CLI mode, turning ON graphics mode with this command will disable the cursor character and disable echoing of text input to the terminal. It has no effect on font in CLI mode. Turning OFF graphics mode will restore the terminal cursor and echoing.
+
+### print_size
+
+print_size <point_size>
+
+This sets the font size of any subsequent print_value prints to the script console. This is a latching command - the colour you set here remains active until either you change it with another print_size command or the script terminates. At the start of each script run, the default font size for print_value output will always be 12.
+
+<point_size> - an integer varval >= 1 and <= 72.
+
+**Note**: This feature has no effect when using PCS in CLI mode.
+
+### print_value
+
+print_value <varval> [format_number]
+
+This causes the current value of <varval> to be printed to the script console and/or to a file. Where it prints to is dictated by the arguments to the command print_file, which see. The default behaviour is to print to the script console only.
+
+<varval> - a varval of any type.
+
+[format_number] - a varval which must evaluate to an integer from 0 to 7 (inclusive) and determines the print format. For details see the notes below.
+
+**Note**: The [format_number] conveys the on/off status of following three binary flags: debug, newline and overwrite. These flags have the following meaning:
+
+* *debug*: When on this causes not only the value but also other information about the varval (such as it's name and data type) to be printed.
+* *newline*: When on this ensures that the printed string ends in a newline character.
+* *overwrite*: This first deletes the last line on the script console and then prints the current message where that line used to be. For this to function as an overwrite printer you must also have the newline flag set to on otherwise the print start position for the current text to be printed will jump up one line each time till it eventually erases all the text that came before it.
+
+These are private flags in the interpreter, they are not variables that the script writer can access by name but they control their on/off status by the value of the single integer they supply for the [format_number] argument. This value, when converted to a 3-bit binary number, sets the on/off (i.e. 1/0) states of the three flags in the order [debug][newline][overwrite] like this:
+
+[format_number] = 0 i.e. binary 000 = all 3 flags are off
+
+[format_number] = 1 i.e. binary 001 = overwrite on and the other two off
+
+[format_number] = 2 i.e. binary 010 = newline on and the other two off
+
+[format_number] = 3 i.e. binary 011 = newline and overwrite on (only)
+
+[format_number] = 4 i.e. binary 100 = debug on and the other two are off
+
+[format_number] = 5 i.e. binary 101 = debug and overwrite are on (only)
+
+[format_number] = 6 i.e. binary 110 = debug and newline on (only)
+
+[format_number] = 7 i.e. binary 111 = all three flags on
+
+**Note**: If a print_value command is issued without the optional [format_number] then the behaviour defaults to the last [format_number] issued in a previous print_value command. If there was no previous use of the [format_number] option then the default behaviour is equivalent to [format_number] = 6.
+
+**Note**: The [format_number] value will reset itself to 6 before and after every script run.
+
+**Note**: As noted above, for a single line to overprint in situ you need to have both the overwrite and newline flags on because the overwrite flag tells the console printer to delete all text from the end of the current text buffer up to the first newline character it encounters before printing the current text. If the current text has no newline in it then the delete operation will always go up a line till it finds the newline character of the line above. This 'delete the line above' feature may be useful in cases where you print several lines - e.g. three lines, one for a red value, one for a green value and one for a blue value (like variance for example) and then you want to delete all those three lines before printing the next set of three lines. In that case just print an empty string with no newline and with the overwrite flag enabled 3 times before starting to print your new set of three lines.
+
+**Note**: The [format_number] value will remain at whatever you last set it to, even when using the print_value command after that without using the optional [format_number] argument.
+
+**Note**: When <varval> is a string variable, the literal contents of the string stored in the variable is printed even if that string can be cast to a numerical value (so "1.200" will be printed as 1.200 and not 1.2). However if <varval> is a literal constant that can be expressed as a numerical value then it will be converted to an actual numerical value and not treated as a string (so 1.200 will be printed as 1.2). This is in keeping with the general rule that when a programmer hard codes a number into a program they expect it to be treated as a number not a string. This only needs clarify in PCS because PCS does not use delimiters to define strings so writing `print_value 1.200` requires some rule to decide whether the argument is to be interpreted as a string or a number - it is interpreted as number.
+
+### prv_cdf_use
+
+prv_cdf_use <ON|OFF|image_file>
+
+Whether or not to apply subtraction of a custom preview colour dark field image. This is not the same as the dark field image used for the full resolution image dark field subtraction.
+
+<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the colour dark field image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: Acceptable formats for the image file are: PPM (P6) and BMP (24 bpp). No other options are allowed. For a file name to be acceptable it must have a .ppm or .bmp extension (case is not important here).
+
+**Note**: The ON/OFF actions will only work if you have loaded a custom colour dark field image before setting this to ON or OFF. Submitting a file name will cause pardcap to assess the file and set 'pending' flag to 1 if it is successful. The ON/OFF status will be whatever it happens to be at the pardcap end and will not change just by virtue of submitting an image file. So you need to call this function twice the very first time you use it in a script. The first call is to submit your file. Then, if the file was accepted OK, call it again with either ON or OFF.
+
+### prv_fc_posn
+
+prv_fc_posn <y>
+
+This sets the row (<y>) pixel coordinate of the top left corner of the focus assist bar(s) as displayed in the preview image.
+
+<y> - an integer in the range 20 to 428 inclusive.
+
+**Note**: The range above will be the same regardless of what you have set the preview size to be with the command prv_size. This is because the position coordinate you supply here will automatically be scaled down at the pardcap end if the preview image is set to be smaller than full VGA.
+
+### prv_fc_show
+
+prv_fc_show <show_mode>
+
+Whether to overlay the focus assist bar(s) on the preview and, if so, which bars to show.
+
+<show_mode_int> - an integer determining what to show. The options are:
+
+* 0 = invisible
+* 1 = all three RGB channels (only applies if previewing in colour)
+* 2 = red channel or mono Y
+* 3 = green channel (only applies if previewing in colour)
+* 4 = blue channel (only applies if previewing in colour)
+
+### prv_hgm_posn
+
+prv_hgm_posn <x> <y>
+
+The column (<x>) and row (<y>) pixel coordinates of the top left corner of the histogram displayed in the preview.
+
+<x> - an integer in the range 2 to 382 inclusive.
+
+<y> - an integer in the range 2 to 222 inclusive.
+
+**Note**: The ranges above will be the same regardless of what you have set the preview size to be with the command prv_size. This is because the position coordinates you supply here will automatically be scaled down at the pardcap end if the preview image is set to be smaller than full VGA.
+
+### prv_hgm_satlim_l
+
+prv_hgm_satlim_l <R/Y> <G> <B>
+
+Sets the preview image lower histogram saturation limits for the red (or mono), green and blue channels.
+
+<R/Y> - an integer from 0 to 254 inclusive
+
+<G> - an integer from 0 to 254 inclusive
+
+<B> - is an integer from 0 to 254 inclusive
+
+**Note**: Any pixels with a value less than the lower saturation limit contributes 1 to the total count of lower saturated pixels in each colour channel.
+
+**Note**: If, when setting these values, the corresponding upper saturation limit is found to be equal to or lower than the value been set, then that upper saturation limit will be set to the lower limit + 1. No error message will be issued in such cases so it is up to the user to ensure the upper saturation limits are set according to the rule that the upper saturation limit values must be greater than the lower saturation limit values if they want their chosen upper saturation limit values to be set and not overruled.
+
+### prv_hgm_satlim_u
+
+prv_hgm_satlim_u <R/Y> <G> <B>
+
+Set the preview image upper histogram saturation limits for the red (or mono), green and
+
+blue channels.
+
+<R/Y> - an integer from 1 to 255 inclusive
+
+<G> - an integer from 1 to 255 inclusive
+
+<B> - is an integer from 1 to 255 inclusive
+
+**Note**: Any pixels with a value greater than the upper saturation limit contributes 1 to the total count of upper saturated pixels in each colour channel.
+
+**Note**: If, when setting these values, the corresponding lower saturation limit is found to be equal to or higher than the value been set, then that upper saturation limit requested here will be overridden and set to the lower saturation limit + 1. If this override occurs in any 1 or more of the colour channels then an error message will be issued back to the client of the type 'Failed to apply a setting due to out of range'. To avoid this error the user should set saturation limits for both upper and lower in adjacent calls to prv_hgm_satlim_l (first - because this will never generate an error as long as the values supplied are in the specified range) followed by a call to prv_hgm_satlim_u ensuring that the values you supply are indeed greater than the values you supplied to the prior call to prv_hgm_satlim_l.
+
+### prv_hgm_scales
+
+prv_hgm_scales <R/Y> <G> <B>
+
+Sets the preview image histogram manual scaling factors to be used (only) when hgm_nofit is set to ON using the prv_toggle command (which see).
+
+<R/Y> - a float >= 0.0
+
+<G> - is a float >= 0.0
+
+<B> - is a float >= 0.0
+
+### prv_lut
+
+prv_lut <LUT_number>
+
+Sets the preview image look-up-table (LUT) for display.
+
+<LUT_number> is an integer between 0 to 5 inclusive and defines the LUT according to:
+
+* 0 = Linear
+* 1 = Inverted
+* 2 = Logarithmic (base 10)
+* 3 = Exponential (base 10)
+* 4 = Square root
+* 5 = Square
+
+### prv_mask_use
+
+prv_mask_use <ON|OFF|image_file>
+
+Whether or not to apply a custom preview mask to the calculation of preview stats. This is not the same as whether or not to display that mask over the preview image - for that see the command prv_toggle.
+
+<ON|OFF|image_file> - a string varval. Supply either the (case sensitive) strings ON or OFF or the file name (optionally to include the full path) of an image to be used as the mask image. File names and paths must not contain spaces. This argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: Acceptable formats for the image file are: PGM (p5), PPM (P6) and BMP (8 bpp or 24 bpp). No other options are allowed. If you supply a colour format image then the 'intensity' component of an HSI transform is calculated for each pixel as (R+G+B)/3 and this is thresholded to be an 'on' pixel if it is >127 and and 'off' pixel otherwise. The same threshold is used to binarise grey scale images. For a file name to be acceptable it must have a .pgm, .ppm or .bmp extension (case is not important here).
+
+**Note**: The ON/OFF actions will only work if you have loaded a mask image before setting this to ON or OFF. Submitting a file name will cause pardcap to assess the file and set 'pending' flag to 1 if it is successful. The ON/OFF status will be whatever it happens to be at the pardcap end and will not change just by virtue of submitting a file. So you need to call this function twice the very first time you use it in a script. The first call is to submit your file. Then, if the file was accepted OK, call it again with either ON or OFF.
+
+### prv_m_bias
+
+prv_m_bias <number_of_grey_levels>
+
+This sets the number of grey levels to add (or subtract) from the preview image after all frames have been integrated (see prv_m_integral). This only applies when previewing in monochrome mode.
+
+<number_of_grey_levels> - an integer between -(PREVINTMAX-1)*255 and 512.
+
+**Note**: At the time of writing, PREVINTMAX = 20 which makes the lower limit for <number_of_grey_levels> = -4845.
+
+### prv_mcor_eject
+
+prv_mcor_eject
+
+This ejects any loaded custom preview mono dark and flat field correction images.
+
+### prv_mdf_set
+
+prv_mdf_set <image_file>
+
+This loads the supplied dark field corrections image and sets it as active for use with monochrome previewing.
+
+<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: The image must be of raw doubles mono format with its name ending in _y.dou (case is not important here) and be of the same dimensions as the preview image.
+
+**Note**: The only way to deactivate its use is to perform a prv_mcor_eject command, which see.
+
+### prv_mff_set
+
+prv_mff_set <image_file>
+
+This loads the supplied flat field corrections file and sets it as active for use with monochrome previewing.
+
+<image_file> - a string varval which evaluates to the name (optionally to include the full path) of the image to use. This must not contain white space. This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: The image must be of raw doubles mono format with its name ending in _y.dou (case is not important here) and be of the same dimensions as the preview image.
+
+**Note**: The only way to deactivate its use is to perform a prv_mcor_eject command, which see.
+
+### prv_m_integral
+
+prv_m_integral <number_of_frames>
+
+This sets the number of frames to integrate when previewing in monochrome mode.
+
+<number_of_frames> - an integer between 1 and PREVINTMAX.
+
+**Note**: At the time of writing, PREVINTMAX = 20
+
+### prv_size
+
+prv_size <size_number>
+
+This sets the size of the preview image as displayed in the VGA-sized preview area of pardclient.
+
+<size_number> - an integer between 0 and 2 and determines the size of the preview image as follows:
+
+* 0 = 640x480 (VGA - the whole size of the preview area)
+* 1 = 320x240 (QVGA)
+* 2 = 160x120 (QQVGA)
+
+**Note**: For preview sizes that are smaller than full VGA, the position of where that preview image is displayed within the full VGA-sized display area of pardclient can be set using the command preview_tile.
+
+**Note**: The size of the preview set here does not affect the coordinate system used with the preview overlay positioning commands prv_fc_posn and prv_hgm_posn. Those commands will always use coordinates based on the full VGA size. The coordinates will automatically be scaled down at the pardcap end if the preview image is set to be smaller than full VGA.
+
+### prv_toggle
+
+prv_toggle <option> <ON|OFF>
+
+This sets one of the preview-related options that only accept a binary choice varval argument (and nothing else such as a file name). These options correspond to individual check boxes in the pardcap GUI.
+
+<option> - a string which must be one of the following:
+
+mono
+
+invert
+
+flip_h
+
+flip_v
+
+laplacian
+
+premedian
+
+postmedian
+
+dctpostlut
+
+fc_dct
+
+fc_mal
+
+fc_vmul
+
+mask_show
+
+hgm_show
+
+hgm_cum_r
+
+hgm_cum_g
+
+hgm_cum_b
+
+hgm_nofit
+
+hgm_restrictvar
+
+Their meanings are as follows:
+
+mono Previewing in monochrome mode
+
+invert Invert the preview colours
+
+flip_h Flip the preview horizontally
+
+flip_v Flip the preview vertically
+
+laplacian Display an absolute Laplacian preview.
+
+premedian Do a 3x3 median filter before Laplacian calc.s
+
+postmedian Do a 3x3 median filter after Laplacian calc.s
+
+dctpostlut If using DCT, do the calculation after applying the LUT
+
+fc_dct Use medium frequency DCT as a focus assist measure
+
+fc_mal Use mean absolute Laplacian as a focus assist measure
+
+fc_vmul Multiply the focus measure by the variance.
+
+mask_show Show the preview mask
+
+hgm_show Overlay the histogram on the preview image
+
+hgm_cum_r Use a cumulative histogram for the red (or mono) channel
+
+hgm_cum_g Use a cumulative histogram for the green channel
+
+hgm_cum_b Use a cumulative histogram for the blue channel
+
+hgm_nofit Prevents automatic scaling of each colour channel data in the histogram so you can get a sense of the absolute relationships between the colour channel data.
+
+hgm_restrictvar If this is ON the mean and variance calculations will only use pixels whose values are greater than the lower saturation limit and less than the upper saturation limit.
+
+<ON|OFF> - a binary choice varval
+
+**Notes**:
+
+1. The options laplacian, premedian and postmedian only have any effect when previewing in monochrome mode.
+
+2. The 'fc_...' (focusser statistic) options are multiplicative cumulative in effect. If none of these are ON then the variance alone will be used as the default focus statistic. If fc_dct alone is ON then the mean mid-frequency discrete cosine transform power (DCT statistic) will replace variance as the focus statistic. If fc_mal alone is ON then the mean absolute Laplacian (MAL statistic) will replace variance as the focus statistic. If *both* fc_dct *and* fc_mal are ON then the focus statistic will be the product DCTxMAL. If fc_vmul is ON then the focus statistic will be whatever it would otherwise have been multiplied by the variance (but fc_vmul status has no effect if both fc_dct and fc_mal are OFF - so it won't result in variance x variance being used). The 'focus statistic' is the value stored in the system variable Ps_Focus_R, Ps_Focus_G and Ps_Focus_B whenever these are retrieved from the server with the command get_preview_stats.
+
+3. The fc_dct, when applied, will calculate the DCT statistic on the preview image (optionally under any preview mask if this is used). This calculation may be done before or after the display LUT transforms are applied (according to your current setting for dctpostlut). When in monochrome mode if the preview has been transformed into a Laplacian image then the DCT will be calculated on that Laplacian image ONLY if dctpostlut is ON and, in that case the DCT will be calculated also after any pre- and/or post-Laplacian median filter is applied. If dctpostlut is OFF then the DCT will be calculated before the Laplacian image is formed but after any pre-Laplacian median filtering is performed. For colour previews the median filter options are never implemented at any stage and the Laplacian image is never formed (only a Laplacian statistic is calculated when requested - by toggling fc_mal to ON - but the preview image itself is never transformed into a Laplacian image) so the only options for DCT in colour preview mode is whether to calculate it pre or post application of the LUT transforms. In all cases, monochrome or colour, the other stats for the preview image (including histograms and variance) are calculated before the application of the LUTs. In monochrome mode (only) these stats are calculated after any median filters are applied and after the image is transformed into a Laplacian image (if that is selected by the user via the Laplacian option).
+
+***Scientific Warning***: The pixel values in a the mean absolute Laplacian image may have a significantly different distribution to the original pixel values of the image from which they were calculated. Thus, the llim and ulim set for the original image will likely be "wrong" for a Laplacian image. For this reason be sure you set appropriate limits when using that option with a Laplacian-transformed preview.
+
+4. mask_show will have no effect unless you previously loaded a preview mask image with the prv_mask_use command, which see.
+
+5. For best visual effect, the hgm_nofit option should be used with appropriate manual scale factors. See the full pardcap manual for details. See also prv_hgm_scales.
+
+6. There are many other preview options not covered by this prv_toggle command because those options require something more or other than a binary ON/OFF argument. For example the prv_fc_show command requires an integer argument from 0 to 4 and not just ON/OFF. That is why prv_fc_show is a separate command and we don't have an 'fc_show' option for prv_toggle.
+
+### randpcg
+
+randpcg <init?> <receptacle> [pos?]
+
+This provides a pseudorandom number (PRN) generator for floats and integers.
+
+<init?> - a binary choice varval. If this evaluates to TRUE or non-zero then the PRN sequence is re-initialised prior to providing the pseudorandom number, otherwise it is not.
+
+<receptacle> - a user variable of type int or float (constants, string variables and system variables are not allowed) into which the PRN result will be deposited.
+
+<pos?> - an optional binary choice varval. If this evaluates to TRUE or non-zero then the value deposited in an integer receptacle will always be 0 or positive. Otherwise (or if this argument is not supplied) then the integer value may be positive or negative. This argument has no effect on floating point pseudorandom numbers.
+
+**Note:** Whether the PRN returned is a float or an int is determined by the data type the supplied <receptacle> variable.
+
+**Note**: For an integer the returned PRN will be in the range INT32_MIN to INT32_MAX (-2,147,483,648 to 2,147,483,647) inclusive if [pos?] is 0 or absent. If [pos?] is present and evaluates to TRUE (or non-0) then the range will be 0 to INT32_MAX. This positive range restriction is performed by simply discarding the sign bit in the (otherwise signed) PRN integer and not by use of the integer abs() function.
+
+**Note**: For a float the returned PRN will be in the range [0.0,1.0). Note that the upper bound is open - it will never return exactly 1.0. A float PRN is made by direct synthesis of an IEEE 754 double precision floating point number from a string of 52 pseudorandom value bits and not by the using float maths function (except for a final subtraction) in order to preserve cross-platform independence of the result.
+
+**Note**: The PRN generator used in PCS is a 32 bit O'Neill 'Permuted congruential generator' (PCG) algorithm using a hard-coded 64-bit initial state thus:
+
+```c
+// Global, internal state of the interpreter's RNG
+static uint64_t pcg_state = 0x853c49e6748fea9bULL;
+static uint64_t const pcg_inc = 0xda3e39cb94b95bdbULL; // Always fixed and odd
+```
+
+The PRN sequence is initialised with this state at the start of every script run. It is re-initialised to the same pcg_state whenever you supply a TRUE or non-0 value for the <init?> argument. This ensures that you can generate identical PRN sequences across different runs of the same script and also that a PRN sequence generated by a script running on one OS will be identical to the PRN obtained while running the same script on a different OS.
+
+**Note**: Use of this algorithm has the advantage of supplying PRN sequences that are platform independent, with a long 64-bit repeat period for every bit in the sequence for any given PRN and that lack Marsaglioid hyperplane periodicity patterns.
+
+### return
+
+return
+
+This closes a function definition code block - that is, a block which is opened with the command def_func (which see). You must have strictly one - and only one - return paired to each def_func.
+
+### save_coords
+
+save_coords <ON|OFF>
+
+This allows you to determine whether each captured image is accompanied by a text file containing the coordinates of all 3 stage axes the time that image was taken. This is a latch setting.
+
+<ON|OFF> - a binary choice varval.
+
+**Note**: The coordinate information will be saved in a plain text file with the same name as the image but with the image file name extension replaced with '_coords.txt'.
+
+**Note**: The coordinates will always be in atomic step units. It is up to you to make separate arrangements to record any scale factors if you need to convert these to calibrated units at any time.
+
+### save_doubles
+
+save_doubles <OFF|ON|FITS>
+
+This sets the option of whether to save a main image in a 64 bpp doubles format.
+
+<OFF|ON|FITS> - a case-sensitive string that means the following:
+
+OFF = don't use the 'save as doubles' pardcap option (this is the default at first startup of a pardcap server)
+
+ON = save as raw doubles (.dou and .qih file pair). One such pair for a mono image or 3 such pairs for RGB images, one or each of the RGB channels).
+
+FITS = As for ON but instead of the raw format (.dou and .qih pairs) it saves the doubles pixel values in one (mono) or 3 (RGB) FITS files.
+
+**Note**: This command sets the save format modifier options 'save as raw doubles' or 'save as FITS' and so helps determine the save format of the image data coming back from a pardcap server according to the rules described in the section on save_format command (which, see).
+
+**Note**: The .qih file is a plain text external header file. The .dou file contains the actual pixel data.
+
+### save_format
+
+save_format <format>
+
+This allows you to set the file format of an image saved to disk by the grab_image command but the format you select here is not the only determining factor of the type of image will ultimately get saved. The actual format and extension of the saved image will also depend on the option you selected with the save_doubles command and also whether you have opted to do multiframe averaging with the frames_to_average command. The rules of how these options combine to determine the actual file format of the saved image will be detailed below. The actual file format dictated by those rules will determine the file name ending that will be appended to the root file name you supply via the command save_root) and the frame number you supply with the command frame_number to form the full file name for the saved image.
+
+<format> - must be a string constant (not a variable) with one of the following (case sensitive): yuv, pgm, bm8, int, ppm, bmp, png, jpg
+
+**Note**: The meanings of the format options are as follows:
+
+yuv - raw binary array of unsigned shorts (16bpp) in YUYV format.
+
+pgm - 8bpp p5 greyscale image in pgm format
+
+bm8 - 8bpp greyscale bmp image
+
+int - the intensity component of an HSI transform of a 24 bpp colour image (saved as raw doubles)
+
+ppm - 24bpp colour p6 ppm image
+
+bmp - 24bpp colour bmp image
+
+png - 24bpp colour png image
+
+jpg - 24bpp colour jpeg image
+
+**Note**: See also save_doubles and jpeg_quality
+
+**Note**: The pardcap server will take your above choice and, depending on the following factors, the server will send back image data in one of several formats to be written to disc. The additional factors are: Whether pardcap is using the MJPEG stream of the camera or the raw YUYV stream (at the time of writing, only raw YUYV image streams are used when pardcap is in server mode), your choice of whether to do multi-frame averaging or not via the frames_to_average command and your choice of whether to 'save as doubles' or 'save as FITS' as set by the save_doubles command. The format of the image data sent back to the pardclient in the blob from pardcap is the 'write as' format and that may be the same as the format option you supplied here (the 'save as' format) or might differ. It is the 'write as' format that actually determines what type of image is saved to disc after a successful grab_image command. The rules on how the 'write as' format is determined as described below.
+
+If the 'save as' format going out to the server was int then the 'write as' format coming back will be dou (raw doubles for single channel images) and the image will be saved with the _i.dou file name ending. All other cases of 'write as' format dou will be saved with the _y.dou file name ending. Note that dou is used for monochrome images as opposed to do3 which is the format specifier for 3-channel (colour) images saved as raw doubles or FITS. Note also that the dou and do3 formats are not available as <format> options to send to the pardcap server via this save_format command. Any attempt to use them in this way will result in an error.
+
+If the 'save as' format going out to the server was yuv then the 'write as' format coming back from the server will be yuv because multiframe averaging is not permitted for YUYV format captures and the 'save as raw doubles' and 'save as FITS' options are ignored for raw YUYV format image captures and no corrections are applied to the image (masking, flat field / dark field). If the camera was streaming in V4L2_PIX_FMT_MJPEG format we would not have got this far because a request to do image capture in raw YUYV format would have been be rejected at the pardcap end as a forbidden task and an error would have resulted. Files saved in YUYV format will have the name ending '_yuyv.raw' appended to the root.
+
+If the 'save as' format going out to the server was jpg then the 'write as' format coming back could be do3 or rgb (used by the server to denote it is sending over a 3-channel colour image) or jpg depending on certain options as follows:
+
+* do3 with 3 raw doubles images in the blob sent back by pardcap: This occurs if the 'save as raw doubles' or 'save as FITS' flags were set (using the PCS command save_doubles (which, see)) AND (if averaging was done or the camera was ***not*** streaming in V4L2_PIX_FMT_MJPEG format).
+* rgb with an RGB image in the blob sent back by pardcap: This occurs if averaging was done or the camera was not streaming in V4L2_PIX_FMT_MJPEG AND neither the 'save as raw doubles' nor 'save as FITS' options were selected. In these cases the RGB image in the blob will be saved as a jpeg using the interpreter's function raw_to_jpeg with a name having a .jpg extension.
+* jpg with a jpeg image in the blob: This occurs regardless of the value of the 'save as raw doubles' and 'save as FITS' options. It occurs if averaging was ***not*** done AND the camera ***was*** streaming in V4L2_PIX_FMT_MJPEG format. In these cases the jpeg data in the blob can be directly written to file with a .jpg extension.
+
+Apart from the rules for the case where 'save as' format was int (see above), all cases where 'write as' format is dou (regardless of what the outgoing 'save as' format was) will be saved with a _y.dou or _y.fit as a FITS file if the 'save as FITS' option is selected (the 'save as FITS' value trumps the 'save as raw doubles' value if both are selected)
+
+All cases where the 'write as' format is do3, the file will be saved in 3 files with their names ending in _r.dou, _g.dou and _b.dou or as 3 FITS files with similar endings but having the .fit extension if the 'save as FITS' option is selected (the 'save as FITS' value trumps the 'save as raw doubles' value if both are selected).
+
+The above rules in prose may seem a bit hard to decipher so here is a distilled table summary:
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| **Requested Format (<format>)** | **Image Type** | **Actual File Extension(s)** | **Notes / Dependencies** |
+| yuv | Raw 16bpp Binary | _yuyv.raw | Direct capture; ignores averaging/save_doubles/image corrections. |
+| int | HSI Intensity | _i.dou or _i.fit | Depending on save_doubles |
+| pgm / bm8 | 8bpp Greyscale | _y.pgm / _y.bmp (or _y.dou or _y.fit) | Returns dou or .fit if save_doubles options are set. |
+| ppm / bmp / png | 24bpp Colour | _rgb.ppm / _rgb.bmp / _rgb.png  (or _r/g/b.dou or _r/g/b.fit) | Returns do3 or .fit if save_doubles options are set. |
+| jpg | 24bpp JPEG | .jpg (or _r/g/b.dou or _r/g/b.fit) | Direct save if MJPEG; re-encoded if RGB/Averaged and then save type depends on save_doubles. |
+
+### save_path
+
+save_path <image_full_save_path>
+
+This sets the absolute path name (the directory) for saving images and any files associated with them.
+
+<image_full_save_path> - a string varval specifying a directory path. It must not contain white space and must not include the file name - only the directory path. This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: Any argument longer than SCNFNAME_MAX bytes will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: The <image_full_save_path> must contain at least one directory separator (/ or  depending on your OS) to be valid. The interpreter will automatically use the last separator found in your path to join the directory to the file name. You do not need to end the path with a slash; if you do, the resulting file path will contain a double slash (e.g., path//root_0001.bmp).". While this double slash may be handled correctly by your OS, it is cleaner and better practice to avoid the use of a terminal slash in case some OS or applications have difficulties with double slashes in path names.
+
+### save_resolution
+
+save_resolution <width> <height>
+
+This allows you to specify the dimensions of any images saved to disk using the grab_image or xyzs_scan commands (which see).
+
+<width> - the image width in pixels supplied as a varval of type int >= 1.
+
+<height> - the image height in pixels supplied as a varval of type int >= 1.
+
+**Note**: The <width> <height> combination must be supported by the currently attached camera in order for this command to be valid.
+
+**Note**: Changing the resolution will invalidate any correction images that may have previously been loaded (such as a corrections mask, a flat field image or a dark field image).
+
+### save_root
+
+save_root <image_name_root>
+
+This allows you to input the string used to construct the common part of file names generated when you grab an image with grab_image.
+
+<image_name_root> is a string varval specifying a string without white space which will be used to construct the file name of the saved image and any associated file (like an external header file for saving in raw doubles format). This string argument may be up to SCNFNAME_MAX bytes long (usually 4095 for POSIX or 259 bytes for older MS Windows systems).
+
+**Note**: If the argument is longer than SCNFNAME_MAX bytes it will be truncated to that limit when read by the interpreter so longer file or path names will likely result in an error when the interpreter attempts to read them.
+
+**Note**: This may include a path component if you want to store the image in a particular location but the path must not contain any white space. If you do this, avoid the use of a slash at the start of the <image_name_root> (that will be handled for you automatically by the interpreter).
+
+**Note**: The full file name of the saved image will be a combination of the <image_name_root> string, an integer number that increments with each image captured (and can be set or reset using the frame_number command, which see) and an extension chosen automatically depending on the format of the image to be saved (see the save_format command for details). Associated files (like external header files) will have the same basic name but with a modified extension appropriate to their type.
+
+### select_camera
+
+select_camera <number>
+
+Selects the currently active pardcap server for all camera commands including preview functions.
+
+<number> - an integer from 1 (the default at startup) upwards to the maximum number of cameras (pardcap servers) connected to the pardserver.
+
+**Note**: Any camera or preview command issued in the script only applies to the currently selected camera and will not take effect in any other camera unless you select that camera and then issue the command.
+
+**Note**: The number of cameras you can have is limited only by your computing resources and from a pure code limit point of view it is capped at just over 2 billion (actually 2147483647, the number of positive values a 32 bit int can store). Because cameras are connected via TCP/IP, the cameras don't all need to be running on the same PC.
+
+**Note**: When the pardclient first starts a login session the camera list is freed and a call to get_cameras is made which re-populates it. The current camera is then set to 1.
+
+**Note**: You can see what is the current camera number as well as how many cameras you have available by looking at the 'Camera Settings' tab on the pardclient GUI. This will display a list of the settings for the current camera with a note that this is 'Camera # of #' where the first number is the current camera number and the second is the total number of cameras available.
+
+**Note**: Calling select_camera from a script does not automatically update the GUI list of available camera settings displayed in the Camera Settings tab but calling select_camera from the GUI 'Manual' tab does. If you want the GUI updated from within a script then make a call to get_camsettings and get_resolutions after you call select_camera.
+
+**Note**: If you have been doing manual operations on cameras from the GUI Manual tab and then load or run a script in the Script tab, several settings may change for your current selection of parameters for the camera because when a script is checked (this happens automatically upon loading a script file and also just prior to running it) then the interpreter runs its internal function nullify_correction_images_and_masks() and also does a resize_blob(). Thus, if you return to manual GUI ops after any script work, be prepared to set your camera settings all over again.
+
+**Note**: When it comes to correction images (flat field, dark field and corrections mask), these are all individual to each camera. You will need to set and load each such image for each camera. This is also true for preview correction images.
+
+### set_condexp
+
+set_condexp <varval1> <condition> <varval2>
+
+This causes the script to set the value of the system variable Condexp to 1 or 0 depending on the result of a conditional expression (i.e. a comparison between two values specified by the arguments). Condexp may then be used as a value argument in other commands (including those commands that act on conditional expressions such as do_if, goto, call_func and loop_while).
+
+<varval1> - a varval of any type.
+
+<condition> - a varval of type string which evaluates to a symbol defining the comparison to be made between <varval1> and <varval2>. The symbol must be one of these:
+
+==, >=, >, <=, <, !=, &&, ||
+
+and these have the same meanings as the same logical comparator symbols in the C programming language (but bear in mind these operators act on the values resulting from any casting using the PCS casting rules rather than the values as literally typed in the PCS source).
+
+<varval2> - a varval of any type.
+
+**Note**: The comparison aspect of a set_condexp command is symbolically equivalent to conditional expressions in the C programming language e.g. (varval1 > varval2) or (varval1 <= varval2) or (varval1 == varval2), etc.
+
+**Note**: If the right hand value <varval2> is of a different data type to the left hand value <varval1> then the interpreter will attempt to cast the right hand value into the same data type as the left hand value prior to the comparison (this will not affect the intrinsic value of <varval2>, it is just a temporary cast for the purpose of making the comparison).
+
+**Note**: When <varval1> is a string, the comparison is a string comparison, and <varval2> is cast to a string by the rule given under def_var. So with `def_var string a 5.0`, `set_condexp a == 5.0` is true but `set_condexp a == 5` is false, because “5.0” and “5” are different strings. To compare the numeric values of two strings, put one of them into an int or float variable first and compare that variable, which then decides the type of the comparison.
+
+**Note**: Only == and != are allowed between arguments of type string.
+
+**Note**: If you use the Condexp itself as your argument for <varval1> or <varval2> then the current value of Condexp will be used (either 0 or 1 as was set by the last call to set_condexp or 0 if this is the first time set_condexp is being called in a script). Accordingly the command:
+
+set_condexp Condexp == Condexp
+
+will always be true and will result in the value of Condexp being set to value 1. Similarly the command
+
+set_condexp Condexp != Condexp
+
+will always be false and will result in the value of Condexp being set to value 0. In this way the script writer can manipulate the value of Condexp at will.
+
+**Note**: Because the comparator condition parameter is processed via the language's string variable evaluation engine, the operator symbol does not need to be a hardcoded constant. It may be supplied directly by a dynamic string variable, allowing for advanced runtime meta-programming and dynamic dispatch jump-table logic, for example:
+
+```pcs
+# Delimiter-free first-class string logic assignment
+def_var string logical_gate &&
+# Script dynamically adapts its tracking criteria mid-session
+do_if emergency_override_active
+   set_str logical_gate ||
+enddo
+# The interpreter resolves the string contents dynamically at runtime
+set_condexp axis1_aligned logical_gate axis2_aligned
+```
+
+**Note**: If you wish to combine multiple individual evaluation states into a single logical truth result, it can be handled natively in a single 3-argument expression by evaluating two pre-existing Boolean flags or numeric variables using the && and || operators, for example:
+
+```pcs
+# Native Inline Compound Checking
+set_condexp base_not_there || shld_not_there
+loop_while Condexp
+```
+
+**Note**: Alternatively, combining multiple complex conditional expressions can be effected step-by-step by using explicit intermediate variable allocations and basic arithmetic accumulation, as shown in the following configuration examples:
+
+```pcs
+def_var int exp1 0
+def_var int exp2 0
+def_var int exp3 0
+def_var int i1 5
+def_var int i2 -2
+def_var int i3 8
+set_condexp i1 < i2
+set_var exp1 Condexp  # This stores the result of the first conditional
+                      # expression into exp1
+set_condexp i3 > i2
+set_var exp2 Condexp  # This stores the result of the second conditional
+                      # expression into exp2
+add_var exp3 exp1
+add_var exp3 exp2
+# With the above setup here are some possibilities for compound
+# logical expressions:
+set_condexp exp1 > exp2     # If (  exp1  AND !exp2 )
+                            # Condexp will equal 1 otherwise 0
+                            # (note that '!' denotes NOT in these comments
+                            # but you cannot use it like that in PCS)
+set_condexp exp1 < exp2     # If ( !exp1  AND  exp2 )
+                            # Condexp will equal 1 otherwise 0
+set_condexp exp1 == exp2    # If (( exp1  AND  exp2 ) OR ( !exp1 AND !exp2 ))
+                            # Condexp will equal 1 otherwise 0
+                            # i.e. (exp1  XNOR  exp2)
+set_condexp exp1 != exp2    # If (  exp1  XOR  exp2 )
+                            # Condexp will equal 1 otherwise 0
+set_condexp exp3 == 1       # If (  exp1  XOR  exp2 )
+                            # Condexp will equal 1 otherwise 0
+set_condexp exp3 > 0        # If (  exp1   OR  exp2 )
+                            # Condexp will equal 1 otherwise 0
+set_condexp exp3 == 2       # If (  exp1  AND  exp2 )
+                            # Condexp will equal 1 otherwise 0
+set_condexp exp3 == 0       # If ( !exp1  AND !exp2 )
+                            # Condexp will equal 1 otherwise 0
+                            #i.e. (exp1 NOR exp2)
+set_condexp exp3 < 2        # If !(exp1 AND exp2)
+                            # Condexp will equal 1 otherwise 0
+                            # i.e. (exp1 NAND exp2)
+```
+
+More complex logical expressions can be made using more variables to combine more pairs of set_condexp command results.
+
+### set_previewpos
+
+set_previewpos <pos> <inc>
+
+This causes the script to set the value of the system variables PreviewPos and PreviewInc to the values specified in the arguments. These determine what value is returned whenever you read the system variable PreviewVal.
+
+<pos> - a varval that evaluates to an integer in the range 0 - (PreviewImg_rgb_size-1).
+
+<inc> - a varval that evaluates to an integer in the range 1 to 3.
+
+**Note**: The value of PreviewImg_rgb_size is VGA*3 i.e. 3*640*480 = 921600.
+
+**Note**: These 3 system variables (PreviewPos, PreviewInc and PreviewVal) allow the programmer to read the pixel values of whatever is currently stored in the main VGA preview bitmap array, called PreviewImg in the source code. The system works like this:
+
+Whenever PreviewVal is evaluated the following integer value is returned by this logic:
+
+```c
+PreviewVal = (int32_t) PreviewImg[PreviewPos];
+PreviewPos +=  PreviewInc;
+if(PreviewPos >=  PreviewImg_rgb_size)  PreviewPos -=  PreviewImg_rgb_size;
+```
+
+Thus each time PreviewVal is evaluated the value of PreviewPos is incremented by PreviewInc and rolled over to stay within the allowed range.
+
+**Note**: At the start of each script run, PreviewPos defaults to 0 and PreviewInc defaults to 1. PreviewVal is evaluated afresh each time it is used so there it has no standard default or initial value.
+
+### set_str
+
+set_str <STR_VAR> [[str1] [[str2] ...]]
+
+This allows you to set a user-defined variable of string type to a string of up to 24 words. If no [str] arguments are provided the string variable is set to an empty string. No space will be printed to the end of the list of argument strings.
+
+<STR_VAR> - the string variable to be modified
+
+[[str1] [[str2] ...]] - a list of between 0 and 24 string constants separated by white space. These will replace the existing contents of <STR_VAR>
+
+**Note**: Up to 24 string arguments may be used in one command. The limitations on what arguments are permitted are as follows:
+
+1. Each string argument in the list of words cannot contain white space and each argument must have no more than MAX_ARGLEN bytes (see Note and Caution below).
+2. Each string argument cannot contain the hash character (#) anywhere in it - as soon as a hash character is encountered the word will be truncated to that point and any characters or words after the hash will be ignored. You can add hash characters to a string if you need to by using the add_var command with the Hash system variable or the cat_char command with an argument of value 35.
+3. Only one plain space character (ASCII value 32) will be printed between each string argument - multiple spaces are ignored. You can add more spaces to a string if you need to using the separate add_var command with the Space system variable or the cat_char command with an argument of value 32.
+4. If any of the string arguments are the names of user-defined or system variables they will be added verbatim without conversion to their current value. Use the set_var or add_var commands if you need that functionality.
+5. Standard formatting / control / escape characters like 'n' will be printed verbatim and will not have their intended special effect.
+6. Recall that PCS does not use delimiters of any kind to define strings or characters to be inserted into strings. If you use single or double quotes as either the whole or part of an argument then those quotes will become part of the string.
+
+**Note**: Each [str] argument will be appended to the <STR_VAR> separated by a single space (ASCII character 32) regardless of whatever type or number of white space character(s) was used to separate arguments in the command. No space will be added between the initial value of <STR_VAR> and the first [str] argument. No space will be printed to the end of the list of argument strings.
+
+**Note**: Each [str] argument will be treated as a string constant and not a variable (of any data type). If a variable name is included in these arguments it will be treated just as a string and will not be evaluated (so the variable's name will be concatenated 'as is'). If you want to add the value contained in some variable to the end of a string then use the add_var command instead (which see).
+
+**Note**: The interpreter has a limit on the maximum size of any argument. This is set by the MAX_ARGLEN value in the interpreter source code which, at the time of writing is 64 bytes. It is important to note that bytes do not necessarily equate to characters. While standard ASCII characters are 1 byte each, UTF-8 Unicode characters (such as box-drawing symbols or emojis) typically consume 3 or 4 bytes each. For example, the ═ symbol uses 3 bytes; therefore, a single argument can contain a maximum of 21 of these characters before exceeding the 64-byte limit.
+
+**Caution**: Do not exceed MAX_ARGLEN bytes per argument. If a string exceeds this limit, the interpreter will truncate it at the byte level. This may result in **malformed UTF-8 sequences** for Unicode characters, likely causing the string to fail to render. For ASCII text, the string will simply be truncated.
+
+### set_tracker
+
+set_tracker <tracker_name> <tracker_setting> <varval>
+
+This assigns a value to a parameter or other setting in an extant tracker.
+
+<tracker_name> - a string varval defining the name of the tracker to be customised. This is case sensitive and must pertain to an extant user-defined tracker.
+
+<tracker_setting> - an integer varval that must be one of the constants #defined in stdpard.pch (listed below) that define a valid setting. A number that is not in the range 1 to 39 is a script error and terminates the script.
+
+<varval> - a varval that contains the value you wish to set the setting to. It must be of the type given in the tables below: an integer for the integer settings (it must be >= 0 because none of them accepts a negative number) and a float for the float settings.
+
+**Note**: The tracking sub-system is designed to fail without terminating the script (except for catastrophic memory failures and invalid arguments). If the value of <varval> is a valid integer or float but is outside the allowed range for that setting, or you set a setting that belongs to a different tracker type (the COM, KLT and GHT settings below only apply to trackers of that type), the command makes no change and instead sets the status flag of your tracker to TRKS_BAD_SETTING (value 6). TRKS_BAD_SETTING is replaced the next time a setting is accepted, or by a successful init_tracker or track. You can also clear it yourself with TKSET_STATUS. Settings that are general but have no effect for a particular tracker type (for example TKSET_MERGEALPHA on a hog tracker) are accepted and stored without any effect.
+
+**Note**: get_tracker can read back only the last known position (set by TKSET_ROW and TKSET_COL) and the occlusion counter (TKSET_OCCLCOUNT). The other settings cannot be read back, so keep your own record of the values you set.
+
+General settings (all tracker types unless stated):
+
+| **Setting (number)** | **Value** | **Default** | **Meaning** |
+| --- | --- | --- | --- |
+| TKSET_TEMPDIM (1) | integer, >= 16, and obeying the def_tracker rules for this type | as defined | Change the template window size. If the size is different, the tracker becomes un-initialised (TRKS_UNSEEDED) and must be initialised again. The change is rejected if it would break the def_tracker rules (for example the hog multiple-of-<cell_dim> rule). |
+| TKSET_SEARCHDIM (2) | integer, obeying the def_tracker rules for this type | as defined | Change the search area size. The tracker stays initialised. (Ignored by klt.) |
+| TKSET_COLCHAN (3) | integer 1 - 4 (CCHAN_ constants) | set by init_tracker | Change the colour channel. If this is a different channel the tracker becomes un-initialised because its target was recorded in the old channel. |
+| TKSET_SEARCHSIG (4) | float > 0 | a quarter of the square of the difference between the search and template sizes | zmncc and ght only: width of the preference for positions near the last known position. A candidate position that is a distance d (pixels, in each direction separately) from the last position has its score multiplied by exp(-d^2 / value). Smaller values make the tracker stick closer to where it was; very large values remove the preference. If you never set it, the default follows any later change of search or template size. Accepted but unused by hog, com and klt. |
+| TKSET_MERGEALPHA (5) | float 0 - 1 | 0.02 | zmncc only: how quickly the template adapts to the target's current appearance. After each confident track (confidence not below the occlusion threshold), this fraction of the newly matched window is blended into the template. 0 means the template never changes. Accepted but unused by the other types. |
+| TKSET_OCCLTHRESH (6) | float 0 - 1 | zmncc 0.80; hog 0.50; com 0.50; ght 0.35; klt 0.30 | Confidence below this value is judged an occlusion. The values for hog, com, ght and klt are untested starting points: tune them on your own images. |
+| TKSET_CELLDIM (7) | integer; hog: 8, 16 or 32 (and the def_tracker hog rules); other types: any integer >= 8 | as defined | The HOG cell size. For a hog tracker, a change makes it un-initialised. For the other types the value is stored but unused. |
+| TKSET_OCCLCOUNT (8) | integer >= 0 | 0 | Set the occlusion counter (for example to reset it to 0). |
+| TKSET_ROW (9) | integer 0 - 480-<template_dim> | - | Move the last known position of the template window (its top row). The next track will centre its search here (klt: it will re-acquire its feature points at the new position instead). The tracker stays initialised. Use this together with TKSET_COL to redirect a tracker, for example to a position you found with match_tracker. |
+| TKSET_COL (10) | integer 0 - 640-<template_dim> | - | The same, for the left column. |
+| TKSET_STATUS (39) | integer 0 - 6 (the TRKS_ codes) | - | Set the status flag to the value you give (normally TRKS_OK). The status flag only reports; changing it has no effect on how the tracker behaves, whether it is initialised or any other setting. Use it to clear an old error before a command so that the flag afterwards can only have come from that command (see the notes after the status code table in init_tracker). An invalid value is rejected like any other setting (TRKS_BAD_SETTING). |
+
+COM settings (com trackers only):
+
+| **Setting (number)** | **Value** | **Default** | **Meaning** |
+| --- | --- | --- | --- |
+| TKSET_COM_THRESH (11) | float <= 255; negative = automatic | automatic | Grey level that separates target from background. Only pixels brighter than it (or darker, if the polarity is 1) take part, weighted by how far they are beyond it. Automatic means the average grey level of the search area, recalculated each frame. |
+| TKSET_COM_POLARITY (12) | integer 0 or 1 | 0 | 0 = the target is brighter than the background; 1 = the target is darker. |
+| TKSET_COM_ITER (13) | integer 1 - 100 | 10 | The most times the window may be re-centred on the centroid in one track while homing in on the target. |
+
+KLT settings (klt trackers only). The defaults suit most targets and rarely need to be changed:
+
+| **Setting (number)** | **Value** | **Default** | **Meaning** |
+| --- | --- | --- | --- |
+| TKSET_KLT_MAXTGT (14) | integer 1 - 128 | 40 | The most feature points kept inside the box. |
+| TKSET_KLT_MAXBG (15) | integer 0 - 128 | 24 | The most feature points kept in the band around the box, used to measure the background motion. 0 turns background compensation off. |
+| TKSET_KLT_RING (16) | integer 1 - 64 | 32 | Width in pixels of the band around the box in which background points are chosen. |
+| TKSET_KLT_LEVELS (17) | integer 1 - 8 | 4 | Number of image-pyramid levels. More levels follow faster motion. Reduced automatically if the image is too small. Takes effect at the next track, which re-acquires the points. |
+| TKSET_KLT_HW (18) | integer 2 - 12 | 7 | Half width of the square window used to follow each point (the window is 2 x value + 1 pixels across, so 15 x 15 by default). Takes effect at the next track, which re-acquires the points. |
+| TKSET_KLT_MAXITER (19) | integer 1 - 100 | 20 | Most refinement iterations per point per pyramid level. |
+| TKSET_KLT_EPS (20) | float 0.000001 - 1 | 0.03 | Refinement stops when a step is smaller than this many pixels. |
+| TKSET_KLT_MINEIG (21) | float 0 - 1000000 | 1.0 | Minimum texture strength a point's window must have to be used. Points on weak texture are rejected. |
+| TKSET_KLT_FBCHECK (22) | integer 0 or 1 | 1 | Forward-backward check: each point is followed forward and then back again and discarded if it does not return close to where it started. |
+| TKSET_KLT_FBTHRESH (23) | float 0.001 - 100 | 1.0 | Largest forward-backward error (pixels) accepted. |
+| TKSET_KLT_CONSIST (24) | float 0.001 - 100 | 2.0 | Base tolerance (pixels) for two points to count as moving together. |
+| TKSET_KLT_RELTOL (25) | float 0 - 10 | 0.15 | Extra tolerance for each pixel per frame of speed (allows for size or shape change of the target). |
+| TKSET_KLT_FGTOL (26) | float 0 - 100 | 1.5 | How far (pixels) a point inside the box must move differently from the background to count as part of the target. |
+| TKSET_KLT_MINPTS (27) | integer 1 - 128 | 3 | If fewer target points than this agree on a motion, the track is lost. |
+| TKSET_KLT_MINBG (28) | integer 1 - 128 | 3 | Number of background points needed before the background motion is trusted. |
+| TKSET_KLT_REFILL (29) | float 0 - 1 | 0.6 | New points are looked for when the number of points in a group falls below this fraction of its maximum. |
+| TKSET_KLT_QUALITY (30) | float 0 - 1 | 0.02 | How good a corner must be, relative to the best corner in the region, to be chosen as a point. |
+| TKSET_KLT_MINDIST (31) | integer 1 - 64 | 6 | Minimum spacing in pixels between points. |
+| TKSET_KLT_MAXLOST (32) | integer 0 - 1000000 | 30 | While the track is lost the box is held where it was and the old reference image is kept so the target can be re-found if it reappears. After more than this many consecutive lost frames, new points are chosen in the held box. |
+
+GHT settings (ght trackers only):
+
+| **Setting (number)** | **Value** | **Default** | **Meaning** |
+| --- | --- | --- | --- |
+| TKSET_GHT_BINS (33) | integer 8 - 90 | 36 | Number of edge-direction classes (36 = 10 degrees each). More classes are more selective. Takes effect at the next init_tracker. |
+| TKSET_GHT_BINTOL (34) | integer 0 - 3 | 1 | How many neighbouring direction classes, on each side, also count as matching. Takes effect immediately. |
+| TKSET_GHT_MAGTHR (35) | float <= 1000; negative = automatic | automatic | Edge strength (the grey level change across two pixels) a pixel needs to count as an edge. Automatic means: at initialisation, TKSET_GHT_EDGEFRAC times the strongest edge in the template (but not less than 8), and that value is then used for the search areas too. A value you set (>= 0) is used for the search areas immediately, but only applied to the template at the next init_tracker, so initialise again after changing it. |
+| TKSET_GHT_EDGEFRAC (36) | float 0.01 - 1 | 0.25 | The fraction used by the automatic edge strength. Takes effect at the next init_tracker. |
+| TKSET_GHT_SMOOTH (37) | integer 0 or 1 | 1 | 1 = smooth the votes slightly so that small shifts or blur of the edges still count. This raises the scores a little. |
+| TKSET_GHT_MINEDGES (38) | integer 1 - 100000 | 20 | Fewest template edge pixels allowed for a successful init_tracker. |
+
+### set_var
+
+set_var <varname> <varval> [charpos]
+
+This assigns a value to a user-defined variable. This is symbolically equivalent to 'varname = varval'. The [charpos] option allows additional operations on string variables.
+
+<varname> - a character string constant representing the name of the variable whose value is to be set.
+
+<varval> - a varval and is the value that is to be assigned to the variable specified in <varname>.
+
+[charpos] - a integer varval specifying the position in a string to operate on (starting from 0) or a negative number if you want the string length to be evaluated. See notes for details.
+
+**Note**: When <varname> is a string, <varval> is cast to a string by the rule given under def_var: a constant written in the script is used exactly as written, and a numeric variable is written out as a number.
+
+**Note**: The [charpos] optional argument has no effect unless <varname> is a string and <varval> is either a string variable or a constant written in the script (a constant is a string for this purpose, so `set_var s 12345 2` gives “3”). It is ignored when <varval> is an int or float variable.
+
+**Note**: When <varname> and <varval> are string data then, if [charpos] is supplied and:
+
+* [charpos] is >= 0 : The the set operation will only pertain to the single character in the the <varval> string that is the [charpos]th character in that string (the first character being at position 0) unless the value of [charpos] is >= the number of characters in the string of <varval> in which case no operation is performed (<varname> is left unaltered) but this will not result in an error - the script will silently continue.
+* [charpos] is < 0 : The string value of the variable <varname> will be assigned a numerical integer value (in ASCII form, as a string) which is the length of the string of <varval> as returned by the C function strlen.
+
+**Note**: Thus the optional [charpos] argument allows you to extract a specific single character from the string of <varval> or return the length of that string. It serves no function for for other data types.
+
+* **Note**: The assignment equals (=) operation can also be done as an inline operation as part of the math_var command (which see).
+
+### skip_frames
+
+skip_frames <skip>
+
+This causes the camera frame grabber to activate and discard a certain number of frames. This allows any frames stored in the grabber buffers to be expunged. This clearing of the buffer queue might be useful to ensure a subsequent grab command begins at the most recent thing stationed in front of the camera or to ensure that any change of camera setting (like brightness, gain, colour balance, etc.) is fully enacted in the next image you capture (otherwise if you simply take the next image in the buffer it will be the one that was put there before your setting change was made).
+
+<skip> - a varval of type int >= 0. It tells the frame grabber how many frames to grab and discard.
+
+**Note**: This is a 'one-off' operation that will happen immediately when you issue the command. This will not change the pardcap internal global variable 'skiplim' which is set using the command frames_to_skip (which see).
+
+**Note**: At the time of writing pardcap uses a buffer queue of 2, so if you set <skip> to 3 this should ensure the buffers are purged and the next image in the buffer queue is up-to-date with any settings or image currently on the camera sensor.
+
+### sleep
+
+sleep <value>
+
+This pauses execution of the script for the specified amount of time in seconds.
+
+<value> - a varval of type float and >= 0.0
+
+**Note**: Fractions of a second are respected - there is no need to use whole numbers.
+
+**Note**: This may be useful to allow any temporary fluctuation in illumination or wobble in the mechanical axes (e.g. due to sudden deceleration), or other process to stabilise before going on to do other things (such as capture an image sequence). It may also be used if you want to pause while PARDUS communicates with another computer (such as an external image processing computer).
+
+### stats_array
+
+stats_array <array_in> <stats_func> <threshold> <arguments as per <stats_func>>
+
+This calculates various statistical measures on the input array. Some of these measures are for 1D or 2D arrays while, for other measures, dimensionality is not important. The index of the input array is respected.
+
+<array_in> - The name of the input array variable whose values are to be analysed. This must be of type int or float. String arrays are not allowed.
+
+<stats_func> - This is a string varval specifying the range of statistics to be calculated. This must be one of these options: basic, spatial, distro, texture.
+
+<threshold> - A numerical varval specifying the value, below which all array cell values in the input array will be ignored (excluded from the processing). For the case of float type input arrays this threshold is applied always. For the case of integer input arrays this threshold is only applied if it is >0.
+
+The meaning of the subsequent arguments depends on your choice for <stats_func> as follows:
+
+For basic the remaining arguments are: <len> <rec_mean> <rec_integral> <rec_min> <rec_max> <rec_range> <rec_var> <rec_SD> <rec_energy> <rec_sparsity>
+
+For spatial the remaining arguments are: <height> <width/rec_com_c> <rec_com_r> <rec_bb_r> <rec_bb_c> <rec_bb_ht> <rec_bb_wd> <rec_orient> <rec_eccent>
+
+For distro the remaining arguments are: <len> <rec_mdn> <rect_lquart> <rec_uquart> <rec_iqr> <ptile> <rec_mode> <rec_peak> <rec_entropy>
+
+For texture the remaining arguments are: <height> <width> <tv> <gradenergy>
+
+**Note**: The index of the input array is respected - processing only occurs from that index onwards.
+
+**Note**: Arrays of integer type are given some special treatment to make the processing faster. This special treatment is as follows: Threshold values <=0 are treated as meaning 'do not apply any thresholding' and this therefore prevents you from applying a negative threshold. This limitation does not apply to float arrays where any threshold value is applied - positive or negative. Another special treatment for integer input is that those stats which require a histogram to be built, the histogram is made on 256 bins assuming the input pixel value range is 0 to 255 and any pixel value outside that range are excluded from the distribution calculations. These special circumstances exist so you can use the integer route for fast processing of video frames. If you want the full range of the inputs beyond this 8-bit span to be processed without these 8-bit assumptions then use a float array as input instead of integer.
+
+**Note**: The output variables may be of any type - all statistics are produced in double precision floating point maths but the PCS auto-casting rules will be applied if any of your receptor variables are of int or string type.
+
+**Note**: You must supply at least as many arguments as you need. If you supply the maximum number (14) any unused arguments will be ignored. If you supply too few, the script will terminate due to a run-time error or it will not get past the script check phase.
+
+**Note**: The size arguments, <len> <height> <width>, must all be integer varvals which may be conveyed as a constant or a variable of any data type. The integer value they convey must be >=1. These specify the total number of array elements to process (<len> on its own or <height> x <width>). If that total number is greater than the available cells of the input array from its supplied index to the end of the array then a script-terminating error will occur.
+
+**Note**: For all <stats_func> except texture the <width> argument may, alternatively be used as a receptor. In those cases you must supply the value as a variable - not a constant. If the <stats_func> value may ever be anything other than texture in your script supplying a constant for this argument will result in a script-terminating error.
+
+**Note**: All the other argument may only be user-defined variables so they can receive the result they are intended for. All results are calculated in doubles but the PCS autocasting rules will be applied if you supply a receptor variable of int or string type. The initial values in all these variables does not matter because it will get overwritten with the result with the sole exception of <ptile> which must convey a valid number. If that number is in the closed range 0.0 - 100.0 then that is the percentile that will be written into that variable after processing, replacing its original value. If its original value is non-numerical this will result in a script-terminating error. If its value is outside the closed range described above then the returned value will be the 95th percentile.
+
+**Note**: The meaning of each receptor variable is described below. For all modes, any pixel with a value strictly less than <threshold> is completely ignored by the processing loops. The remaining pixels that meet or exceed <threshold> are defined as the ***active data set***. If no pixels meet this requirement, output values gracefully default to zero (or 1.0 for sparsity) to prevent division-by-zero errors:
+
+***For basic stats***:
+
+<rec_mean> - The average intensity value of the image. Calculated as the sum of all elements in the active data set divided by the number of active elements. Impact of Threshold: Excluding dark background noise or negative anomalies will cleanly increase this value to reflect only your target highlights.
+
+<rec_integral> - The total accumulated sum of all pixel values in the active data set. Useful for overall light exposure measurements.
+
+<rec_min> - The lowest pixel intensity value discovered within the active data set. Impact of Threshold: This value will always be greater than or equal to your chosen <threshold>.
+
+<rec_max> - The absolute peak pixel intensity value found within the active data set.
+
+<rec_range> - The difference between maximum and minimum intensity (max - min). Measures the total contrast envelope of your active pixels.
+
+<rec_var> - The statistical population variance. Measures how widely the pixel values fluctuate around the calculated mean.
+
+<rec_SD> - The standard deviation (square root of variance). Expresses image contrast variations in the exact same units as your raw pixels (e.g. 0–255).
+
+<rec_energy> - The Root Mean Square (RMS) Amplitude. Measures the total signal power or global noise energy across the processed canvas block.
+
+<rec_sparsity> - The ratio of zero-value pixels to the total number of items in the active data set. Impact of Threshold: Setting <threshold> greater than 0 filters out all physical zeroes, automatically locking this output to 0.0.
+
+***For spatial stats***:
+
+<rec_com_r> - The row position of the calculated global Center of Mass ('Mass' = pixel value). Impact of Threshold: Isolates an object's physical coordinates by ignoring asymmetric background noise.
+
+<width/rec_com_c> - [In-Place Dual Parameter]. This must hold the integer width of the input array when submitted. When the results are calculated its value will be over-written with the column position of the calculated global Center of Mass ('Mass' = pixel value). Impact of Threshold: Isolates an object's physical coordinates by ignoring asymmetric background noise.
+
+<rec_bb_r> - The bounding box row offset. Marks the top-most row index that contains at least one active pixel.
+
+<rec_bb_c> - The bounding box column offset. Marks the left-most column index that contains at least one active pixel.
+
+<rec_bb_ht> - The total height of the bounding box enclosure spanning your active pixels.
+
+<rec_bb_wd> - The total width of the bounding box enclosure spanning your active pixels.
+
+<rec_orient> - The dominant tilt angle of light distribution across the canvas (in radians from -p/2 to +p/2), calculated using central moments. Impact of Threshold: Allows you to find the orientation of a specific shape or object while completely ignoring surrounding background artefacts.
+
+<rec_eccent> - The shape eccentricity index (elongation factor) between 0.0 and 1.0. A value of 0.0 means a perfectly round circle of light, while values approaching 1.0 describe a stretched line.
+
+***For distro stats***:
+
+<rec_mdn> - The median (50th percentile). The exact middle intensity value when your active data set is sorted. Unlike the mean, it is highly resistant to outlier spikes like hot-pixel camera artefacts.
+
+<rect_lquart> - The lower quartile (25th percentile). 25% of your active pixels fall at or below this intensity value.
+
+<rec_uquart> - The upper quartile (75th percentile). 75% of your active pixels fall at or below this intensity value.
+
+<rec_iqr> - The Interquartile Range (<rec_uquart> - <rect_lquart>). Measures the spread of the middle 50% of your data, providing a robust descriptor of uniform mid-tone contrast.
+
+<ptile> - [In-Place Dual Parameter] Input a floating-point target percentile value (0.0 to 100.0) into this variable. The command reads your configuration, executes, and overwrites this exact variable with the corresponding pixel intensity value.
+
+<rec_mode> - The intensity value that occurs most frequently across the active data set.
+
+<rec_peak> - The maximum count/frequency of your mode. Tells you exactly how many active pixels share that dominant intensity value.
+
+<rec_entropy> - The information-theory randomness density. High entropy indicates a highly detailed texture or busy noise pattern, while low values indicate flat, uniform regions of colour. Impact of Threshold: Restricting the data set to a specific highlight window will drop entropy to focus purely on the target's internal texture density.
+
+***For texture stats***:
+
+<tv> - Total Variation. Sums the absolute derivative differences between every pixel and its neighbours across rows and columns. Measures raw canvas sharpness.
+
+<gradenergy> - Gradient Energy. Sums the squared variations of local pixel transitions. This value spikes significantly in highly focused, sharp-edged imagery, making it an excellent metric for camera autofocus tuning routines. Impact of Threshold: Filters out uniform background gradient shifts so your sharpness metric is calculated purely from your prioritized regions of interest.
+
+### sub_var
+
+sub_var <varname> <varval>
+
+This subtracts a value from a user-defined variable.
+
+<varname> - The name of the variable whose value you want to change
+
+<varval> - The value (or variable containing the value) you want to subtract from <varname>.
+
+**Note**: This is symbolically equivalent to <varname> -= <varval> in C.
+
+**Note**: Subtraction can also be done inline using math_var (which see).
+
+### tc_threshold
+
+tc_threshold <lower> <upper>
+
+This sets lower and upper tissue content thresholds. See notes below for more information.
+
+<lower> - a varval of type float. It must not be greater than <upper>
+
+<upper> - a varval of type float. It must not be less than <lower> (unless <upper> is negative - which is permitted but which also disables the use of this upper limit value as described below).
+
+**Note**: Tissue content thresholding is an optional test to determine whether a captured image is discarded or saved. Even if an image is discarded due to not passing the tissue content threshold test you may still request a coordinates file by setting the save_coords value to ON (see save_coords).
+
+**Note**: If the <lower> value supplied here as negative then tissue content thresholding will not be used at all and any image capture request (if the capture succeeds without error) will result in an image to be saved. If only the <upper> value supplied here is negative (when the <lower> is non-negative) then tissue content thresholding will be done but without an upper limit imposed in the thresholding process.
+
+**Note**: Tissue content threshold tests are applied to the number returned from the tissue content analysis (TCA) algorithm applied to the Y-component of a preview image taken just prior to a full-size frame image capture event (see the command get_preview_tc for details of that TCA algorithm). If the threshold test is passed then the full image capture goes ahead. If the test fails then the full image capture does not go ahead.
+
+**Note**: Unless you call get_preview_tc OFF on, at least once in any given login session to a pardcap server after the pardcap server first starts up, the reference values MALref and VARref will not be set. Their default values when a pardcap server first starts are -1.0 (for each of them). If VARref is negative it means the tc reference values have not yet been set and so tc measurements (let alone tc thresholding) will not be possible and so will not be applied regardless of what values you set with this tc_threshold command.
+
+**Note**: The thresholding tests are implemented in the pardcap C source code according to the pseudocode logic shown below (tcval is the result of the TCA algorithm applied to the preview image):
+
+```c
+if (<lower> < 0.0) go_ahead_with_full_image_capture(); // No thresholding
+else {
+  int score = 0;
+  int passmark = 1;
+  grab_a_preview_image_and_calculate_tcval_from_it();
+  if (tcval >= <lower>) score++;
+  if (<upper> >= 0.0) {
+    passmark++;
+    if (tcval <= <upper>) score++;
+  }
+  if (score == passmark) go_ahead_with_full_image_capture();
+}
+```
+
+### tmc_chconf_parse
+
+tmc_chconf_parse <chconf_info> <receptor>
+
+Extracts a piece of config information from the current value of the locally stored TMC stepper motor driver chop conf register (CHOPCONF).
+
+<chconf_info> - an integer determining what piece of config information to get.
+
+<receptor> - a variable which will receive the information.
+
+**Note**: The received information will be an integer.
+
+**Note**: This is a purely local command with no traffic to the server or Arduino.
+
+**Note**: The value of the local copy of CHOPCONF can be updated with the separate act_get command using the INFO_TMCCHCONF option.
+
+**Note**: This parsing command uses a custom PARDUS C function and does not use the TMCStepper library code. It thereby bypasses the commonly known bug in that library for parsing the microstep denominator (TMC_CI_MRESMSDEN) value.
+
+**Note**: The currently acceptable <chconf_info> options are defined in parddefs.h as:
+
+```c
+// TMC2209 chopconf info item
+#define TMC_CI_TOFFLEVEL 1
+#define TMC_CI_HYSTSTART 2
+#define TMC_CI_HYST__END 3
+#define TMC_CI_CPBLANKTM 4
+#define TMC_CI_VSENSITIV 5
+#define TMC_CI_MRESMSDEN 6
+#define TMC_CI_INTERPOLN 7
+#define TMC_CI_DOUBLEDGE 8
+#define TMC_CI_DISSHRTTG 9
+#define TMC_CI_DISSHRTTL 10
+```
+
+**Note**: Information returned will conform to the following ranges:
+
+For TMC_CI_TOFFLEVEL the result will be a number between 0 and 15.
+
+For TMC_CI_HYSTSTART the result will be a number between 1 and 8.
+
+For TMC_CI_HYST__END the result will be a number between -3 and 12.
+
+For TMC_CI_CPBLANKTM the result will be a number between 0 and 3 with the following meaning:
+
+0=16 clocks
+
+1=24 clocks
+
+2=36 clocks
+
+3=54 clocks
+
+For TMC_CI_MRESMSDEN the result will be a number between 1 and 256.
+
+For all other options the result will be 1 (for true) or 0 (for false).
+
+For more details on these data items see the TMC2209 data sheet.
+
+### tmc_status_parse
+
+tmc_status_parse <status_info> <receptor>
+
+Extracts a piece of status information from the current value of the locally stored TMC stepper motor driver status register (DRV_STATUS).
+
+<status_info> - an integer determining what piece of status information to get.
+
+<receptor> - a variable which will receive the information.
+
+**Note**: The received information will be an integer.
+
+**Note**: This is a purely local command with no traffic to the server or Arduino.
+
+**Note**: The value of the local copy of DRV_STATUS can be updated with the separate act_get command using the INFO_TMCSTATUS option
+
+Note: The currently acceptable <status_info> options are defined in parddefs.h as:
+
+```c
+// TMC2209 status info item
+#define TMC_SI_OVER_TEMP 1
+#define TMC_SI_PREO_TEMP 2
+#define TMC_SI_SHORTGNDA 3
+#define TMC_SI_SHORTGNDB 4
+#define TMC_SI_SHORTSUPA 5
+#define TMC_SI_SHORTSUPB 6
+#define TMC_SI_OPENLOADA 7
+#define TMC_SI_OPENLOADB 8
+#define TMC_SI_CS_ACTUAL 9
+#define TMC_SI_TEMP_THRS 10
+#define TMC_SI_STNDSTILL 11
+#define TMC_SI_SPRDCYCLE 12
+```
+
+**Note**: Information returned will conform to the following ranges:
+
+For TMC_SI_CS_ACTUAL the result will be a number between 0 and 31.
+
+For TMC_SI_TEMP_THRS the result will be a number between 0 and 15.
+
+For all other options the result will be 1 (for true) or 0 (for false).
+
+For more details on these data items see the TMC2209 data sheet.
+
+### track
+
+track <tracker_name> <receptor_r> <receptor_c> <receptor_score>
+
+This causes a tracker to assess the current position of the target it is tracking and return its best estimate of the current position of the target and its confidence measure of target acquisition. Use it once for each new image placed in the preview buffer.
+
+<tracker_name> - a string varval defining the name of the tracker to be activated. This is case sensitive and must pertain to an extant user-defined tracker.
+
+<receptor_r> - a user-defined variable to receive the top of the template window area of the tracker's current estimate of the position of the target. The variable must be capable of storing an integer number.
+
+<receptor_c> - a user-defined variable to receive the extreme left column of the template window area of the tracker's current estimate of the position of the target. The variable must be capable of storing an integer number.
+
+<receptor_score> - a user-defined variable to receive the match strength / confidence value. The variable must be capable of storing a float number.
+
+**Note**: Row and column coordinates are provided in the reference frame of the preview image's VGA field (even if smaller or non 4:3 preview images are being used).
+
+**Note**: What you get back:
+
+* Normal tracking: the position of the best match and a confidence at or above the occlusion threshold. The status flag is TRKS_OK.
+* Occluded or poor match: the confidence is below the occlusion threshold. The best position found is still returned, the occlusion counter increases by one and the status flag is TRKS_OCCLUDED. (zmncc does not adapt its template on such a frame. klt: if too few points agree on the motion, the target is declared lost: the box is held at its previous position, which is what is returned, with confidence 0.)
+* No search possible because the tracker is not initialised (never initialised, initialisation failed, or a setting change discarded it): <receptor_score> is set to -1.0, <receptor_r> and <receptor_c> are left exactly as they were, and the status flag is TRKS_UNSEEDED.
+* No search possible because the search area could not be placed in the frame: the same, with the status flag TRKS_BAD_WINDOW. This should never happen with a 640 x 480 preview image.
+
+**Note**: A <receptor_score> of -1.0 means that no search was made and that your row and column receptor variables have not been changed. Every position that track does write is a valid template position (row between 0 and 480-<template_dim>, column between 0 and 640-<template_dim>), so it can be passed straight to init_tracker, match_tracker or TKSET_ROW and TKSET_COL without checking. A score of 0 or a low score, by contrast, means that a search was made and the target was not found well (TRKS_OCCLUDED): the position returned is then only the best guess.
+
+**Note**: The returned position becomes the tracker's last known position and the centre of the next search. The confidence has these meanings:
+
+* zmncc: the correlation between the (adapting) template and the best window. 1 = identical pattern, near 0 = no resemblance.
+* hog: the overlap of the edge-direction histograms of the template and the best window. 1 = identical.
+* com: the fraction of the bright (or dark) "mass" in the whole search area that lies inside the final window. It is low if there is a second blob in the search area, or none.
+* ght: the number of votes for the winning position (smoothed, see TKSET_GHT_SMOOTH) divided by the number of edge pixels in the template, limited to 1.
+* klt: how many of the box points moved together as the target and how many survived, scaled down when fewer than 8 points agree; 0 if fewer than TKSET_KLT_MINPTS agree (track lost).
+
+**Note**: Speed of the target. For zmncc, hog, com and ght, the target must stay inside the search area: it can move at most about (<search_dim> - <template_dim>) / 2 pixels between two track commands. A klt tracker copes with much larger movements because it covers the whole frame. If a target is lost, use match_tracker to look for it, then redirect the tracker with set_tracker (TKSET_ROW, TKSET_COL) or init_tracker.
+
+**Note**: All tracking activity is based on the VGA preview buffer - even if that buffer is displaying multiple images or images that are not of VGA dimensions (i.e. non 4:3 aspect ratio). For non-4:3 aspect ratio preview images, the grey zones of padding (used to pad the preview image to fit in the 4:3 display zone) will be used as if they were image pixels for all tracking purposes.
+
+**Note**: The tracking sub-system is designed to fail without terminating the script (except for catastrophic memory failures or invalid arguments). Failures are reported by setting the tracker's status code, which you can read with get_tracker.
+
+Example - tracking a target through a series of images with a zmncc tracker:
+
+```pcs
+#include stdpard.pch
+def_var int  row 0
+def_var int  col 0
+def_var float score 0.0
+def_var int  status 0
+# (load the first image into the preview buffer, then)
+def_tracker zmncc t1 64 128 16
+init_tracker t1 244 267 CCHAN_R
+# for each later image: load it into the preview buffer, then
+track t1 row col score
+get_tracker t1 TKGET_ERRSTATUS status
+undef_tracker t1
+```
+
+### undef_actuator
+
+undef_actuator <act_id>
+
+This undefines (frees) an actuator definition. This clears all data associated with an actuator such that it cannot be used in any way after it is undefined. You may re-define it in order to use it (using def_actuator) but it will then be created in the completely nascent state (unhomed, step count invalid, requiring all pins to be re-defined, etc.).
+
+<act_id> - This is a string that uniquely identifies the actuator. It may be one of 2 things:
+
+1. The name of an extant actuator
+2. The word CurrAct
+
+In both cases these are case sensitive and may be supplied either as a string constant or in a string variable.
+
+Internally, the command uses the values of the system variables CurrActIdx (actuator index) and CurrActType (actuator type value) to identify the actuator to undefine. If you supply CurrAct as <act_id> then it simply uses whatever values those two system variables happen to have at the time. If you supply the name of an actuator then it attempts to find the index and type of that actuator and will set CurrActIdx and CurrActType to those values before using them.
+
+The actuator of the specified type and index must exist on the server for this command to succeed, otherwise an error will occur at run time. The script check procedure will not fail if the specific actuator does not exist because it can't predict what actuators will come into existence upon a run-time call to get_actuators so it is up to the script writer to ensure these will exist at run time to avoid error. To find out if an actuator exists, do a get_actuators command to refresh the local list of extant actuators from the server's data, then do either an act_getname or act_getid command (which see).
+
+### undef_tracker
+
+undef_tracker <tracker_name>
+
+This destroys a user-defined tracker and deletes any information it contained. Its name becomes available for reuse (to define a new tracker) and any later tracker command that names it (apart from def_tracker) will cause an error.
+
+<tracker_name> - a string varval defining the name of the tracker to be destroyed. This is case sensitive and must pertain to an extant user-defined tracker.
+
+### undef_var
+
+undef_var <varname>
+
+This destroys a user-defined variable (including an array) and deletes any information it contained.
+
+<varname> - a string constant defining the name of the variable or array to be destroyed. This is case sensitive and must pertain to a extant user-defined variable or array (not a system variable).
+
+**Note**: This command works for arrays of size > 1 as well as single variables. When operating on an array only supply the base name and do not use dereferencing brackets. This is the only occasion, other than with def_var, where an array of size > 1 can (and must) be used without dereferencing brackets.
+
+**Note**: This allows you to use system resources (in particular, RAM) more efficiently by giving variables temporally limited scope. Bear in mind, however, that for the duration in which a variable exists it will always have global scope. For mote details about variable scope rules see p.39 . For example you can create a set of temporary variables to act as 'arguments' to pass values to a function that expects those variables and then undefine those variables at the end of the function just before the function returns. Alternatively you can define a set of variables at the beginning of a function to act as temporary working variables and then undefine them just before you return from the function. However, unlike in other languages, these temporary variables are not 'automatic' or limited in global scope. You can also define a large array for reading in data and then undefine that array when it is no longer needed. It will be entirely up to the PCS programmer to establish and stick to a valid protocol for defining, using and destroying those variables.
+
+**Note**: The script checker part of the interpreter imposes certain restrictions on the use of variables and their existence. For details see the dedicated section on that topic on page 39 .
+
+**Note**: In general, problems may occur if you use def_var, def_array or undef_var inside loops or blocks of code that are conditionally accessed (by do_if, else or any block that is the target of a conditional jump etc.). Such usage is not forbidden and may well pass the syntax checking phase (where conditions are not evaluated and jumps or loops are not enacted) but may results in errors or unforeseen behaviour during run time. Sometimes such placement may be desirable but it is left to the programmer to determine when this is appropriate according to their intended logic. For example, it is almost never a good idea to use these commands inside a loop_while loop but it might be acceptable if you need to read large amounts of data into an array from a file and the size of that array might need to change on each iteration of the loop. In such cases using def_array for dynamic allocation of the array to the appropriate size followed, after reading and using the data, by undef_var before the loop repeats might be a resource efficient way to code this and would be perfectly safe provided the loop can never be exited by a non-local jump that comes between def_array and undef_var.
+
+**Note**: By using the def_array -> undef_var -> def_array sequence you can effect dynamic re-sizing of an array at run time. See the notes in the description of def_array for more detail.
+
+### update_gui_coords
+
+update_gui_coords <server_sync?>
+
+This updates the client side values and display on the GUI controls of the current XYZ stage coordinates and calibration information.
+
+<server_sync?> - is a binary choice varval. If it evaluates to non-zero then the command queries the server to get the latest values of the stage XYZ coordinates, calibration factors, calibration units name and currently used unit type (as set by act_unit) and updates the local client side copies of these variables. If this evaluates to zero then the GUI coordinate values are updated with whatever coordinates are currently held on the client.
+
+**Note**: The reason that making a syncing call to the server is optional is that most 'normal' motion commands that wait for a PARDUS movement report (PMR) will already have the very latest coordinates held locally in the client once the motion has ended and so there is no need to query the server again, only to update the GUI widgets with those values using the pardclient function update_axis_positions_gui(); (which this command will ultimately call regardless of the value of <server_sync?> ). However, there are occasions when these coordinate values might change on the server and Arduino without the latest values coming over to the client (such as after an act_set command using the INFO_STEPCOUNT info item) in which case using a <server_sync?> value of TRUE (or similar) will allow full syncing to what is current on the server.
+
+**Note**: Using act_get with an info item of INFO_STEPCOUNT or INFO_XYZCOORDS will only update script variables with the latest coordinate values but will not change the client local PMRep globals. Only using this update_gui_coords command will do that.
+
+**Note**: This command will not work unless all 3 stage axis stepper motors are defined (X, Y and Z).
+
+### verbosity
+
+verbosity <level>
+
+This sets how much output to show in the server console, script console and log file.
+
+<level> is a varval of type int and can be:
+
+0 = only show and log error messages (plus camera setup/quit notices)
+
+1 = as for 0 plus show (but don't log) the results of print_value commands
+
+2 = as for 1 plus log the results of print_value commands (and show check/run status lines in CLI mode)
+
+3 = show and log everything.
+
+**Note**: Having a verbosity less than 3 can be useful, esp. for live preview and other rapid loops.
+
+**Note**: The default value is 1 at program start (or a value read from a config file). Verbosity is reset to this default value before and after every script run.
+
+**Note**: In pardclient some messages are printed to the script console during loading and checking of files regardless of the default or current verbosity to give visual feedback to the user that the file was read and checked or processed OK.
+
+### xyzs_af_period
+
+xyzs_af_period <period>
+
+This command sets the period of performing an autofocus attempt during an XY-scan performed by the command xyzs_scan (which see).
+
+<period> - a varval of type int that must evaluate to >= 0. It is the period (in terms of number of scan moves) at which autofocus is triggered during an XY scan.
+
+**Note**: If <period> is 0 then no autofocus will be performed throughout the whole scan. Otherwise an autofocus procedure will be attempted every <period> moves the scan takes. Use a value of 1 to perform autofocus at every step. If tissue content thresholding is on, scan positions will only be counted towards this period if there is tissue detected in the field, so the actual period will only relate to the number of tissue-containing positions in the scan.
+
+Note: If <period> is >= 1 then the pre-requisite commands for the PCS command autofocus to function must have been called at some point before calling xyzs_scan. See autofocus for details.
+
+### xyzs_finish
+
+xyzs_finish <coord_x> <coord_y>
+
+Set the end-point coordinates of an XY scan performed by the command xyzs_scan (which see).
+
+<coord_x> - a varval of type float and must be non-negative (>= 0.0). It is the X coordinate for the end of the scan.
+
+<coord_y> - a varval of type float and must be non-negative (>= 0.0). It is the Y coordinate for the end of the scan.
+
+**Note**: All coordinates are expected to be supplied in either calibrated units (if you set act_unit to > 0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.97). For example, when using atomic steps, if you set <coord_x> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <coord_x> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <coord_x> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+
+### xyzs_process
+
+xyzs_process <progname> [<arg1> ...]
+
+Spawn an external non-blocking command during an XY scan. This is similar to execute_daemon but is run at every step of an automated XY scan run by the command xyzs_scan. You must issue this command at least once before issuing xyzs_scan but it you do not want any processes to run on the scanned images you may use NULL (case sensitive) as your <progrname> argument.
+
+<programe> - a string which is the name of the executable file of the command to pass to the command processor. Alternatively supply NULL if you do not want any process to run on your scanned images.
+
+[<arg1> ...] - an optional list of arguments for the program to be executed. If any of the arguments to be passed is the name of the most recently saved image then this must be specified within the argument list as '[img]' (without the quote marks) and the PARDUS script interpreter will replace that with the name of the last scanned image (this will be the full path name). If tissue content thresholding is active and no image was captured due to lack of tissue content then the [img] symbol will be replaced with NoTissue so your external program should check for this specific string (if it is expecting an image file name) to decide what to do.
+
+**Note**: For more details on the rules see execute_daemon.
+
+### xyzs_scan
+
+xyzs_scan
+
+Begin an XY scan of moves in a snake pattern from a start position to an end position with various options pre-set using other commands. This has no arguments but for this command to work without an error certain pre-requisite commands must have been successfully issued before calling it. These commands are listed below but see their individual entries in the manual for detail:
+
+* All the commands required for grab_image to work (see grab_image for the list).
+* xyzs_start - sets the (x,y,z) start position of the scan.
+* xyzs_finish - sets the (x,y) end position of the scan.
+* xyzs_process - sets what external process to run on each image of the scan.
+* xyzs_stepsize - sets the width and height and depth of each move in the scan pattern.
+* xyzs_af_period - sets how often to perform autofocus during the scan. If this is set to anything more than 0 then you must also have called the pre-conditional commands required for autofocus to work (see the section on autofocus for the list).
+
+**Note**: For a scan to work a pardcap server must be connected with a valid camera available and all three stage axes (X, Y and Z) must be extant, mature and homed.
+
+**Note**: A text file will be opened at the start of the scan to record scan parameters and also to record the positions of each image (stage coordinates) and whether they had tissue or not (if tissue thresholding is used). The name of this file will be constructed from your image capture path and root file name settings and have the name ending in "_xys.xys". This text file output must succeed for the scan to complete successfully - any file IO errors will terminate the scan. This file is also used to load a scan into the GUI for the pardclient scan view feature.
+
+**Note**: At the end of a scan, the preview image will be attempted to be saved to disc with a file name beginning with your image capture path and root file name settings and have the name ending in "_preview.ppm" (it is saved in p6 ppm format).
+
+**Note**: During a scan run in the headless pcs-cli CLI mode, each tile output will be stitched into the file described above. So it will be available and updated atomically after each tile as the scan progresses, not only at the end of the scan, and in this way you can monitor the progress of the scan (an external viewer or daemon can inspect it safely mid-scan).
+
+### xyzs_semino_z
+
+xyzs_semino_z <slices>
+
+Set the number of focus plane slices above and below the central focus plane in a scan performed by the command xyzs_scan (which see).
+
+<slices> - a varval of type int and must be non-negative (>= 0). It is the number of slices to be captured at each XY position of the scan both below and above the central Z position (hence 'semi').
+
+**Note**: For a scan involving Z slices (i.e. if <slices> is > 0) then you must also have previously called the command af_setup successfully even if you have no intention of using autofocus in your scan. The reason for this is that a call to af_setup ensures that the Z motor motion is well characterised and, in particular, the client ensures it knows which direction is 'up' and which is 'down' because these are needed to perform Z stacks.
+
+**Note**: At each XY scan position, if xyzs_semino_z is > 0, the Z motor starts at the current Z position (z0) and first moves down by (<slices> * <size_z>) distance units (where <size_z> is the Z step size supplied in xyzs_stepsize; if this starting position is < 0.0, the scan aborts with an out-of-bounds error). It then performs <slices> iterations of moving to the slice position and capturing an image, stepping upward by <size_z> each time until it reaches z0. After verifying it has returned to z0, it captures the central z0 image (which is also used to render the XY scan preview tile and execute any background daemon command). It then steps upward by <size_z> and performs another <slices> iterations of moving to the slice position and capturing an image above z0, before returning the Z stage to z0 and continuing the XY scan. Thus, at each XY position, a symmetric Z-stack of (2 * <slices>) + 1 images is acquired (<slices> below z0, 1 at z0, and <slices> above z0).
+
+### xyzs_start
+
+xyzs_start <coord_x> <coord_y> <coord_z>
+
+Set the start point coordinates for an XY scan performed by the command xyzs_scan (which see).
+
+<coord_x> - a varval of type float and must be non-negative (>= 0.0). It is the X coordinate for the end of the scan.
+
+<coord_y> - a varval of type float and must be non-negative (>= 0.0). It is the Y coordinate for the end of the scan.
+
+<coord_z> - a varval of type float and must be non-negative (>= 0.0). It is the Z coordinate for the end of the scan.
+
+**Note**: All coordinates are expected to be supplied in either calibrated units (if you set act_unit to > 0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.97). For example, when using atomic steps, if you set <coord_x> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <coord_x> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <coord_x> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+
+### xyzs_stepsize
+
+xyzs_stepsize <size_x> <size_y> <size_z>
+
+Set the width and height for each move in an XY scan performed by the command xyzs_scan (which see).
+
+<size_x> - a varval of type float and must be non-negative (>= 1.0e-3). It is the search step distance for each X motion in the scan.
+
+<size_y> - a varval of type float and must be non-negative (>= 1.0e-3). It is the search step distance for each Y motion in the scan.
+
+<size_z> - a varval of type float and must be non-negative (>= 1.0e-3). It is the search step distance for each Z motion in the scan.
+
+**Note**: The term 'step' in xyzs_stepsize refers to each step in the scan pattern, not the microstep size of the motors. If you set the <size_x> and <size_y> values so that the stage moves exactly one camera frame width in X and one camera frame height in Y for each scan move then your XY scan images will not overlap. If you set them to smaller values then your scan images will have overlap at the boundaries of each image (which may be useful for 'stitching' the images together into a larger image after the scan is complete.
+
+**Note**: The value you set for all of these arguments must be >= 1.0e-3 to satisfy the syntax checker even if you do not intend to scan along a particular axis. For example, the value you supply for <size_z> will never be used if you are not doing any Z slices above and below the current Z position (see the command xyzs_semino_z).
+
+**Note**: All step size distances are expected to be supplied in either calibrated units (if you set act_unit to >0 for steppers) or in atomic steps (1/maxmsdenom microsteps). Positions are measured from 0 (= the homed position) and no negative values are allowed. Because a stepper motor can only travel in steps of a minimum of 1/msdenom microsteps, this means that whatever values you supply here for distances and positions will be rounded to the nearest *onestep* value (see p.97). For example, when using atomic steps, if you set <size_x> to 15 when maxmsdenom in 256 and msdenom is 8 (giving a onestep value of 256/8 = 32) then this will result in an effective <size_x> of 0 because (uint32_t)(0.5 + (15.0 / 32.0)) = 0. However if you set <size_x> = 16 then the effective value will be 1 because (uint32_t)(0.5 + (16.0 / 32.0)) = 1.
+
+### yuyv_bias
+
+yuyv_bias <value>
+
+This sets the value of the bias constant used in the YUYV-to-RGB conversion that occurs for colour images captured with a camera streaming raw YUYV data.
+
+<value> is a varval of type float.
+
+**Note**: There is no restriction on the value. By default the value is 0.0.
+
+### yuyv_gain
+
+yuyv_gain <value>
+
+This sets the value of the gain coefficient used in the YUYV-to-RGB conversion that occurs for colour images captured with a camera streaming raw YUYV data.
+
+<value> is a varval of type float.
+
+**Note**: There is no restriction on the value. By default the value is 1.0.
+
+1. In this manual I use the terms RHS-value (meaning Right Hand Side value) and LHS-value (Left Hand Side value) to refer to the left and right values in an expression. So, in the expression 'myval += incval' the variable 'myval' is the LHS-value and the value 'incval' is the RHS-value. In the PCS programming language we would not write that expression in that way. Instead we would write: add_var myval incval but the LHS-value and RHS-value will be as just described. These LHS and RHS terms should not be confused for the modern programming language terms L-value and R-value which mean something quite different (although historically related to Left and Right). [↑](#footnote-ref-2)
+2. The quotes here are just for emphasising that this is a string to the reader of this manual. Recall that quotes are not used to define strings in actual PCS variables and PCS string constants. [↑](#footnote-ref-3)
+3. If you attempt to use a variable after it is destroyed then the variable evaluation process will search for the value of that variable, it will see that the string you supplied does not exist in the list of extant variables and so it will treat it as a string literal. If that string literal is compatible with the attempted use then no error will be emitted but your program will not behave as you expect. This type of bug may be hard to identify so take care to avoid it in the first place by careful use of the undef_var command during coding, paying attention to the details of PCS rules as described in this manual. [↑](#footnote-ref-4)

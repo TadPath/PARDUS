@@ -1,0 +1,80 @@
+Pardus pcs 1
+verbosity 1
+
+###########################################################
+# Testing sensor nodes - 'hot-swapping' an analogue pin   #
+# and effectively hot-swapping analogue to digital using  #
+# undef_actuator and def_actuator.                        #
+###########################################################
+
+#include stdpard.pch
+
+def_var string actname1 _
+def_var int loopidx 0
+def_var int pin_state 0
+
+def_func main
+    get_actuators
+
+# Safety Layer: Clean up any previously defined actuator of the same index
+# and type (but possibly with a different name to the one you are about to
+# create) to avoid a re-definition error later.
+
+act_getname ACT_SENSOR 1 actname1
+set_condexp actname1 != null
+do_if Condexp
+  undef_actuator actname1
+enddo
+
+# Instantiate the sensor actuator and make it of the analogue type
+def_actuator ACT_SENSOR 1 Sensor_general
+act_set Sensor_general INFO_SEN_TYPE  SEN_ANALOGUE        
+act_set Sensor_general INFO_SEN_PIN   5      # Reading analogue pin 5
+
+# Make periodic sensings and print the value
+print_value Sensing_on_pin_A5:
+call_func sensor_readings
+    
+# Now hot-swap the sensed pin from A5 to A3
+print_value Swapping_to_pin_A3:
+    act_set Sensor_general INFO_SEN_PIN   FREE_PIN    # Release current pin
+    act_set Sensor_general INFO_SEN_PIN   3           # Reading analogue pin 3
+
+# Make periodic sensings and print the value
+print_value Sensing_on_pin_A3:
+call_func sensor_readings
+
+# Now 'hot-swap' from an analogue sensor to a digital one:
+print_value Swapping_to_pin_D7:
+
+# We can't just swap the pin so we destroy the analogue sensor first:
+undef_actuator Sensor_general
+
+# Now re-define it as a digital sensor
+    def_actuator ACT_SENSOR 1 Sensor_general
+    act_set Sensor_general INFO_SEN_TYPE  SEN_DIGITAL        
+    act_set Sensor_general INFO_SEN_PIN   7      # Reading digital pin 7
+
+set_var loopidx 32
+print_value Sensing_on_pin_D7:
+call_func sensor_readings
+
+return
+
+def_func sensor_readings
+set_var loopidx 16
+loop_while loopidx
+
+    # Read the sensor value
+    act_get Sensor_general INFO_SEN_VAL pin_state
+
+    # Print the value
+    print_value pin_state
+    
+    sleep 1.0                 
+
+    sub_var loopidx 1
+endloop
+return
+
+exit

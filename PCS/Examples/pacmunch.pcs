@@ -1,0 +1,941 @@
+Pardus pcs 1
+verbosity 1
+gui_update_period 6
+
+################################################
+# 'PAC-MUNCH' - Dungeon Crawler (v12 + SFX)    #
+################################################
+
+#define MAP_W 21
+#define MAP_H 15
+#define DISP_OFFSET_X 5
+#define DISP_OFFSET_Y 5
+#define SCREEN_H 32
+#define SCREEN_W 64
+
+# --- Global Variables ---
+
+# Map Data
+def_array int Map 315 0
+def_var int Map_Idx 0
+def_var int Cell_Val 0
+
+# Rect Drawing Utils (For Maze Gen)
+def_var int r_x 0
+def_var int r_y 0
+def_var int r_w 0
+def_var int r_h 0
+def_var int cx 0
+def_var int cy 0
+
+# Player State
+def_var int P_X 10
+def_var int P_Y 12  # NEW SPAWN
+def_var int P_Old_X 10
+def_var int P_Old_Y 12
+def_var int P_Dir_X 0
+def_var int P_Dir_Y 0
+def_var int P_Next_Dir_X 0
+def_var int P_Next_Dir_Y 0
+def_var int Score 0
+def_var int Pellets_Left 0
+
+# Sprites
+def_var string Pac_L _
+def_var string Pac_U _
+def_var string Pac_R _
+def_var string Pac_D _
+def_var string Pac_Current _
+
+def_var int P_Timer 0
+def_var int Ghost_Vuln FALSE
+def_var string Power_Char ●
+
+# Ghost State
+def_var int G_X 1
+def_var int G_Y 1
+def_var int G_Old_X 1
+def_var int G_Old_Y 1
+def_var int G_Timer 0
+def_var int G_Speed 2
+def_var int Dist_X 0
+def_var int Dist_Y 0
+def_var int Move_Done 0
+
+# Logic & Rendering
+def_var int Game_Active TRUE
+def_var string inp _
+def_var string Wall_Char █
+def_var string Dot_Char ·
+def_var string Ghost_Char M
+
+def_var int loop_x 0
+def_var int loop_y 0
+def_var int math_tmp 0
+def_var string score_msg _
+def_var string aether _
+
+# Sound State (dedicated vars - never shared with game logic)
+def_var int Waka_Toggle 0
+def_var int Snd_Tick 0
+def_var int snd_i 0
+def_var float Snd_Freq 0
+
+# Splash screen
+def_var string title_msg _
+def_var int idx 0
+def_var int flicker_tmp 0
+def_var int logic_tmp 0
+
+# --- Main Entry Point ---
+
+def_func main
+  print_clear
+  print_size 14
+  print_graphics ON
+
+  # --- 1. Construct Sprites ---
+  set_str Pac_L
+  cat_char Pac_L 9668
+  set_str Pac_U
+  cat_char Pac_U 9650
+  set_str Pac_R
+  cat_char Pac_R 9658
+  set_str Pac_D
+  cat_char Pac_D 9660
+  set_var Pac_Current Pac_R
+
+  # --- 2. Screen Buffer Init ---
+  call_func setup_aether_grid
+  call_func show_splash
+
+
+  call_func setup_level
+  call_func draw_full_map
+  call_func update_score
+
+  # SFX: start-of-game jingle (blocks briefly, but only BEFORE play begins)
+  call_func sfx_start
+
+  set_var Game_Active TRUE
+
+  # Main Loop
+  loop_while TRUE
+    
+    # 1. Input Handling
+    set_str inp
+    poll_user OFF OFF inp
+    
+    gui_buffer ON
+
+    set_condexp inp == ,
+    do_if Condexp
+      set_var P_Next_Dir_X -1
+      set_var P_Next_Dir_Y 0
+    enddo
+    set_condexp inp == .
+    do_if Condexp
+      set_var P_Next_Dir_X 1
+      set_var P_Next_Dir_Y 0
+    enddo
+    set_condexp inp == a
+    do_if Condexp
+      set_var P_Next_Dir_X 0
+      set_var P_Next_Dir_Y 1 
+    enddo
+    set_condexp inp == z
+    do_if Condexp
+      set_var P_Next_Dir_X 0
+      set_var P_Next_Dir_Y -1
+    enddo
+    set_condexp inp == q
+    do_if Condexp
+      goto game_over
+    enddo
+
+    # 2. Try to Apply Turn
+    set_var loop_x P_X
+    add_var loop_x P_Next_Dir_X
+    set_var loop_y P_Y
+    add_var loop_y P_Next_Dir_Y
+    call_func check_wall
+    
+    set_condexp Cell_Val != 1
+    do_if Condexp
+      set_var P_Dir_X P_Next_Dir_X
+      set_var P_Dir_Y P_Next_Dir_Y
+      
+      set_condexp P_Dir_X == -1
+      do_if Condexp
+         set_var Pac_Current Pac_L
+      enddo
+      set_condexp P_Dir_X == 1
+      do_if Condexp
+         set_var Pac_Current Pac_R
+      enddo
+      set_condexp P_Dir_Y == 1
+      do_if Condexp
+         set_var Pac_Current Pac_U
+      enddo
+      set_condexp P_Dir_Y == -1
+      do_if Condexp
+         set_var Pac_Current Pac_D
+      enddo
+    enddo
+
+    # 3. Move Player
+    set_var P_Old_X P_X
+    set_var P_Old_Y P_Y
+    
+    set_var loop_x P_X
+    add_var loop_x P_Dir_X
+    set_var loop_y P_Y
+    add_var loop_y P_Dir_Y
+    
+    call_func check_wall
+    set_condexp Cell_Val != 1
+    do_if Condexp
+      set_var P_X loop_x
+      set_var P_Y loop_y
+      
+      set_condexp Cell_Val == 2
+      do_if Condexp
+        add_var Score 10
+        add_var Pellets_Left -1
+        call_func sfx_waka
+        call_func update_score
+        
+        set_var Map_Idx P_Y
+        mul_var Map_Idx MAP_W
+        add_var Map_Idx P_X
+        set_var Map[Map_Idx] 0
+      enddo
+
+      set_condexp Cell_Val == 3
+      do_if Condexp
+         add_var Score 50
+         add_var Pellets_Left -1
+         set_var P_Timer 50  # 50 frames of power
+         set_var Ghost_Vuln TRUE
+         set_var Map[Map_Idx] 0
+         call_func sfx_power
+         call_func update_score
+      enddo
+
+      # Timer Countdown logic (place near the end of main loop)
+      set_condexp P_Timer > 0
+      do_if Condexp
+         add_var P_Timer -1
+      else
+         set_var Ghost_Vuln FALSE
+      enddo
+
+
+    enddo
+
+    # 4. Move Ghost
+    add_var G_Timer 1
+    set_condexp G_Timer >= G_Speed
+    do_if Condexp
+      set_var G_Timer 0
+      call_func move_ghost
+    enddo
+
+    # 5. Collision Check
+    set_condexp P_X == G_X
+    do_if Condexp
+      set_condexp P_Y == G_Y
+      do_if Condexp
+        set_condexp Ghost_Vuln == TRUE
+        do_if Condexp
+           # Eat the Ghost!
+           add_var Score 200
+           call_func sfx_ghost_eat
+           call_func update_score
+           # Send Ghost back to Jailhouse
+           set_var G_X 10
+           set_var G_Y 7
+        else
+           goto game_over
+        enddo
+      enddo
+    enddo
+
+    # 6. Render Updates
+    call_func get_screen_coords_old_p
+    print_colour 100 100 100
+    print_cursor loop_x loop_y
+    print_value Space 0
+    
+    call_func get_screen_coords_p
+    print_colour 255 255 0
+    print_cursor loop_x loop_y
+    print_value Pac_Current 0
+    
+    set_var loop_x G_Old_X
+    set_var loop_y G_Old_Y
+    call_func check_wall
+    set_var math_tmp Cell_Val
+    call_func get_screen_coords_old_g
+    
+    set_condexp math_tmp == 2
+    do_if Condexp
+       print_colour 255 180 180
+       print_cursor loop_x loop_y
+       print_value Dot_Char 0
+    else
+       print_cursor loop_x loop_y
+       print_value Space 0
+    enddo
+    
+    call_func get_screen_coords_g
+    set_condexp Ghost_Vuln == TRUE
+    do_if Condexp
+       print_colour 64 64 255 # Blue Ghost
+    else
+       print_colour 255 0 0   # Red Ghost
+    enddo
+    print_cursor loop_x loop_y
+    print_value Ghost_Char 0
+
+    # 7. Win Check
+    set_condexp Pellets_Left == 0
+    do_if Condexp
+      goto win_game
+    enddo
+
+    # 8. Ambient SFX (power-mode heartbeat; silent otherwise)
+    call_func sfx_power_tick
+
+    gui_buffer OFF
+
+    sleep 0.1
+    
+    set_condexp Game_Active == TRUE
+  endloop
+
+return
+
+# --- Logic Functions ---
+
+def_func setup_aether_grid
+  set_str aether
+  set_var loop_x 0
+  set_condexp loop_x < SCREEN_H
+  loop_while Condexp
+    cat_char aether 32
+    add_var loop_x 1
+    set_condexp loop_x < SCREEN_H
+  endloop
+  
+  set_var loop_y 0
+  set_condexp loop_y < SCREEN_H
+  loop_while Condexp
+    print_value aether 2
+    add_var loop_y 1
+    set_condexp loop_y < SCREEN_H
+  endloop
+  print_value aether 0
+return
+
+def_func show_splash
+  
+  # 1. Check for failure (Missing or corrupt bin file)
+
+
+  # 4. OVERLAY Title Text
+  print_colour 0 255 255     # Cyan
+  print_cursor 5 16
+  set_str title_msg PAC-MUNCH
+  print_value title_msg 0
+
+  print_colour 255 50 50     # Red
+  print_cursor 1 14
+  set_str title_msg Keys:
+  print_value title_msg 0
+  print_colour 255 255 50    # Yellow
+  print_cursor 5 12
+  set_str title_msg [a]
+  add_var title_msg Space
+  add_var title_msg Space
+  add_var title_msg Space
+  add_var title_msg Space
+  cat_str title_msg = Up
+  print_value title_msg 0
+  print_cursor 2 11
+  set_str title_msg [,]
+  add_var title_msg Space
+  add_var title_msg Space
+  add_var title_msg Space
+  cat_str title_msg [.] = Left,Right
+  print_value title_msg 0
+  print_cursor 5 10
+  set_str title_msg [z]
+  add_var title_msg Space
+  add_var title_msg Space
+  add_var title_msg Space
+  add_var title_msg Space
+  cat_str title_msg = Down
+  print_value title_msg 0
+  print_colour 255 50 255     # Magenta
+  print_cursor 2 8
+  set_str title_msg Press [q] to quit.
+  print_value title_msg 0
+
+
+  # 5. PULSING START PROMPT
+  set_var idx 0              # Using idx as boolean (0=TRUE/Looping)
+  set_var flicker_tmp 0      # Toggle state
+  set_condexp idx == 0
+  loop_while Condexp
+    set_var logic_tmp flicker_tmp
+    add_var flicker_tmp 1
+    math_var logic_tmp imod 2
+
+    # Pulse between White and Gray
+    set_condexp logic_tmp == 0
+    do_if Condexp
+      print_colour 255 255 255
+    else
+      print_colour 100 100 100
+    enddo
+
+    print_cursor 2 2
+    set_str title_msg PRESS [S] TO START
+    print_value title_msg 0
+
+    set_str inp
+    poll_user OFF OFF inp
+    set_condexp inp == s
+    do_if Condexp
+      beep 100 880 30 
+      set_var idx 1          # Stop looping
+    enddo
+
+    sleep 0.2
+    set_condexp idx == 0
+  endloop
+
+  # 6. MASTER WIPE: Sanitise the buffer for the game start
+  print_clear
+  call_func setup_aether_grid
+return
+
+def_func check_wall
+  set_condexp loop_x < 0
+  do_if Condexp
+    set_var Cell_Val 1
+  else
+    set_condexp loop_x >= MAP_W
+    do_if Condexp
+       set_var Cell_Val 1
+    else
+       set_var Map_Idx loop_y
+       mul_var Map_Idx MAP_W
+       add_var Map_Idx loop_x
+       set_var Cell_Val Map[Map_Idx]
+    enddo
+  enddo
+return
+
+def_func move_ghost
+  set_var G_Old_X G_X
+  set_var G_Old_Y G_Y
+  set_var Move_Done FALSE
+  
+  set_var Dist_X P_X
+  sub_var Dist_X G_X
+  math_var Dist_X abs
+  
+  set_var Dist_Y P_Y
+  sub_var Dist_Y G_Y
+  math_var Dist_Y abs
+  
+  set_condexp Dist_Y > Dist_X
+  do_if Condexp
+     call_func attempt_y_move
+     set_condexp Move_Done == FALSE
+     do_if Condexp
+        call_func attempt_x_move
+     enddo
+  else
+     call_func attempt_x_move
+     set_condexp Move_Done == FALSE
+     do_if Condexp
+        call_func attempt_y_move
+     enddo
+  enddo
+return
+
+def_func attempt_x_move
+  set_var math_tmp 0
+  set_condexp P_X > G_X
+  do_if Condexp
+    set_var math_tmp 1
+  enddo
+  set_condexp P_X < G_X
+  do_if Condexp
+    set_var math_tmp -1
+  enddo
+  
+  set_condexp math_tmp != 0
+  do_if Condexp
+     set_var loop_x G_X
+     add_var loop_x math_tmp
+     set_var loop_y G_Y
+     call_func check_wall
+     set_condexp Cell_Val != 1
+     do_if Condexp
+        set_var G_X loop_x
+        set_var Move_Done TRUE
+     enddo
+  enddo
+return
+
+def_func attempt_y_move
+  set_var math_tmp 0
+  set_condexp P_Y > G_Y
+  do_if Condexp
+    set_var math_tmp 1
+  enddo
+  set_condexp P_Y < G_Y
+  do_if Condexp
+    set_var math_tmp -1
+  enddo
+  
+  set_condexp math_tmp != 0
+  do_if Condexp
+     set_var loop_x G_X
+     set_var loop_y G_Y
+     add_var loop_y math_tmp
+     call_func check_wall
+     set_condexp Cell_Val != 1
+     do_if Condexp
+        set_var G_Y loop_y
+        set_var Move_Done TRUE
+     enddo
+  enddo
+return
+
+# --- Map Generation Functions ---
+
+# --- Improved Arcade-Style Maze for PAC-MUNCH ---
+
+def_func setup_level
+  # 1. Fill Grid with Pellets (315 slots)
+  set_var Map_Idx 0
+  set_var math_tmp 315
+  set_var Pellets_Left 0
+  set_condexp Map_Idx < math_tmp
+  loop_while Condexp
+     set_var Map[Map_Idx] 2
+     add_var Pellets_Left 1
+     add_var Map_Idx 1
+     set_condexp Map_Idx < math_tmp
+  endloop
+
+  # 2. Outer Border
+  set_var r_x 0
+  set_var r_y 0
+  set_var r_w 21
+  set_var r_h 1
+  call_func draw_rect
+  set_var r_y 14
+  call_func draw_rect
+  set_var r_x 0
+  set_var r_y 0
+  set_var r_w 1
+  set_var r_h 15
+  call_func draw_rect
+  set_var r_x 20
+  call_func draw_rect
+
+  # 3. Structural Pillars (Even/Even Grid)
+  # This creates the "Checkerboard" foundation for 1-tile lanes
+  def_var int px 0
+  def_var int py 0
+  set_var py 2
+  set_condexp py < 14
+  loop_while Condexp
+    set_var px 2
+    set_condexp px < 20
+    loop_while Condexp
+      set_var r_x px
+      set_var r_y py
+      set_var r_w 1
+      set_var r_h 1
+      call_func draw_rect
+      add_var px 2
+      set_condexp px < 20
+    endloop
+    add_var py 2
+    set_condexp py < 14
+  endloop
+
+  # 4. "Stitching" - Connecting Pillars to form Bars (Clumping)
+  # We connect the pillars to remove the █·█·█ look
+  set_var r_h 1
+  set_var r_w 3
+  # Row 2 Stitches
+  set_var r_y 2
+  set_var r_x 3
+  call_func draw_rect
+  set_var r_x 15
+  call_func draw_rect
+  # Row 4 Stitches
+  set_var r_y 4
+  set_var r_w 5
+  set_var r_x 2
+  call_func draw_rect
+  set_var r_x 14
+  call_func draw_rect
+  # Row 10 Stitches
+  set_var r_y 10
+  set_var r_w 5
+  set_var r_x 2
+  call_func draw_rect
+  set_var r_x 14
+  call_func draw_rect
+  # Row 12 Stitches (Long Bottom Bar)
+  set_var r_y 12
+  set_var r_w 15
+  set_var r_x 3
+  call_func draw_rect
+
+  # Vertical Stitches
+  set_var r_w 1
+  set_var r_h 3
+  set_var r_x 2
+  set_var r_y 5
+  call_func draw_rect
+  set_var r_x 18
+  call_func draw_rect
+
+  # 5. Hollow Jailhouse (Center)
+  set_var r_x 8
+  set_var r_y 6
+  set_var r_w 5
+  set_var r_h 3
+  call_func draw_rect
+  # Carve the Room
+  set_var Map_Idx 156
+  set_var Map[Map_Idx] 0
+  set_var Map_Idx 157
+  set_var Map[Map_Idx] 0
+  set_var Map_Idx 158
+  set_var Map[Map_Idx] 0
+  # Carve the Door
+  set_var Map_Idx 136
+  set_var Map[Map_Idx] 0
+
+  # Place 4 Power Pellets in corners
+  set_var Map[22] 3   # (1,1)
+  set_var Map[40] 3   # (19,1)
+  set_var Map[274] 3  # (1,13)
+  set_var Map[292] 3  # (19,13)
+  # Note: These were already pucks, so Pellets_Left is already correct.
+
+  # 6. Spawns
+  set_var P_X 1
+  set_var P_Y 1
+  set_var G_X 10
+  set_var G_Y 7
+  set_var Map_Idx 22
+  set_var Map[Map_Idx] 0
+  add_var Pellets_Left -1
+return
+
+def_func draw_rect
+  set_var loop_y 0
+  set_condexp loop_y < r_h
+  loop_while Condexp
+    set_var loop_x 0
+    set_condexp loop_x < r_w
+    loop_while Condexp
+       
+       set_var cy r_y
+       add_var cy loop_y
+       set_var cx r_x
+       add_var cx loop_x
+       
+       set_var Map_Idx cy
+       mul_var Map_Idx MAP_W
+       add_var Map_Idx cx
+       
+       # If overwriting a pellet, decrement count
+       set_var math_tmp Map[Map_Idx]
+       set_condexp math_tmp == 2
+       do_if Condexp
+         add_var Pellets_Left -1
+       enddo
+       
+       set_var Map[Map_Idx] 1
+       
+       add_var loop_x 1
+       set_condexp loop_x < r_w
+    endloop
+    add_var loop_y 1
+    set_condexp loop_y < r_h
+  endloop
+return
+
+def_func draw_full_map
+  set_var loop_y 0
+  set_condexp loop_y < MAP_H
+  loop_while Condexp
+    set_var loop_x 0
+    set_condexp loop_x < MAP_W
+    loop_while Condexp
+       
+       set_var Map_Idx loop_y
+       mul_var Map_Idx MAP_W
+       add_var Map_Idx loop_x
+       set_var Cell_Val Map[Map_Idx]
+       
+       set_var math_tmp loop_x
+       add_var math_tmp DISP_OFFSET_X
+       
+       set_var Map_Idx loop_y
+       add_var Map_Idx DISP_OFFSET_Y
+       
+       print_cursor math_tmp Map_Idx
+       
+       set_condexp Cell_Val == 1
+       do_if Condexp
+         print_colour 0 0 255
+         print_value Wall_Char 0
+       enddo
+       set_condexp Cell_Val == 2
+       do_if Condexp
+         print_colour 255 180 180
+         print_value Dot_Char 0
+       enddo
+       set_condexp Cell_Val == 3
+       do_if Condexp
+         print_colour 255 255 255
+         print_value Power_Char 0
+       enddo
+       set_condexp Cell_Val == 0
+       do_if Condexp
+         print_value Space 0
+       enddo
+
+       add_var loop_x 1
+       set_condexp loop_x < MAP_W
+    endloop
+    add_var loop_y 1
+    set_condexp loop_y < MAP_H
+  endloop
+return
+
+def_func update_score
+  print_colour 255 255 255
+  print_cursor 10 3
+  set_str score_msg SCORE:
+  print_value score_msg 0
+  print_cursor 17 3
+  print_value Score 0
+return
+
+def_func get_screen_coords_old_p
+  set_var loop_x P_Old_X
+  add_var loop_x DISP_OFFSET_X
+  set_var loop_y P_Old_Y
+  add_var loop_y DISP_OFFSET_Y
+return
+
+def_func get_screen_coords_p
+  set_var loop_x P_X
+  add_var loop_x DISP_OFFSET_X
+  set_var loop_y P_Y
+  add_var loop_y DISP_OFFSET_Y
+return
+
+def_func get_screen_coords_old_g
+  set_var loop_x G_Old_X
+  add_var loop_x DISP_OFFSET_X
+  set_var loop_y G_Old_Y
+  add_var loop_y DISP_OFFSET_Y
+return
+
+def_func get_screen_coords_g
+  set_var loop_x G_X
+  add_var loop_x DISP_OFFSET_X
+  set_var loop_y G_Y
+  add_var loop_y DISP_OFFSET_Y
+return
+
+# --- Sound Effects ---
+# beep is non-blocking, so in-game effects use NO sleeps (except the
+# deliberate ghost-eat freeze). Blocking sequences (start / death / win)
+# only run when gameplay is not in progress.
+
+# Waka-waka: alternates two pitches on each pellet eaten.
+# 80 ms < the 100 ms frame, so consecutive wakas never pile up.
+def_func sfx_waka
+  set_condexp Waka_Toggle == 0
+  do_if Condexp
+    set_var Waka_Toggle 1
+    beep 80 260 35
+  else
+    set_var Waka_Toggle 0
+    beep 80 400 35
+  enddo
+return
+
+# Power pellet: bright major chord (C5 E5 G5 C6), zero added delay.
+def_func sfx_power
+  beep 220 523.25 30
+  beep 220 659.25 30
+  beep 220 783.99 30
+  beep 220 1046.50 30
+return
+
+# Power-mode heartbeat: low tick every 3rd frame while ghost is vulnerable.
+# Switches to a higher, urgent tick when the power-up is about to run out.
+def_func sfx_power_tick
+  set_condexp Ghost_Vuln == TRUE
+  do_if Condexp
+    add_var Snd_Tick 1
+    set_condexp Snd_Tick >= 3
+    do_if Condexp
+      set_var Snd_Tick 0
+      set_condexp P_Timer < 15
+      do_if Condexp
+        beep 40 900 15
+      else
+        beep 40 180 20
+      enddo
+    enddo
+  enddo
+return
+
+# Ghost eaten: rising "gulp" sweep. The ~150 ms pause is intentional -
+# the original arcade game also freezes briefly when you eat a ghost.
+def_func sfx_ghost_eat
+  beep 40 400 60
+  sleep 0.03
+  beep 40 600 60
+  sleep 0.03
+  beep 40 800 60
+  sleep 0.03
+  beep 40 1000 60
+  sleep 0.03
+  beep 60 1300 60
+  sleep 0.03
+return
+
+# Start-of-game jingle (plays before the loop begins).
+def_func sfx_start
+  beep 80 493.88 50
+  sleep 0.09
+  beep 80 987.77 50
+  sleep 0.09
+  beep 80 739.99 50
+  sleep 0.09
+  beep 80 622.25 50
+  sleep 0.09
+  beep 80 987.77 50
+  sleep 0.09
+  beep 60 739.99 50
+  sleep 0.07
+  beep 200 622.25 50
+  sleep 0.25
+return
+
+# Death: descending slide, then a low thud. Plays on the game-over screen.
+def_func sfx_death
+  set_var snd_i 0
+  set_var Snd_Freq 900
+  set_condexp snd_i < 12
+  loop_while Condexp
+    beep 90 Snd_Freq 70
+    sleep 0.07
+    add_var Snd_Freq -55
+    add_var snd_i 1
+    set_condexp snd_i < 12
+  endloop
+  beep 300 110 80
+  sleep 0.3
+return
+
+# Victory: rising C-major arpeggio finishing on a full chord.
+def_func sfx_win
+  beep 120 523.25 60
+  sleep 0.12
+  beep 120 659.25 60
+  sleep 0.12
+  beep 120 783.99 60
+  sleep 0.12
+  beep 120 1046.50 60
+  sleep 0.14
+  beep 900 523.25 35
+  beep 900 659.25 35
+  beep 900 783.99 35
+  beep 900 1046.50 35
+  sleep 0.9
+return
+
+# --- End Game Handlers ---
+
+win_game:
+  print_colour 0 255 0
+  print_cursor 12 12
+  set_str score_msg VICTORY!
+  print_value score_msg 0
+  gui_buffer OFF
+  print_graphics OFF
+  gui_update
+  call_func sfx_win
+  sleep 3.0
+  goto final_shutdown
+
+game_over:
+  print_colour 255 0 0
+  print_cursor 12 12
+  set_str score_msg GOTTEN!
+  print_value score_msg 0
+  gui_buffer OFF
+  print_graphics OFF
+  gui_update
+  call_func sfx_death
+  sleep 3.0
+
+final_shutdown:
+exit
+
+################################################################################
+# AI SCRATCHPAD - PERSISTENT MEMORY & REASONING LOG                            #
+# Target: PCS AI Interpreter / Future Coding Agents                            #
+# Project: PAC-MUNCH (v12 + SFX)                                               #
+################################################################################
+ {
+   "project_metadata": {
+     "name": "PAC-MUNCH",
+     "version": "12.0",
+     "genre": "Dungeon Crawler / Arcade",
+     "engine_constraints": "Text-Mode (64x32), Global Scope, Atomic Execution"
+   },
+   "core_algorithms": {
+     "ghost_ai": "Manhattan Distance Priority. Calculates |Px-Gx| and |Py-Gy|. Attempts to reduce the largest delta first. If blocked, attempts the secondary axis. Prevents 'staircase' movement and wall-sticking.",
+     "map_generation": "Procedural Rectangles. Uses a 'draw_rect' helper to carve walls into a pellet-filled grid. Automatically decrements 'Pellets_Left' when overwriting empty space to keep win-state math valid.",
+     "collision_detection": "Index-Based Lookup. Converts 2D coords (x,y) to 1D index (y*Width + x) to check 'Map[]' values before allowing movement."
+   },
+   "audio_design": {
+     "rule": "beep is non-blocking. In-game sfx_* functions must NOT call sleep (frame is 0.1s). Only sfx_start, sfx_death, sfx_win and the short ghost-eat freeze may block.",
+     "polyphony": "Max 8 simultaneous notes. Waka is 80ms (<100ms frame) so it never stacks; power chord uses 4 voices for 220ms.",
+     "variables": "Waka_Toggle, Snd_Tick, snd_i, Snd_Freq are dedicated to audio. Do not reuse loop_x/loop_y/math_tmp inside sfx_* functions."
+   },
+   "critical_fixes_log": {
+     "infinite_loop_trap": "The command 'loop_while TRUE' checks the literal value '1' forever. Loops must depend on 'Condexp' variables updated INSIDE the loop.",
+     "screen_buffer_collapse": "PCS/GTK buffers render 0-height lines if empty. Always pre-fill the screen with an 'Aether' of spaces (ASCII 32) before drawing coordinates.",
+     "font_fallback_glitch": "Using exotic Unicode (Adlam/Aboriginal) triggers variable-width font fallback, breaking grid alignment. Use Geometric Shapes (U+25xx) for reliable monospacing.",
+     "exit_segmentation": "The 'exit' command acts as EOF. Multiple exit points make code below them unreachable/invisible. Use a single 'final_shutdown' label at the bottom and jump to it."
+   },
+   "agent_guidelines": {
+     "atomic_thinking": "Do not nest math. Do not assume 'if (x > y)' works. Use 'set_condexp' then 'do_if Condexp'. One thought per line.",
+     "coordinate_systems": "Verify the target terminal's Y-Axis. Standard terminals are Top-Left (Y+ goes Down). Cartesian plots are Bottom-Left (Y+ goes Up). Map inputs explicitly.",
+     "variable_safety": "All variables are global. Loop counters (idx, loop_x) WILL be clobbered if a subroutine uses them. Use dedicated counters for nested logic."
+   }
+ }
+################################################################################

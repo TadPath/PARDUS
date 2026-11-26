@@ -1,0 +1,258 @@
+Pardus pcs 1
+verbosity 1
+gui_update_period 8
+# ==============================================================================
+# PARDUS DYNAMIC PNM VIEWER (V4.8 - FINAL STABLE)
+# FIXED: Colour resets for UI visibility + Error prompt + All Syntax Rules.
+# ==============================================================================
+
+# --- GLOBAL DEFINITIONS ---
+def_var string g_target_file 0       
+def_var string g_continue 1          
+def_var string g_magic_num 0
+def_var string g_first 0
+def_var string g_token 0
+def_var string g_msg 0
+
+def_array int G_pixel_data 2 0
+
+def_var int g_img_w 1
+def_var int g_img_h 1
+def_var int g_color_mode 0
+def_var int g_total_pix 2            
+def_var int g_byte_offset 0
+def_var int g_is_binary 0            
+
+def_var int g_x 0
+def_var int g_y 0
+def_var int g_p_idx 0
+def_var int g_idx_r 0
+def_var int g_idx_g 0
+def_var int g_idx_b 0
+
+def_var int g_start_millis 0
+def_var int g_duration 0
+def_var int g_timed_out 0
+def_var int g_input_received 0
+
+def_var   int t_0    0      # monotonic start stamp
+def_var   int t_ms   0      # elapsed milliseconds
+def_var   string msg _
+
+# --- MAIN ENGINE ---
+def_func main
+    set_var g_continue 1
+
+    set_condexp g_continue == 1
+    loop_while Condexp
+        # Reset UI Style
+        print_size 12
+        print_colour 255 255 255
+        print_clear
+        
+        set_str g_msg Enter PNM file path or type exit :
+        print_value g_msg 2
+        poll_user ON ON g_target_file
+
+        set_condexp g_target_file == exit
+        do_if Condexp
+            set_var g_continue 0
+        else
+            set_var g_byte_offset 0
+            fbyte_mode OFF
+            fskip_size 1
+            call_func Get_Next_Token
+            
+            set_condexp NReads < 0
+            do_if Condexp
+                set_str g_msg ERROR: File
+                add_var g_msg Space
+                add_var g_msg g_target_file
+                add_var g_msg Space
+                cat_str g_msg not found.
+                print_value g_msg 2
+                set_str g_msg Press c to return to the file prompt ...
+                print_value g_msg 2
+                call_func Wait_For_User_Timed
+            else
+                set_var g_magic_num g_token
+                call_func Get_Next_Token
+                set_var g_img_w g_token
+                call_func Get_Next_Token
+                set_var g_img_h g_token
+                call_func Get_Next_Token 
+
+                set_var g_first g_magic_num 1
+                set_condexp g_first == 3
+                set_var g_color_mode Condexp
+                set_condexp g_first == 6
+                add_var g_color_mode Condexp
+                        
+                set_var g_total_pix g_img_w
+                mul_var g_total_pix g_img_h
+                set_condexp g_color_mode > 0
+                do_if Condexp
+                    mul_var g_total_pix 3
+                enddo
+
+                undef_var G_pixel_data
+                def_array int G_pixel_data g_total_pix 0 
+
+                set_str g_msg Allocated G_pixel_data with
+                add_var g_msg Space
+                add_var g_msg g_total_pix
+                add_var g_msg Space
+                cat_str g_msg slots.
+                print_value g_msg 2
+
+                set_condexp g_magic_num == P5
+                set_var g_is_binary Condexp
+                set_condexp g_magic_num == P6
+                add_var g_is_binary Condexp
+                
+                set_condexp g_is_binary > 0
+                do_if Condexp
+                    fbyte_mode ON
+                    fset_var G_pixel_data[0] g_byte_offset g_target_file
+                else
+                    fbyte_mode OFF
+                    set_var g_p_idx 0
+                    set_condexp g_p_idx < g_total_pix
+                    loop_while Condexp
+                        call_func Get_Next_Token
+                        set_var G_pixel_data[g_p_idx] g_token
+                        add_var g_p_idx 1
+                        set_condexp g_p_idx < g_total_pix
+                    endloop
+                enddo
+
+                print_size 4
+                call_func Render_Image
+                
+                print_size 12
+                print_colour 255 255 255
+                set_str msg elapsed_ms:
+                add_var msg Space
+                add_var msg t_ms
+                print_value msg 2
+                set_str g_msg Render Complete. Press c to continue or wait 30s.
+                print_value g_msg 2
+                call_func Wait_For_User_Timed
+            enddo
+        enddo
+        set_condexp g_continue == 1
+    endloop
+return
+
+def_func Wait_For_User_Timed
+    set_var g_start_millis Millis
+    set_var g_timed_out 0
+    set_var g_token 0
+    set_var g_input_received 0
+    set_condexp g_input_received == 0
+    loop_while Condexp
+        poll_user OFF OFF g_token
+        set_condexp g_token == c
+        do_if Condexp
+            set_var g_input_received 1
+        else
+            milliduration g_start_millis g_duration
+            set_condexp g_duration > 30000
+            do_if Condexp
+                set_var g_timed_out 1
+                set_var g_input_received 1
+            enddo
+        enddo
+        set_condexp g_input_received == 0
+    endloop
+return
+
+def_func Get_Next_Token
+    fset_var g_token g_byte_offset g_target_file
+    add_var g_byte_offset NBytes
+    set_var g_first g_token 0
+    set_condexp g_first == Hash
+    do_if Condexp
+        set_condexp NewLines == 0
+        loop_while Condexp
+            fset_var g_token g_byte_offset g_target_file
+            add_var g_byte_offset NBytes
+            set_condexp NewLines == 0
+        endloop
+        call_func Get_Next_Token
+    enddo
+return
+
+def_func Render_Image
+    set_var g_p_idx 0
+    set_var g_y 0
+    gui_update_period 0
+    set_var t_0 Millis
+    print_graphics ON
+    gui_buffer 2
+    set_condexp g_y < g_img_h
+    loop_while Condexp
+        set_var g_x 0
+        set_condexp g_x < g_img_w
+        loop_while Condexp
+            set_condexp g_color_mode > 0
+            do_if Condexp
+                set_var g_idx_r g_p_idx
+                set_var g_idx_g g_p_idx
+                add_var g_idx_g 1
+                set_var g_idx_b g_p_idx
+                add_var g_idx_b 2
+                print_colour G_pixel_data[g_idx_r] G_pixel_data[g_idx_g] G_pixel_data[g_idx_b]
+                add_var g_p_idx 3
+            else
+                set_var g_idx_r g_p_idx
+                print_colour G_pixel_data[g_idx_r] G_pixel_data[g_idx_r] G_pixel_data[g_idx_r]
+                add_var g_p_idx 1
+            enddo
+            print_value █ 0
+            add_var g_x 1
+            set_condexp g_x < g_img_w
+        endloop
+        print_value Space 2
+        add_var g_y 1
+        set_condexp g_y < g_img_h
+    endloop
+    gui_buffer OFF
+    gui_update_period 7
+    print_graphics OFF
+    milliduration t_0 t_ms
+return
+
+undef_var G_pixel_data
+def_array int G_pixel_data 2 0
+exit
+
+# --- AI SCRATCHPAD & PERSISTENT MEMORY ---
+# The interpreter ignores everything in this zone.
+# This data serves as a lesson-learnt audit for PCS programming.
+
+{
+  "script_metadata": {
+    "version": "4.8",
+    "description": "Definitive Dynamic Universal PNM Viewer (P2/P3/P5/P6)",
+    "functionality": "Runtime array re-sizing and precision memory management"
+  },
+  "lessons_learnt": {
+    "dynamic_allocation": [
+      "To re-size an array, you must follow the sequence: undef_var -> def_array.",
+      "The syntax checker is a sequential reader. To prevent it from 'losing' a variable scope after undef_var, you must 'bait' it with a dummy def_array at the very end of the file.",
+      "Variables must be initialised at the global level with values that satisfy the checker (e.g., size >= 1)."
+    ],
+    "syntax_strictness": [
+      "Vector variables (size > 1) MUST use dereferencing brackets [0] even in block commands like fset_var.",
+      "PCS uses 'enddo' to close 'do_if' blocks; 'endif' is not a valid command.",
+      "Arguments in set_str and cat_str are literal; use add_var to evaluate and append variable values to strings."
+    ],
+    "user_interface_and_io": [
+      "poll_user in non-blocking mode (OFF OFF) does not detect the [Enter] key; use a specific character like 'c' for interactive pauses.",
+      "The 'milliduration' command is the native way to handle timeouts and elapsed time logic.",
+      "Persistent state: Always reset 'print_colour' to 255 255 255 when switching from pixel rendering to UI text to ensure visibility."
+    ]
+  },
+  "operational_notes": "The script uses a 'Streaming Helper' (Get_Next_Token) to maintain robustness against comment lines and whitespace shifts while keeping the file pointer synced for dynamic re-loads."
+}

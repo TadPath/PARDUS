@@ -1,0 +1,129 @@
+Pardus pcs 1
+
+verbosity 1
+
+#include stdpard.pch
+
+
+
+# Initialize, clear, and display the preview overlay canvas
+preview_draw_buffer 1
+preview_draw_clear
+preview_clear
+preview_draw_show
+
+def_var string inp _
+def_var int src_top    112
+def_var int src_left   256
+def_var int src_pos    0
+def_var int work       0
+
+def_var int currchan CCHAN_G
+
+def_func main
+
+ # Turn off the cursor and terminal echoing if running in headless mode
+ # and set the path for live preview viewing with a background daemon:
+ do_if CLImode
+    print_graphics ON
+    cli_path ./clip_
+ enddo
+
+ # cpy_gar8: 256x256 pixel 8 bpp grey raw image graphics array
+ def_array int cpy_gar8 65566 0   # The graphics array with 256*256 cells for
+                                  # the image pixels and 12 formatting cells.
+                                  # Plus 18 for the bounding box.
+ def_array int imin 65536 0
+
+ # =================================================================
+ # STEP 1: INITIALISE ENVIRONMENT (CURSOR POSITION)
+ # =================================================================
+
+ set_var cpy_gar8[0]  GSI_TYPE_ENV
+ set_var cpy_gar8[1]  OP_PREVIEW_DRAW_CURSOR
+ set_var cpy_gar8[2] 0       # X position for top left corner of drawing
+ set_var cpy_gar8[3] src_top # Y position for top left corner of drawing
+
+
+ # =================================================================
+ # STEP 2: SET METADATA
+ # =================================================================
+
+ # FOR RAW 8BPP BITMAP
+ set_var cpy_gar8[4]  GSI_TYPE_GBITMP
+ set_var cpy_gar8[5]  256    # Height
+ set_var cpy_gar8[6]  256    # Width
+ set_var cpy_gar8[7]  1      # Paint to R channel
+ set_var cpy_gar8[8]  1      # Paint to G channel
+ set_var cpy_gar8[9]  1      # Paint to B channel
+ set_var cpy_gar8[10]  0     # Use alpha ?
+
+ # Pixel data will start at index 11
+
+ set_var cpy_gar8[65547]  GSI_TYPE_ENV
+ set_var cpy_gar8[65548]  OP_PREVIEW_DRAW_COLOUR
+ set_var cpy_gar8[65549]  255    # R (Bright Red)
+ set_var cpy_gar8[65550]  64     # G
+ set_var cpy_gar8[65551]  64     # B
+ set_var cpy_gar8[65552]  OP_PREVIEW_DRAW_LWIDTH
+ set_var cpy_gar8[65553]  4
+ set_var cpy_gar8[65554]  OP_PREVIEW_DRAW_DESTTYPE  # Use dimensions for destinations
+ set_var cpy_gar8[65555]  1
+ set_var cpy_gar8[65556]  OP_PREVIEW_DRAW_CURSOR
+ set_var cpy_gar8[65557]  src_left   # X
+ set_var cpy_gar8[65558]  src_top    # Y
+ set_var cpy_gar8[65559] GSI_TYPE_PLOT
+ set_var cpy_gar8[65560] PDS_RECT
+ set_var cpy_gar8[65561] FALSE # Not filled
+ set_var cpy_gar8[65562] 256    # Rectangle width and height
+ set_var cpy_gar8[65563] 256    #
+
+ # ---- Termination ----
+ set_var cpy_gar8[65564] GSI_TYPE_END
+
+ # =================================================================
+ # STEP 3: LIVE PREVIEW LOOP
+ # =================================================================
+ # Main Loop
+ print_clear
+
+ loop_while TRUE
+    
+    get_preview OFF 0 0 FALSE    # Grab a preview image - but don't display it yet (FALSE).
+
+    set_str inp
+    poll_user OFF OFF inp
+    set_condexp inp == q
+    do_if Condexp
+      goto end_program
+    enddo
+
+   # Copy the new preview tile and paint it in the graphics area (if we need to)
+
+     # Set the preview system variable positioner to the source postion
+     set_var work src_top
+     mul_var work 1920     # 1920 = VGA width stride for RGB array
+     set_var src_pos src_left
+     mul_var src_pos 3
+     math_var src_pos add work
+     set_previewpos src_pos 1
+
+     # Copy the selected single channel into the 8-bit array (pixel data
+     # starts at index 11) and render it above the colour tile
+     preview_copy 256 256 cpy_gar8[11] currchan
+     # Perform an in situ real-time Fourier visual spectrum transform
+     fourier fvpow 1 256 256 cpy_gar8[11] imin[0]
+     math_array imin[0] = 0        # Must clear the imaginary array back to
+                                   # all 0 because fvpow fills it with a
+                                   # visual power spectrum in native Fourier
+                                   # order.
+
+     preview_draw_array cpy_gar8[0]
+ 
+   sleep 0.01
+endloop
+
+end_program:
+return
+
+exit

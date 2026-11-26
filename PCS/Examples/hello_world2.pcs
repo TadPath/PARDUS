@@ -1,0 +1,12 @@
+Pardus pcs 1
+
+verbosity 1
+
+def_var string msg _
+set_str msg Hello World!
+
+print_value msg 2
+
+exit
+
+

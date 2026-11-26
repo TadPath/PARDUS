@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+<language name="PCS" section="Scripts" version="4" kateversion="5.0" extensions="*.pcs;*.pch" author="Specialist" license="MIT">
+  <highlighting>
+    <list name="keywords">
+      <item>act_accel</item>
+      <item>act_get</item>
+      <item>act_getid</item>
+      <item>act_getname</item>
+      <item>act_halt</item>
+      <item>act_home</item>
+      <item>act_moveby</item>
+      <item>act_movereport</item>
+      <item>act_moveto</item>
+      <item>act_set</item>
+      <item>act_unit</item>
+      <item>add_lib</item>
+      <item>add_var</item>
+      <item>af_ccrit</item>
+      <item>af_setup</item>
+      <item>autofocus</item>
+      <item>average_scale_means</item>
+      <item>beep</item>
+      <item>call_func</item>
+      <item>camera_get</item>
+      <item>camera_set</item>
+      <item>cat_char</item>
+      <item>cat_str</item>
+      <item>cli_path</item>
+      <item>cmath_var</item>
+      <item>cmath_array</item>
+      <item>corrections_mask</item>
+      <item>def_actuator</item>
+      <item>def_array</item>
+      <item>def_func</item>
+      <item>def_tracker</item>
+      <item>def_var</item>
+      <item>df_correction</item>
+      <item>div_var</item>
+      <item>do_if</item>
+      <item>else</item>
+      <item>enddo</item>
+      <item>endloop</item>
+      <item>eval_char</item>
+      <item>execute_daemon</item>
+      <item>execute_system</item>
+      <item>exit</item>
+      <item>fbyte_mode</item>
+      <item>ff_correction</item>
+      <item>fourier</item>
+      <item>fput_var</item>
+      <item>frame_number</item>
+      <item>frames_to_average</item>
+      <item>frames_to_skip</item>
+      <item>fset_var</item>
+      <item>fskip_size</item>
+      <item>get_actuators</item>
+      <item>get_camsettings</item>
+      <item>get_preview</item>
+      <item>get_preview_focus</item>
+      <item>get_preview_stats</item>
+      <item>get_preview_tc</item>
+      <item>get_resolutions</item>
+      <item>get_tracker</item>
+      <item>goto</item>
+      <item>grabber_predelay</item>
+      <item>grabber_retries</item>
+      <item>grabber_timeout</item>
+      <item>grab_image</item>
+      <item>gui_buffer</item>
+      <item>gui_update</item>
+      <item>gui_update_period</item>
+      <item>init_tracker</item>
+      <item>jpeg_quality</item>
+      <item>loop_while</item>
+      <item>make_lib</item>
+      <item>match_tracker</item>
+      <item>math_var</item>
+      <item>math_array</item>
+      <item>max_daemons</item>
+      <item>milliduration</item>
+      <item>mul_var</item>
+      <item>null_command</item>
+      <item>poll_user</item>
+      <item>preview_clear</item>
+      <item>preview_copy</item>
+      <item>preview_draw_angles</item>
+      <item>preview_draw_array</item>
+      <item>preview_draw_blend</item>
+      <item>preview_draw_buffer</item>
+      <item>preview_draw_chamfer</item>
+      <item>preview_draw_clear</item>
+      <item>preview_draw_colour</item>
+      <item>preview_draw_cursor</item>
+      <item>preview_draw_desttype</item>
+      <item>preview_draw_file</item>
+      <item>preview_draw_lwidth</item>
+      <item>preview_draw_pcg</item>
+      <item>preview_draw_save</item>
+      <item>preview_draw_shape</item>
+      <item>preview_draw_show</item>
+      <item>preview_draw_string</item>
+      <item>preview_file</item>
+      <item>preview_load</item>
+      <item>preview_save</item>
+      <item>preview_show</item>
+      <item>preview_tile</item>
+      <item>print_clear</item>
+      <item>print_colour</item>
+      <item>print_cursor</item>
+      <item>print_file</item>
+      <item>print_graphics</item>
+      <item>print_size</item>
+      <item>print_value</item>
+      <item>prv_cdf_use</item>
+      <item>prv_fc_posn</item>
+      <item>prv_fc_show</item>
+      <item>prv_hgm_posn</item>
+      <item>prv_hgm_satlim_l</item>
+      <item>prv_hgm_satlim_u</item>
+      <item>prv_hgm_scales</item>
+      <item>prv_lut</item>
+      <item>prv_mask_use</item>
+      <item>prv_m_bias</item>
+      <item>prv_mcor_eject</item>
+      <item>prv_mdf_set</item>
+      <item>prv_mff_set</item>
+      <item>prv_m_integral</item>
+      <item>prv_size</item>
+      <item>prv_toggle</item>
+      <item>randpcg</item>
+      <item>return</item>
+      <item>save_coords</item>
+      <item>save_doubles</item>
+      <item>save_format</item>
+      <item>save_path</item>
+      <item>save_resolution</item>
+      <item>save_root</item>
+      <item>select_camera</item>
+      <item>set_condexp</item>
+      <item>set_previewpos</item>
+      <item>set_str</item>
+      <item>set_tracker</item>
+      <item>set_var</item>
+      <item>skip_frames</item>
+      <item>sleep</item>
+      <item>stats_array</item>
+      <item>sub_var</item>
+      <item>tc_threshold</item>
+      <item>tmc_chconf_parse</item>
+      <item>tmc_status_parse</item>
+      <item>track</item>
+      <item>undef_actuator</item>
+      <item>undef_var</item>
+      <item>undef_tracker</item>
+      <item>update_gui_coords</item>
+      <item>verbosity</item>
+      <item>xyzs_af_period</item>
+      <item>xyzs_finish</item>
+      <item>xyzs_process</item>
+      <item>xyzs_scan</item>
+      <item>xyzs_semino_z</item>
+      <item>xyzs_start</item>
+      <item>xyzs_stepsize</item>
+      <item>yuyv_bias</item>
+      <item>yuyv_gain</item>
+
+      <item>if</item>
+    </list>
+    <list name="sysvars">
+      <item>Condexp</item>
+      <item>CurrActIdx</item>
+      <item>CurrActType</item>
+      <item>CurrTC</item>
+      <item>DateTime</item>
+      <item>FALSE</item>
+      <item>Hash</item>
+      <item>HasTissue</item>
+      <item>Homed</item>
+      <item>Millis</item>
+      <item>NBinaries</item>
+      <item>NMlevels</item>
+      <item>NoTissue</item>
+      <item>NServos</item>
+      <item>NSteppers</item>
+      <item>NSensors</item>
+      <item>OFF</item>
+      <item>ON</item>
+      <item>PMRep1</item>
+      <item>PMRep2</item>
+      <item>PMRep3</item>
+      <item>PMRep4</item>
+      <item>PreviewInc</item>
+      <item>PreviewPos</item>
+      <item>PreviewVal</item>
+      <item>Ps_DCT_B</item>
+      <item>Ps_DCT_G</item>
+      <item>Ps_DCT_R</item>
+      <item>Ps_Focus_B</item>
+      <item>Ps_Focus_G</item>
+      <item>Ps_Focus_R</item>
+      <item>Ps_Integral_B</item>
+      <item>Ps_Integral_G</item>
+      <item>Ps_Integral_R</item>
+      <item>Ps_MAL_B</item>
+      <item>Ps_MAL_G</item>
+      <item>Ps_MAL_R</item>
+      <item>Ps_Max_B</item>
+      <item>Ps_Max_G</item>
+      <item>Ps_Max_R</item>
+      <item>Ps_Mean_B</item>
+      <item>Ps_Mean_G</item>
+      <item>Ps_Mean_R</item>
+      <item>Ps_Min_B</item>
+      <item>Ps_Min_G</item>
+      <item>Ps_Min_R</item>
+      <item>Ps_Msupport</item>
+      <item>Ps_Npix_B</item>
+      <item>Ps_Npix_G</item>
+      <item>Ps_Npix_R</item>
+      <item>Ps_SatL_B</item>
+      <item>Ps_SatL_G</item>
+      <item>Ps_SatL_R</item>
+      <item>Ps_SatU_B</item>
+      <item>Ps_SatU_G</item>
+      <item>Ps_SatU_R</item>
+      <item>Ps_Var_B</item>
+      <item>Ps_Var_G</item>
+      <item>Ps_Var_R</item>
+      <item>Space</item>
+      <item>Sysval</item>
+      <item>TRUE</item>
+      <item>CLImode</item>
+
+      <item>NReads</item>
+      <item>NWrites</item>
+      <item>NewLines</item>
+      <item>NBytes</item>
+
+      <item>PreviewReport</item>
+
+
+    </list>
+    <list name="types">
+      <item>int</item> <item>float</item> <item>string</item>
+    </list>
+
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <!-- Strings: Yellow-Orange -->
+        <DetectChar attribute="String" context="StringQ" char="&quot;" />
+        <DetectChar attribute="String" context="StringS" char="'" />
+
+        <RegExpr attribute="Preprocessor" context="#stay" String="#(define|include|include_once)\b" />
+        <DetectChar attribute="Comment" context="CommentContext" char="#" />
+
+        <!-- Folding Blocks -->
+        <StringDetect attribute="Keyword" context="#stay" String="do_if" beginRegion="Conditional" />
+        <StringDetect attribute="Keyword" context="#stay" String="else" endRegion="Conditional" beginRegion="Conditional" />
+        <StringDetect attribute="Keyword" context="#stay" String="enddo" endRegion="Conditional" />
+        <StringDetect attribute="Keyword" context="#stay" String="loop_while" beginRegion="Loop" />
+        <StringDetect attribute="Keyword" context="#stay" String="endloop" endRegion="Loop" />
+        <StringDetect attribute="Keyword" context="#stay" String="def_func" beginRegion="Function" />
+        <StringDetect attribute="Keyword" context="#stay" String="return" endRegion="Function" />
+
+        <!-- Highlighting Rules -->
+        <keyword attribute="Keyword" context="#stay" String="keywords" />
+        <keyword attribute="System Variable" context="#stay" String="sysvars" />
+        <keyword attribute="Data Type" context="#stay" String="types" />
+        
+        <!-- Numbers: Green -->
+        <Float attribute="Decimal" context="#stay" />
+        <Int attribute="Decimal" context="#stay" />
+      </context>
+
+      <!-- Context for Double Quotes -->
+      <context name="StringQ" attribute="String" lineEndContext="#pop">
+        <DetectChar attribute="String" context="#pop" char="&quot;" />
+      </context>
+      <!-- Context for Single Quotes -->
+      <context name="StringS" attribute="String" lineEndContext="#pop">
+        <DetectChar attribute="String" context="#pop" char="'" />
+      </context>
+      
+      <context name="CommentContext" attribute="Comment" lineEndContext="#pop" />
+    </contexts>
+
+    <itemDatas>
+      <itemData name="Normal Text"  defStyleNum="dsNormal" />
+      <itemData name="Keyword"      defStyleNum="dsKeyword" color="#0000ff" bold="1" />
+      <itemData name="Data Type"    defStyleNum="dsDataType" color="#008000" bold="1" />
+      <itemData name="System Variable" defStyleNum="dsVariable" color="#008080" bold="1" />
+      <itemData name="Preprocessor" defStyleNum="dsPreprocessor" color="#a020f0" />
+      <itemData name="Comment"      defStyleNum="dsComment" color="#ff0000" />
+      <itemData name="Decimal"      defStyleNum="dsDecVal" color="#00a000" /> <!-- Green -->
+      <itemData name="String"       defStyleNum="dsString" color="#ff8c00" /> <!-- Orange-Yellow -->
+    </itemDatas>
+  </highlighting>
+</language>

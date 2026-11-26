@@ -1,0 +1,334 @@
+Pardus pch 1
+
+##############################################
+#                                            #
+# stdpard.pch                                #
+#                                            #
+# Some common definitions for the PCS        #
+# programming language for programs that use #
+# actuators.                                 #
+#                            PJT 25.11.2026  #
+#                                            #
+##############################################
+
+#define ACT_NONE     0
+#define ACT_STEPPER  1
+#define ACT_BINARY   2
+#define ACT_MLEVEL   3
+#define ACT_SERVO    4
+#define ACT_SENSOR   5
+
+#define INFO_ENA_STATE 1 
+#define INFO_HOMED_TO  2 
+#define INFO_DIRN1     3 
+#define INFO_DIRN2     4 
+#define INFO_DIRNC     5 
+#define INFO_DIRNP     6  
+#define INFO_MSDENOM   7 
+#define INFO_MSDEMAX   8 
+#define INFO_PULWIDTH  9 
+#define INFO_BLSTEPS   10       
+#define INFO_BLSTMAX   11
+#define INFO_CALIMAX   12
+#define INFO_STEPCOUNT 13
+#define INFO_SW_LIM1   14
+#define INFO_SW_LIM2   15
+#define INFO_NHS       16
+#define INFO_ISD_HOBL  17
+#define INFO_LIMSTATE  18
+#define INFO_PIN_PUL   19
+#define INFO_PIN_DIR   20
+#define INFO_PIN_LIM1  21
+#define INFO_PIN_LIM2  22
+#define INFO_PIN_DIAG  23
+#define INFO_PIN_ENA   24
+#define INFO_NAME_LS1  25
+#define INFO_NAME_LS2  26
+#define INFO_NAME_SW1  27
+#define INFO_NAME_SW2  28
+#define INFO_NAME_UNI  29
+#define INFO_MATURITY  30       
+#define INFO_XYZCOORDS 31
+#define INFO_DURALAM   32 
+#define INFO_STEPLAM   33 
+#define INFO_ONESTEP   34       
+#define INFO_FASTMSD   35
+#define INFO_MMODE     36
+#define INFO_TMCSGVAL  37 
+#define INFO_TMCSTATUS 38 
+#define INFO_TMCCHCONF 39 
+#define INFO_SG_BUFFPC 40
+#define INFO_SG_THRESH 41
+#define INFO_TURBO_BST 42
+#define INFO_TMCMSCNT  43
+#define INFO_TENSTEPS1 44
+#define INFO_TENSTEPS2 45
+#define INFO_UNIT_TYPE 46 
+#define INFO_PIN_MS1   47
+#define INFO_PIN_MS2   48
+#define INFO_PIN_MS3   54
+#define INFO_SD_TYPE   53
+
+# Stepper Driver_type:
+#define SD_UNDEF   0
+#define SD_A4988   1
+#define SD_DRV8825 2
+#define SD_TMC2209 3
+
+#define INFO_BIN_STATE 1
+#define INFO_ON_VAL    3
+#define INFO_OFF_VAL   4
+#define INFO_PIN_BIN   24
+
+#define INFO_CAM_MIN   50
+#define INFO_CAM_MAX   51
+#define INFO_CAM_CURR  52
+
+#define BIN_OFF 0
+#define BIN_ON  1
+#define BIN_UNSET 3
+    
+#define INFO_ML_STATE  1
+#define INFO_ML_TYPE   3
+#define INFO_ML_TIMER  6
+#define INFO_ML_PSC    4
+#define INFO_ML_FREQ  33
+#define INFO_ML_TTABLE 8
+#define INFO_PIN_P0   19
+#define INFO_PIN_P1   20
+#define INFO_PIN_P2   21
+#define INFO_PIN_P3   22
+#define INFO_PIN_P4   23
+#define INFO_PIN_P5   24
+#define INFO_PIN_P6   47
+#define INFO_PIN_P7   48
+#define INFO_ML_LEVEL 49
+
+
+#define MLT_PARALLEL 0
+#define MLT_PWM      1
+#define MLT_UNSET    3
+
+#define ML_DUTY_MAX       1000  # plain PWM duty: 0 .. 1000 per mille
+#define ML_FX_BASE        1000  # duty = ML_FX_BASE * E + P
+#define ML_FX_NOISE       1     # E = 1
+#define ML_FX_TIMEDNOISE  2     # E = 2
+#define ML_FX_BURSTHISS   3     # E = 3
+#define ML_FX_GLIDE       4     # E = 4
+#define ML_DUTY_CODE_MAX  4999  # largest valid duty value
+
+#define PWM_PSC_1     0
+#define PWM_PSC_8     3
+#define PWM_PSC_32    5
+#define PWM_PSC_64    6
+#define PWM_PSC_128   7
+#define PWM_PSC_256   8
+#define PWM_PSC_1024  10
+#define PWM_PSC_UNDEF 11
+
+#define DEGREES 1
+
+#define SRV_FREQ_MID50   1
+#define SRV_FREQ_MID200  2
+#define SRV_FREQ_MID333  3
+
+#define INFO_SRV_STATE  1
+#define INFO_SRV_AFB   33
+#define INFO_SRV_TIMER  6
+#define INFO_SRV_ISD   17
+#define INFO_SRV_FREQ  9 
+#define INFO_SRV_PINS  19
+#define INFO_SRV_PINP  21
+#define INFO_SRV_QPOS  44
+#define INFO_SRV_SPOS  45
+#define INFO_SRV_MIN   14
+#define INFO_SRV_MAX   15
+#define INFO_SRV_THMAX 10
+#define INFO_SRV_THMIN 11
+#define INFO_SRV_CALIB 12
+#define INFO_SRV_ACCEL 49
+
+#define INFO_SEN_TYPE   3
+#define INFO_SEN_PIN   21
+#define INFO_SEN_VAL   33
+
+#define SEN_DIGITAL  0
+#define SEN_ANALOGUE 1
+#define SEN_UNSET    3
+
+#define FREE_PIN 255
+
+#define CCHAN_Y 1
+#define CCHAN_R 2
+#define CCHAN_G 3
+#define CCHAN_B 4
+
+# TMC2209 status info item
+#define TMC_SI_OVER_TEMP 1
+#define TMC_SI_PREO_TEMP 2
+#define TMC_SI_SHORTGNDA 3
+#define TMC_SI_SHORTGNDB 4
+#define TMC_SI_SHORTSUPA 5
+#define TMC_SI_SHORTSUPB 6
+#define TMC_SI_OPENLOADA 7
+#define TMC_SI_OPENLOADB 8
+#define TMC_SI_CS_ACTUAL 9
+#define TMC_SI_TEMP_THRS 10
+#define TMC_SI_STNDSTILL 11
+#define TMC_SI_SPRDCYCLE 12
+
+# TMC2209 chopconf info item
+#define TMC_CI_TOFFLEVEL 1
+#define TMC_CI_HYSTSTART 2
+#define TMC_CI_HYST__END 3
+#define TMC_CI_CPBLANKTM 4
+#define TMC_CI_VSENSITIV 5
+#define TMC_CI_MRESMSDEN 6
+#define TMC_CI_INTERPOLN 7
+#define TMC_CI_DOUBLEDGE 8
+#define TMC_CI_DISSHRTTG 9
+#define TMC_CI_DISSHRTTL 10
+
+# TMC2209 Motion mode
+#define MM_STEALTHY 0
+#define MM_PRECISE  1
+
+# Directions for stepper motors
+#define DIRN_UNS 255
+
+# The limit or limit switch (LIM_) identifier values. These are used to
+# identify which limit switch a motor is homed_to and also which limit or limit
+# switch is currently triggered in the limstate member:
+
+#define LIM_UNSET   0  # Not homed (or no limit switch triggered)
+#define LIM_SWTC1   1  # Physical switch 1 (triggered by moving in dirn1)
+#define LIM_SWTC2   2  # Physical switch 2 (triggered by moving in dirn2)
+#define LIM_NULL1   3  # Null-homed 1 (step count goes to 0 by moving in dirn1)
+#define LIM_NULL2   4  # Null-homed 2 (step count goes to 0 by moving in dirn2)
+#define LIM_SOFT1   5  # Sofware limit 1 activated (cannot be homed to)
+#define LIM_SOFT2   6  # Sofware limit 2 activated (cannot be homed to)
+#define LIM_ZERO    7  # Motor attempted to move to a negative step count. This
+                       # can happen if a limit switch is a bit noisy or has
+                       # some error or if there is some error in the axes such
+                       # that returning to a step count of zero does not
+                       # trigger the limit switch. Alternatively this can
+                       # happen in cases of null homing where there is no
+                       # phyisical end stop switch to trigger and step count is
+                       # all we have.
+#define LIM_STALL   8  # The StallGuard4 threshold was exceeded - likely stall.
+                       # If a stall is detected then the Arduino sends back the
+                       # the error code  to the user but that does not tell you
+                       # which motor triggered the stall event. However the
+                       # Arduino also sets the limstate member of the motor
+                       # that triggered the stall to this LIM_STALL value. So
+                       # the user can do a 'cold read' of the limit state of
+                       # each motor in turn (using act_get with INFO_LIMSTATE)
+                       # to find out which motor triggered the stall.
+
+
+# The Graphics Sub-Interpreter (GSI) and related constants:
+
+#define GSI_TYPE_ENV       -1 # Set global behaviour modifiers (see below)
+#define GSI_TYPE_PLOT      -2 # Enact drawing of a shape (pixel, line, rect, ellipse)
+#define GSI_TYPE_STRING    -3 # Print text in the bitmap font
+#define GSI_TYPE_MGLYPH    -4 # Paint a pixel map in two colours (packed)
+#define GSI_TYPE_CGLYPH    -5 # Paint a general colour pixel map (packed)
+#define GSI_TYPE_CBITMP    -6 # Paint a colour (24bpp) pixel map (raw)
+#define GSI_TYPE_GBITMP    -7 # Paint a grey (8bpp) pixel map    (raw)
+#define GSI_TYPE_END       -8 # No more graphics sub-interpreter tasks follow
+
+# Global behaviour modifier types:
+#define OP_PREVIEW_DRAW_LWIDTH    3
+#define OP_PREVIEW_DRAW_CHAMFER   4
+#define OP_PREVIEW_DRAW_ANGLES    5
+#define OP_PREVIEW_DRAW_BLEND     6
+#define OP_PREVIEW_DRAW_COLOUR    9
+#define OP_PREVIEW_DRAW_CURSOR   10
+#define OP_PREVIEW_DRAW_DESTTYPE 17
+
+# GSI Plot (Preview Draw Shape - PDS) types:
+#define PDS_PIXEL	0
+#define PDS_LINE	1
+#define PDS_RECT	2
+#define PDS_ELLIPSE	3
+
+
+# Values for ScriptTracker.Status (describes the outcome of the last init/track)
+#define TRKS_OK            0  # Last init or track succeeded
+#define TRKS_UNSEEDED      1  # No template: never initialised, or the init failed
+#define TRKS_BAD_WINDOW    2  # Template or search window could not be placed in frame
+#define TRKS_BAD_CHANNEL   3  # Invalid colour channel supplied at initialisation
+#define TRKS_FLAT_TEMPLATE 4  # Template region is featureless (KLT: too few corners found)
+#define TRKS_OCCLUDED      5  # Searched, but best score < OcclusionThreshold (KLT: or track lost)
+#define TRKS_BAD_SETTING   6  # A set_tracker value was rejected; nothing was changed
+
+# Tracker getting constants
+#define TKGET_OCCLCOUNT   1   # Occlusion counter
+#define TKGET_ERRSTATUS   2   # Error number (TRKS_ status code)
+#define TKGET_SEEDED      3   # Initialisation done/succeeded? (1 = yes, 0 = no)
+#define TKGET_ROW         4   # Last known template top row
+#define TKGET_COL         5   # Last known template left column
+#define TKGET_NPOINTS     6   # KLT: number of feature points currently tracked (else 0)
+#define TKGET_NINLIERS    7   # KLT: target inliers behind the last box update (else 0)
+#define TKGET_LOSTFRAMES  8   # KLT: consecutive frames without a valid track (else 0)
+#define TKGET_NREFEDGES   9   # GHT: edge points stored in the R-table at init (else 0)
+#define TKGET_VOTES      10   # GHT: smoothed peak votes of the last track (else 0)
+#define TKGET_IMGEDGES   11   # GHT: edge pixels found in the last search area (else 0)
+
+
+# Tracker setting constants:
+#define TKSET_TEMPDIM     1
+#define TKSET_SEARCHDIM   2
+#define TKSET_COLCHAN     3
+#define TKSET_SEARCHSIG   4
+#define TKSET_MERGEALPHA  5
+#define TKSET_OCCLTHRESH  6
+#define TKSET_CELLDIM     7   # HOG cell dimension
+#define TKSET_OCCLCOUNT   8   # Occlusion counter (e.g. reset to 0)
+#define TKSET_ROW         9   # Last-known template top row (search centre)
+#define TKSET_COL        10   # Last-known template left column
+# --- COM only ---
+#define TKSET_COM_THRESH    11  # float: grey threshold 0..255, negative = automatic
+#define TKSET_COM_POLARITY  12  # int:   0 = bright target, 1 = dark target
+#define TKSET_COM_ITER      13  # int:   max window shifts per frame (1..100)
+# --- KLT only ---
+#define TKSET_KLT_MAXTGT    14  # int:   target points kept inside the box
+#define TKSET_KLT_MAXBG     15  # int:   background points kept in the ring
+#define TKSET_KLT_RING      16  # int:   ring width around the box (pixels)
+#define TKSET_KLT_LEVELS    17  # int:   pyramid levels (reduced automatically if too small)
+#define TKSET_KLT_HW        18  # int:   window half width (window = 2*hw+1)
+#define TKSET_KLT_MAXITER   19  # int:   max LK iterations per level
+#define TKSET_KLT_EPS       20  # float: LK convergence threshold (pixels)
+#define TKSET_KLT_MINEIG    21  # float: min per-pixel eigenvalue of the window Hessian
+#define TKSET_KLT_FBCHECK   22  # int:   forward-backward check 0/1
+#define TKSET_KLT_FBTHRESH  23  # float: max forward-backward error (pixels)
+#define TKSET_KLT_CONSIST   24  # float: base tolerance for "same motion" (pixels)
+#define TKSET_KLT_RELTOL    25  # float: extra tolerance per pixel of speed
+#define TKSET_KLT_FGTOL     26  # float: deviation from background motion that makes a point foreground
+#define TKSET_KLT_MINPTS    27  # int:   fewer target inliers than this = track lost
+#define TKSET_KLT_MINBG     28  # int:   ring points needed to trust the background motion
+#define TKSET_KLT_REFILL    29  # float: replenish a group below this fraction of its maximum
+#define TKSET_KLT_QUALITY   30  # float: corner quality relative to the best corner in the region
+#define TKSET_KLT_MINDIST   31  # int:   minimum spacing between points (pixels)
+#define TKSET_KLT_MAXLOST   32  # int:   lost frames before points are re-seeded in the held box
+# --- GHT only (BINS, MAGTHR and EDGEFRAC take effect at the next init_tracker) ---
+#define TKSET_GHT_BINS      33  # int:   gradient direction bins (8..90)
+#define TKSET_GHT_BINTOL    34  # int:   neighbouring bins that also vote (0..3)
+#define TKSET_GHT_MAGTHR    35  # float: edge threshold in grey levels, negative = automatic
+#define TKSET_GHT_EDGEFRAC  36  # float: automatic threshold as a fraction of the strongest template gradient
+#define TKSET_GHT_SMOOTH    37  # int:   smooth the vote accumulator 0/1
+#define TKSET_GHT_MINEDGES  38  # int:   minimum template edge points for a successful init
+#define TKSET_STATUS        39  # int:   set the status flag (0..6, a TRKS_ code). Informational only:
+                                #        e.g. set_tracker t TKSET_STATUS TRKS_OK before a command to
+                                #        be sure the flag afterwards comes from that command.
+#define TKSET_COM_FIRST  11
+#define TKSET_COM_LAST   13
+#define TKSET_KLT_FIRST  14
+#define TKSET_KLT_LAST   32
+#define TKSET_GHT_FIRST  33
+#define TKSET_GHT_LAST   38
+
+
+
+
+exit

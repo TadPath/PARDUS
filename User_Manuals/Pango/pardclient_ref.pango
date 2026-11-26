@@ -1,0 +1,1202 @@
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4"><b>PARD</b><b>client</b></span>
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4"><b>(and pcs-cli)</b></span>
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4"><b>User </b><b>Guide</b></span>
+
+Document created: 18.06.2026,   Last edited: 26.11.2026
+
+
+[IMAGE:image1.png]
+
+
+by
+Dr Paul J. Tadrous
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Legal Information</span>
+
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">License for this document</span>
+Copyright (C)  2026  Dr Paul J. Tadrous
+Permission is granted to copy, distribute and/or modify this document under the terms of the GNU Free Documentation License, Version 1.3 or any later version published by the Free Software Foundation; with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license can be found at https://www.gnu.org/licenses/fdl-1.3.html
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">License for the software</span>
+Copyright (C) 1994-2026 Dr Paul J. Tadrous
+The pardclient software and the pcs-cli software are part of the open source PARDUS robotics/microscopy system and are released under the terms of the GNU General Public License version 3.
+These programs are free software: you can redistribute them and/or modify them under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+These programs are distributed in the hope that they will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License along with these programs. If not, see &lt;https://www.gnu.org/licenses/&gt;.
+
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Abbreviations</span>
+
+
+
+
+  <tt> │ <span weight="bold" foreground="#1a5fb4">Abbreviation</span> │ <span weight="bold" foreground="#1a5fb4">Meaning                                                               </span> │ </tt>
+  <tt> ├──────────────┼────────────────────────────────────────────────────────────────────────┤ </tt>
+  <tt> │ AAFB         │ Acid-Alcohol Fast Bacillus (or bacilli)                                │ </tt>
+  <tt> │ ASCII        │ American Standard Code for Information Interchange                     │ </tt>
+  <tt> │ BLOB         │ Binary Large OBject                                                    │ </tt>
+  <tt> │ BMP          │ MS Windows bitmap image file format                                    │ </tt>
+  <tt> │ BOB          │ Breakout board (e.g. Arduino)                                          │ </tt>
+  <tt> │ bpp          │ Bits per pixel                                                         │ </tt>
+  <tt> │ C            │ The C programming language                                             │ </tt>
+  <tt> │ CLI          │ Command Line Interface                                                 │ </tt>
+  <tt> │ CWD          │ Current Working Directory                                              │ </tt>
+  <tt> │ .dove        │ Direct Object-Value Executable - the format of a compiled PCS          │ </tt>
+  <tt> │              │ executable program                                                     │ </tt>
+  <tt> │ ECC          │ Elliptic curve cryptography                                            │ </tt>
+  <tt> │ FITS         │ Flexible Image Transport System file format                            │ </tt>
+  <tt> │ FOSS         │ Free and Open Source Software.                                         │ </tt>
+  <tt> │ gcc          │ GNU Compiler Collection (C compiler and linker software)               │ </tt>
+  <tt> │ GIMP         │ The GNU Image Processing program                                       │ </tt>
+  <tt> │ GNU GPL      │ GNU General Public License                                             │ </tt>
+  <tt> │ GTK          │ The GIMP Tool Kit                                                      │ </tt>
+  <tt> │ GUI          │ Graphical User Interface                                               │ </tt>
+  <tt> │ ICMP         │ Internet Control Message Protocol                                      │ </tt>
+  <tt> │ IO           │ Input / Output                                                         │ </tt>
+  <tt> │ IP           │ Internet Protocol                                                      │ </tt>
+  <tt> │ MS           │ Microsoft®                                                             │ </tt>
+  <tt> │ macOS        │ Apple® Macintosh® Operating System                                     │ </tt>
+  <tt> │ MSYS2        │ Minimal SYStem 2                                                       │ </tt>
+  <tt> │ OS           │ Operating System                                                       │ </tt>
+  <tt> │ OTP          │ One-Time-Password                                                      │ </tt>
+  <tt> │ P2P          │ Peer-to-peer                                                           │ </tt>
+  <tt> │ P5           │ The binary form of a PGM file (as opposed to the ASCII form)           │ </tt>
+  <tt> │ P6           │ The binary form of a PPM file (as opposed to the ASCII form)           │ </tt>
+  <tt> │ PARDUS       │ Programmable Affordable Remote-controlled Drive Utility Standard       │ </tt>
+  <tt> │ PC           │ Personal computer                                                      │ </tt>
+  <tt> │ PCG          │ This can refer to the 'Permuted Congruential Generator' pseudorandom   │ </tt>
+  <tt> │              │ number generator algorithm used in PCS or to the 'programmable         │ </tt>
+  <tt> │              │ character generator' of PCS, depending on the context.                 │ </tt>
+  <tt> │ .pcl         │ PARDUS Compiled Library (a compiled library file for PCS programs)     │ </tt>
+  <tt> │ PCS          │ PARDUS Command Script (programming language)                           │ </tt>
+  <tt> │ PGM          │ Jeff Poskanzer's Portable Grey Map image file format                   │ </tt>
+  <tt> │ PNG          │ Portable Netowork Graphics image file format                           │ </tt>
+  <tt> │ PPM          │ Jeff Poskanzer's Portable PixMap colour image file format              │ </tt>
+  <tt> │ RHEL         │ Red Hat Enterprise Linux                                               │ </tt>
+  <tt> │ TB           │ Tuberculosis                                                           │ </tt>
+  <tt> │ TCP/IP       │ Transmission Control Protocol/Internet Protocol                        │ </tt>
+  <tt> │ UCRT64       │ Universal C Run Time 64 bit                                            │ </tt>
+  <tt> │ USB          │ Universal Serial Bus                                                   │ </tt>
+  <tt> │ UTF-8        │ Unicode Transformation Format - 8-bit                                  │ </tt>
+  <tt> │ WSI          │ Whole Slide Image / imaging                                            │ </tt>
+  <tt> │ Z85          │ ZeroMQ's base-85 encoding scheme. This is designed to convert the      │ </tt>
+  <tt> │              │ arbitrary binary data of an ECC key into a printable, 40 character,    │ </tt>
+  <tt> │              │ human-readable ASCII text string using a specially selected set of 85  │ </tt>
+  <tt> │              │ ASCII characters.                                                      │ </tt>
+  <tt> │ ZeroMQ       │ 'Zero Message Queueing' - an asynchronous messaging library that works │ </tt>
+  <tt> │              │ without a message broker to effectively provide a fast peer-to-peer    │ </tt>
+  <tt> │              │ (P2P) connection.                                                      │ </tt>
+  <tt> │ ZN           │ Ziehl Neelsen stain commonly used to detect mycobacteria like those    │ </tt>
+  <tt> │              │ that cause tuberculosis.                                               │ </tt>
+
+
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Introduction to PARDclient and pcs-cli</span>
+
+The free and open source software (FOSS) pardclient is a cross-platform GUI program that may be compiled for and run on Linux, MS Windows and macOS. This cross-platform ability comes from the fact that it is written in C using the GTK 4.0 toolkit and Glib.
+pcs-cli is the headless command-line interface (CLI) equivalent of pardclient. This is also FOSS. pcs-cli works from a terminal or terminal emulator and does not require a GUI to operate. It can run all the pcs programs that pardclient can run, although with some modifications. For example, the PCS command print_size will have no effect when run in CLI mode and PCS programs will need to make some accommodations for text input and graphical output when running via pcs-cli. However, the PCS programming language provides a facility for automatically detecting, at run-time, whether the program is being run via pcs-cli (via the state of the read-only system variable CLImode) and so can make any such adjustments as CLI-dependent optional code branches. In this way the very same PCS programs - if well written - can run just as well via the pardclient GUI as with the pcs-cli command line tool. The pcs-cli program also has some additional tools for analysing PCS programs and libraries which are not available via the pardclient GUI. The pcs-cli program is a CLI 'wrapper' that actually includes the full source code of pardclient in its compile command. Thus, any time I mention pardclient in this manual, the processes involved are equally applicable to pcs-cli unless they specifically relate to the GUI aspects of pardclient.
+PARDclient and pcs-cli are the main user interface programs of the PARDUS robotics control system and allow the user to do 5 main things:
+To log onto a pardserver and, by that means, to interface with the robotics hardware connected to a breakout board (BOB - for example, an 8-bit AVR-based Arduino-type board) to control actuators and interface with the sensors of the robot; and also to interface with one or more pardcapture imaging device servers to have image feedback, processing and capture abilities.
+To control those devices via the built-in GUI of pardclient or terminal input via pcs-cli, including to perform automated XY and XYZ specimen scans or generally move the 3 axes of a 3-axis stage robot and perform image grabber setup and capture functions.
+To program in the PCS programming language (PCS stands for PARDUS Command Script). PCS is a Turing complete programming language that allows the user to perform custom robotics, imaging and general programming tasks including file IO, interactive user input, loops, branching logic, spawning custom commands on the underlying OS and more. See the dedicated PCS reference manual for detailed information about it.
+To load and examine XY and XYZ scans that have been saved to disc (pardclient only).
+To load and read both PARDUS official and custom help files and custom notes (pardclient only).
+
+PARDUS stands for the Programmable Affordable Remote-controlled Drive Utility Standard. It is a means of interfacing with a robotics system composed of actuators, sensors and imaging devices. I originally developed it to control a robotic microscope stage and camera and so the terminology used occasionally reflects this specific application field. However PARDUS can be used to control other robotic systems.
+There are three main elements to a PARDUS system:
+The user (who logs into a Linux-based pardserver via the cross-platform pardclient application or the pcs-cli). The pardclient / pcs-cli and pardserver programs may be running on the same computer or on different PCs that may be separated by a significant distance because they communicate via a dedicated fast P2P network connection using elliptical curve cryptography via the ZeroMQ network communications C library. This connection can be made over the open internet if appropriate port forwarding and firewall rules are set, so the PC running pardclient or pcs-cli may be in a different country to the PC running the pardserver.
+Optionally, the motion control breakout board (BOB) of the microscope or other robotics system (which, in the current implementation, is an Arduino 8 bit AVR compatible microcontroller) connected to the robot's actuators and sensors. 
+Optionally, one or more pardcapture image servers to enable image capture and processing abilities.
+This interconnectivity is illustrated in figure 3.1.
+PARDserver acts as a client in communications with pardcap server(s) and each pardcap server may be running on the same computer as pardserver or on different computers. In each case, the connection between the pardserver and a pardcap server is made via (unencrypted) TCP/IP socket comms.                                    
+The BOB will be connected to the same computer running pardserver for two-way serial communication. In the case of the BOB being an Arduino, this communication will be done via the USB cable connecting the BOB to the PC.
+
+
+
+[IMAGE:image2.png]
+
+Figure 3.1 The architecture of a PARDUS robotics control system showing how pardclient fits in.                                                    
+
+Once the pardserver is setup with its connected components it waits for a login request from a pardclient or pcs-cli user. Once a user successfully logs into a pardserver the pardserver will serve only that client until they log out (or are logged out by some other means such as a network fault). If another user attempts to log on to a pardserver that has a client already logged in then the server will return a 'busy' signal and refuse the connection to the user attempting login.
+The logged in user sends PCS commands to the pardserver. In response to each such command the pardserver generates '<b><i>orders</i></b>' to send to the BOB and / or '<b><i>instructions</i></b>' to send to any connected pardcap servers. The orders make the microscope (or other robot) do something or get some data from the BOB (like the current position of an axis) or set some data on the BOB (like settings for the motors or camera(s); for example the number of backlash correction steps each motor needs or the microstep size used by a motor).
+After receiving an order, the BOB will attempt to fulfil it and send back a report on what it has done (which will include an error status code that will take the value PARDU_ERR_NONE if all went well or one of the other PARDU_ERR_ codes describing the error if there was a problem). The pardserver will translate any such error code into English and pass a status report back to the user with information about the success or failure of their PCS command, including any error message.
+In a similar way, the instructions pardserver sends to a connected pardcap server will tell the pardcap server what do do - like capture an image and send it back to the pardserver or to change the value of some camera setting, etc. The pardcap server will send back an instruction report to the pardserver with information about the success or failure of the order and include some diagnostic error information if the order fails. As, with BOB comms, the server will relay this information back to the user.
+All messages between pardclient and a pardserver are indexed with a sequential integer number - this is called the message index number. All communications between pardclient and pardserver will be displayed, together with the message index in square brackets, in the server console display area of the pardclient main window (see figure 6.1). If the user is issuing PCS commands from a script then error information from the server may also be displayed in the script console display area of the pardclient application (to be described later).
+For more information about pardclient and to get the latest version of the source code, see the project Codeberg page:
+https://codeberg.org/TadPath/PARDUS
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Compiling and Installing the software</span>
+
+PARDclient and pcs-cli are distributed as source code written in the C programming language. While some pre-compiled distributions may be available, the way to get the most up-to-date and most efficient binaries for your specific machine will be to compile the programs from source code into working executable programs.
+To do this you must first install the GCC toolchain and all necessary development libraries. You will also need the PARDUS header files parddefs.h and pardcapdefs.h and the resources file resources.c, all of which are available in the online PARDUS repository.
+If you want to compile the source code on MS Windows, you can do this using the MSYS2 environment for Windows which you must first install and update before following the instructions below.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">1. Install System Dependencies</span>
+Before compiling, you must install a C compiler, development headers, and the required runtime libraries for your specific operating system.
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Debian / Ubuntu / Linux Mint:</span>
+	$ sudo apt update
+	$ sudo apt install build-essential libgtk-4-dev libzmq3-dev libpng-dev libjpeg-dev libfontconfig-dev libpulse-dev
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Fedora / RHEL / Rocky Linux:</span>
+  $ sudo dnf groupinstall "Development Tools"
+  $ sudo dnf install gtk4-devel zeromq-devel libpng-devel libjpeg-turbo-devel fontconfig-devel pulseaudio-libs-devel
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Arch Linux / Manjaro:</span>
+Note: Arch Linux does not split packages into separate runtime and '-dev' header formats. A full system synchronisation is performed here to prevent compilation dependency errors caused by partial upgrades.
+  $ sudo pacman -Syu base-devel gtk4 zeromq libpng libjpeg-turbo fontconfig libpulse
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">MS Windows via MSYS2:</span>
+MSYS2 provides a Linux-like environment and the GCC toolchain on MS Windows. First, download and run the installer from the official MSYS2 website (https://www.msys2.org/). 
+Once installed, open the "MSYS2 UCRT64" terminal from your Start Menu to build a modern 64-bit Windows binary.
+Ensure your MSYS2 system environment is fully up to date.
+  $ pacman -Syu
+(The first time you do this it may only update core packages and the pacman installer itself then the terminal closes. If that happens, re-open "MSYS2 UCRT64" and run pacman -Syu once more.)
+Next, install the compiler toolchain, GTK4, ZeroMQ, and the remaining graphics libraries. The UCRT64 environment automatically bundles header files with these packages:
+  $ pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-gtk4 mingw-w64-ucrt-x86_64-zeromq mingw-w64-ucrt-x86_64-libpng mingw-w64-ucrt-x86_64-libjpeg-turbo mingw-w64-ucrt-x86_64-fontconfig
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">macOS:</span>
+Compilation on macOS requires the Apple Command Line Tools and the Homebrew package manager. 
+First, open the native Terminal application and install the core Apple build utilities (this provides 'gcc', which functions as a wrapper for Apple's Clang compiler):
+  $ xcode-select --install
+
+Next, if you do not have Homebrew installed, install it by pasting the instruction found on the official Homebrew website (https://brew.sh).
+Once Homebrew is active, install the required library dependencies. Homebrew automatically manages runtime files and header packages together:
+  $ brew install pkg-config gtk4 zeromq libpng jpeg-turbo fontconfig
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">2. Compile the Source Code</span>
+Navigate to the folder containing your source code files (pardclient.c and resources.c) in your terminal and execute the compilation command corresponding to your operating system. Note that, even though pcs-cli does not use a GUI, you still need to compile it with the gtk4 dependencies because it includes (and so compiles) the entire source code of pardclient.c which does require those dependencies).
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Linux (All Distributions):</span>
+  $ gcc -O2 -march=native `pkg-config --cflags gtk4` -Wall -Wno-format-truncation -o pardclient resources.c pardclient.c `pkg-config --libs gtk4` -lm -lzmq -lpng -ljpeg -lfontconfig -lpulse-simple -lpulse -lX11
+  $ gcc -O2 -march=native -w `pkg-config --cflags gtk4` -o pcs-cli resources.c pcs-cli.c `pkg-config --libs gtk4` -lm -lzmq -lpng -ljpeg -lfontconfig -lpulse-simple -lpulse -lX11
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">MS Windows (via MSYS2 UCRT64 Terminal):</span>
+Note: Ensure you are running this command inside the UCRT64 terminal, which correctly processes the pkg-config backticks. This explicitly appends the mandatory '.exe' extension for Windows binaries.
+  $ gcc -O2 `pkg-config --cflags gtk4` -Wall -Wno-format-truncation -o pardclient.exe resources.c pardclient.c `pkg-config --libs gtk4` -lzmq -lpng -ljpeg -lfontconfig -lws2_32 -lm -lwinmm
+  gcc -O2 -w `pkg-config --cflags gtk4` -o pcs-cli.exe resources.c pcs-cli.c `pkg-config --libs gtk4` -lws2_32 -lm -lzmq -lpng -ljpeg -lfontconfig -lwinmm
+The -march=native flag may be added if you only intend to use the resulting executable on the PC you are compiling on. If you intend to distribute the binary then that flag may cause the compiler to include machine code specific to your PC's CPU that might crash other PCs if they use a different architecture CPU.
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">macOS (Terminal):</span>
+Note: On macOS, the '-march=native' flag is omitted to ensure compatibility with Apple Silicon (M-series) systems. The math library flag (-lm) is natively resolved by the OS.
+  $ gcc -O2 `pkg-config --cflags gtk4` -Wall -Wno-format-truncation -o pardclient resources.c pardclient.c `pkg-config --libs gtk4` -lm -lzmq -lpng -ljpeg -lfontconfig -framework AudioToolbox -framework CoreFoundation
+gcc -O2 -w `pkg-config --cflags gtk4` -o pcs-cli resources.c pcs-cli.c `pkg-config --libs gtk4` -lm -lzmq -lpng -ljpeg -lfontconfig -framework AudioToolbox -framework CoreFoundation
+
+Note: If macOS throws 'zmq.h file not found' or 'ld: library not found for -lzmq', then using `pkg-config --cflags --libs gtk4 libzmq libpng libjpeg fontconfig` resolves /opt/homebrew automatically on both Intel and Apple Silicon Macs, e.g. for the pcs-cli command, try this (and similar for the pardclient command):
+
+gcc -O2 -w `pkg-config --cflags gtk4 libzmq libpng libjpeg fontconfig` -o pcs-cli resources.c pcs-cli.c `pkg-config --libs gtk4 libzmq libpng libjpeg fontconfig` -lm -framework AudioToolbox -framework CoreFoundation
+
+The programs are now ready to run.
+
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Using the software</span>
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Command line options for PARDclient</span>
+The command-line execution syntax for pardclient is defined as follows:
+
+  $ ./pardclient
+  $ ./pardclient &lt;-h|--help&gt;
+  $ ./pardclient &lt;-v|--version&gt;
+  $ ./pardclient &lt;-c|--config&gt; &lt;config_file&gt;
+  $ ./pardclient &lt;key&gt; &lt;address&gt; &lt;port&gt; &lt;name&gt;
+
+Note: You must omit the './' prefix if the executable binary file has been placed in a directory listed within your system's PATH environment variable (such as will have occurred if you installed the software on MS Windows via the automatic installer program for pre-compiled binaries).
+The pardclient application accepts either 0, 1, 2 or 4 parameter arguments at startup. Using any other number of arguments will trigger an invalid arguments error, causing the program to print its standard usage summary to the console and abort.
+
+The available options and parameters are detailed below:
+
+-h, --help
+Displays a concise command-line usage summary and exits the program immediately.
+
+-v, --version
+Prints the current program version string along with its compiled release timestamp, then exits immediately.
+
+&lt;key&gt;
+Specifies the 40-character Z85-formatted public key string of the pardserver you wish to access. This string — or instructions on how to acquire it — should be provided by your PARDUS system administrator. 
+
+When supplying this string on the command line, it is highly recommended to enclose it in single quotes ('...') on Linux, macOS, and MSYS2/PowerShell environments to prevent the command shell from misinterpreting special characters embedded within the Z85 key format. If you omit this argument, you can type or paste the key directly into the "Public key" entry box on the Login page after startup. A valid public key is strictly required to establish a server connection.
+<b>⚠️ </b><b>CRITICAL WARNING FOR </b><b>MS </b><b>WINDOWS COMMAND PROMPT USERS</b>
+If you are passing a &lt;server_public_key&gt; via the classic MS Windows Command Prompt (cmd.exe) then you must use double quotes ("..."). However be aware that cmd.exe expands percent signs (%) as system environment variables, even inside quotation marks. 
+If your administrator-provided Z85 key contains any percent symbols (e.g., %A), you must type a double percent sign (%%) in the console to prevent Windows from corrupting the key before passing it to the application. Alternatively, launch the program without arguments and paste the key directly into the entry box for it in application's Login page or use Windows PowerShell and encase the unmodified Z85 key string in single quotes as described above.
+
+&lt;address&gt;
+Specifies the IP address or domain name of the computer the pardserver is running on (for example: '203.0.113.42' or 'mydomain.com'). Use standard formats for IP addresses. Do not include any spaces, and do not include protocol prefixes such as 'tcp://' or 'http://'. The application handles the protocol selection automatically.
+
+&lt;port&gt;
+Specifies the network port number of the target pardserver. This parameter must be a positive integer containing no spaces, signs (+ or -), or alphabetic characters. The value must sit strictly within the unprivileged port range of 1024 to 65535, inclusive. The correct value will be provided by your system administrator. 
+If an invalid value is supplied, the "Port" entry box in the GUI will automatically fall back to displaying the default port value of '5555'.
+
+&lt;name&gt;
+Specifies the name of the pardserver to connect to. This is a free-text string that does not include any white space.
+
+(No optional arguments provided)
+If pardclient is launched without any command-line parameters, the graphical user interface will initialise on the Login page, automatically assigning user input focus to the 'Public key' field which will be unfilled. The other server fields will default to an IP of 127.0.0.1, a port of 5555 and a server name of Pardus1.
+
+-c &lt;config_file&gt;
+--config &lt;config_file&gt;
+This allows you to start the program with parameters supplied in a plain text '.ini'-style config file. The parameters in the file include all those you would otherwise have supplied as separate parameters (described above) plus a few more. An example config file is shown below:
+
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>[server]</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>key=hUU?&lt;8QTFnkgi^lQ(N^WR-NNiN{ic0./vtcd.&gt;S&lt;</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>address=127.0.0.1</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>port=5555</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>server_name=Pardus1</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>username=parduser1</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28">  </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>[client]</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28"> <tt>verbosity=1</tt> </span>
+    <span font="monospace" background="#f0f0f0" foreground="#c01c28">  </span>
+
+The exact same config file may be used with pcs-cli as described below. The format and syntax rules for this client config file are not the same as for a server config file. The following points explain the client config file formatting rules:
+In addition to the parameters that may be supplied individually on the command line, you also can supply your user name in this file. For pardclient this field is optional but, if you are using the config file for pcs-cli then the username field is mandatory (if the config file is ever used to make a remote connection - which it might not be if the script you are running with pcs-cli does not use any server commands).
+The application's default verbosity level may also be set with this file. This field is optional. The default verbosity details what messages are printed by the client in-between running scripts and during running a script if the PCS program does not override the default verbosity with a verbosity PCS command in the script.
+You may include comment lines that start with a hash '#' but these must be dedicated lines - you cannot have a comment on the same line as a setting or your comment will be treated as part of the setting value rather than as a comment.
+The amount of white space ahead of any line is ignored.
+White space around '=' is permitted and stripped: 'port = 5555' and 'port=5555' are treated identically 
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Command line options for pcs-cli</span>
+The command-line execution syntax for pcs-cli is defined as follows:
+
+  $ ./pcs-cli
+  $ ./pcs-cli [-c &lt;config_file&gt;] passwd
+  $ ./pcs-cli [-c &lt;config_file&gt;] [run] &lt;file.pcs|file.dove&gt;  [interrupt_script.pcs|dove]
+  $ ./pcs-cli [-c &lt;config_file&gt;] compile &lt;file.pcs&gt; &lt;out.dove&gt;
+  $ ./pcs-cli [-c &lt;config_file&gt;] dump &lt;file.pcs&gt;
+  $ ./pcs-cli [-c &lt;config_file&gt;] libinfo &lt;file.pcl&gt;
+  $ ./pcs-cli [-c &lt;config_file&gt;] decompile &lt;file.pcl|file.dove&gt; &lt;out.pcs&gt;
+  $ ./pcs-cli [-c &lt;config_file&gt;] locators &lt;file.pcs&gt;
+  $ ./pcs-cli [-c &lt;config_file&gt;] bindings &lt;file.pcs|file.dove&gt;
+  $ ./pcs-cli [-c &lt;config_file&gt;] pclname &lt;name&gt;
+
+Note regarding config files. These are the exact same file type and format that was described for use with pardclient and you may use the same file for both programs. The main difference between the pardclient use of a config file and the pcs-cli use of a config file is that pcs-cli will require that the user name field be supplied in the config file while for pardclient that field is optional. Note that:
+-c &lt;config_file&gt;
+may alternatively be supplied as:
+--config &lt;config_file&gt;
+This option allows you to specify a custom config file to use in the event that login to a server is required for running a script or .dove program. If you do not supply a custom name with this method then the default config file name "pcscli.cfg" will be sought on your common paths before the program gives up and throws an error. The config file will only be sought in the even you need to log into a server. If your script has only local commands then this option is never used and the program will be run immediately without asking you for a password.
+Here are what the other options do:
+
+  pcs-cli passwd
+Log in to a pardserver and change your password. 
+
+  pcs-cli [-c &lt;config_file&gt;] [run] &lt;file.pcs|file.dove&gt;  [interrupt_script.pcs|dove]
+Pre-process, compile (and link), check, and run a script, or load, AOT-link and run a .dove.  Prints one "pcs-cli:" line per stage if the default verbosity is &gt; 1. If any command in the script or .dove program required connection to a pardserver you will be prompted to enter your password (if a valid config file can be read - if not this will terminate with an error). If you are logging in with a one-time password then you will be prompted to change it. This use of pcs-cli is also how you would create a library (archive a library) if the pcs script is of the correct format for being the source of a library. The resulting library will be saved with the name &lt;path_root&gt;.pcl where &lt;path_root&gt; is the input program name with its extension changed from .pcs or .dove to .pcl. It is this usage mode that allows for .dove files (and .pcs files if you choose it) to be run by simple 'double-click' of the file in a desktop browser provided the .dove (and, optionally, .pcs) extensions are registered to trigger the pcs-cli program on double-click in your desktop environment. I say associating .pcs files with pcs-cli is optional because, these being source files, you probably would want to associate them with a text editor (like Kate or Geany) so that they open for editing when double-clicked rather than being run. If an interrupt script is supplied, this will be checked and run (if the check passes) immediately and automatically as soon as the main script is interrupted with Ctrl+c - but not if the main script terminates normally. If the interrupt script requires login to a server you will be prompted to log in before the interrupt script can run if you are not already logged in. So if it is important for your needs that the interrupt script run quickly after Ctrl+c then you must ensure that the interrupt script passes any checks and runs fine before using it as an interrupt script and also ensure you are already logged in when the main script starts (if the main script does not have any server commands in it that would prompt you for login then you should add a command that uses the server anyway just to ensure you log in before it runs - something like get_actuators - even if you don't need the result of that command for the main script).
+
+  pcs-cli dump &lt;script.pcs&gt;
+Pre-process, compile and link a script, and print every row of the resulting program: row number, source line, op code name, words.
+
+  pcs-cli compile &lt;script.pcs&gt; &lt;out.dove&gt;
+Pre-process, compile and link a script, and save it as a .dove (a "static build", per the last paragraph of Rules_for_libs.txt).
+
+  pcs-cli decompile &lt;in.dove|in.pcl&gt; &lt;out.pcs&gt;
+Create a runnable PCS source code file from a compiled script or lib. The line numbers of the original source are preserved where possible but original comments and white space elements before or after lines or between arguments will be generic and not reflect the original white space of the source the program or lib was compiled from. Because compiled files are statically linked against all libraries and headers that they use, all that library source code will also be exported into the resulting PCS file. Likewise and pre-processor macros in the original PCS files that the compiled files were made from will not be preserved in the resulting decompiled file but their numerical or string substituted values (i.e. post pre-processor code) will be output and so will not contain and #include or #define statements. This also means that the resulting PCS source code will be just as 'static' as the compiled program - not being dependent on the present of external libs or header files.
+
+  pcs-cli libinfo  &lt;file.pcl&gt;
+Load a library with the linker's own loader (lib_load) and print its header values and rows.
+
+  pcs-cli bindings &lt;script.pcs|.dove&gt;
+Proves that the positional bindings are made by script_check() (or, for a .dove, by link_aot_flow_control()) and by nothing else. First, straight after compiling and linking (or loading the .dove), it counts the rows that already carry a binding - the answer must
+be 0.  Then it runs the checker (or the AOT linker) and verifies every binding it made: each goto bound to the row of its label, each call_func and def_func bound to the right function, each loop_while/endloop and do_if/else/enddo bound to the right node. Prints "BINDINGS OK &lt;n&gt; verified" or each failure.
+
+  pcs-cli pclname &lt;name&gt;
+Prints the name that make_lib would save a library under when the save dialog returns &lt;name&gt;: the extension is always .pcl.
+
+  pcs-cli locators &lt;script.pcs&gt;
+Compile (and link) and check a script, then ask every row-index locator - func_id_from_idx, loop_index_open/close, if_index_open, else_index, if_index_close - for every function, loop and if-block that script_check() recorded, and verify that each answers with the right node.  Prints "LOCATORS OK &lt;n&gt; queries" or each failure.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Starting the PARDclient GUI Program via File Browser (Double-Click)</span>
+You may also launch the pardclient application by double-clicking its executable icon within your operating system's desktop file manager. This action bypasses command-line parameters entirely, initialising the application in the default state described above. 
+Alternatively, your system administrator may deploy a desktop configuration file (.desktop shortcut on Linux or a standard Shortcut link on MS Windows) pre-configured to launch the binary with your organisation's specific server public key, IP address, port and name parameters automatically appended.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">System Administrator's Note: Verifying Port Connectivity</span>
+When troubleshooting communication issues between pardclient and a remote pardserver, do not use the standard ping command. The ping tool uses the ICMP protocol, which only tests whether a physical machine is online. It cannot verify whether a specific application port is open. A machine can return a successful ping response even if it is completely blocking your server’s TCP traffic.
+To accurately diagnose connectivity across the open internet, you must test the exact TCP port your pardserver is running on. Use the appropriate built-in operating system commands below to verify if a network connection is possible:
+
+<span font="sans" weight="bold" size="large" foreground="#333333">MS Windows (PowerShell)</span>
+Windows 10 and 11 include a built-in utility to test TCP ports directly without requiring third-party software. Open PowerShell and run:
+Test-NetConnection -ComputerName &lt;Server_Address&gt; -Port &lt;Port_Number&gt;
+(Replace &lt;Server_Address&gt; with the target IP or domain name of the pardserver, and &lt;Port_Number&gt; with your pardserver port).
+<b>Connection Possible</b>: The last line of the output will explicitly read TcpTestSucceeded : True.
+<b>Connection Blocked</b>: The output will read TcpTestSucceeded : False.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Linux &amp; macOS (Terminal)</span>
+Unix-like platforms include nc (Netcat), a lightweight tool ideal for auditing network ports. Open your terminal application and execute:
+nc -zv &lt;Server_Address&gt; &lt;Port_Number&gt;
+<b>Connection Possible</b>: The terminal will output: Connection to &lt;Server_Address&gt; &lt;Port_Number&gt; port [tcp/*] succeeded!
+<b>Connection Blocked</b>: The output will indicate Connection refused or Operation timed out.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Interpreting the Test Results</span>
+The outcome of the network tests above points directly to where your connection issue lies:
+<b>If the test fails (Connection Blocked):</b>
+The network path is completely obstructed. The issue is purely an infrastructure problem. The server administrator must re-verify that the Linux firewall rules are applied correctly, that the network router has active port forwarding configured for that exact TCP port, and that the server machine is currently powered on and running the pardserver software.
+<b>If the test passes but the pardclient application still fails to connect:</b>
+Your network routing is functioning perfectly. Because the network pipeline is verified to be open, the failure is almost certainly cryptographic (assuming you are using the correct server address and port number in the pardclient application as were used in the connection tests). The client is likely using an outdated, corrupted, or invalid Z85 public key for that specific server. Double-check your server public key string and ensure that any shell-specific characters were not stripped or mutated during command-line execution or graphical copy-pasting.
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Main components of the GUI</span>
+
+When you first launch pardclient you will see the GUI with its 4 main components as illustrated in figure 6.1 (showing the result of launching the program without any arguments).
+
+
+[IMAGE:image3.png]
+
+Figure 6.1 The main GUI window of pardclient showing its 4 regions: On the top there is the 'control pages' region which has 8 tabbed pages. Shown here is the Login page as is seen before any login attempt has been made. Below this is the coordinates bar. Below this is the server console area and below that is the preview area. The objects labelled as DTL1 and DTL2 are the draggable transition lines (DTL). These can be dragged with the mouse vertically up and down to resize the areas occupied by the control pages, the server console and the preview area. One of these is the transition between the coordinates bar and the server console (DTL1) and the other is the transition between the server console and the preview area (DTL2).
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Control pages</span>
+This area is in the form of a tabbed 'notebook' where you select the desired page by left single click on the heading on the top grey strip. Each page provides GUI controls relevant to a particular function function.
+For the most part you can switch between pages freely to perform complex tasks with the exception that you cannot switch to the 'Scan Viewer' page while an active XY (or XYZ) scan is being performed.
+PARDclient will always start up in the Login page as shown in figure 6.1. If a server public key was not provided on the command line then the program will start with input focus on the 'Key' entry box, as is shown in figure 6.1 and indicated by the blue outline around that box. If an acceptable public key was provided on the command line then the program will start with user input focus on the 'User name' entry box. If a password was provided via the command line (via a config file) as well as a public key the the program will start with focus on the password box.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Coordinates bar</span>
+This bar is always shown regardless of what control page tab is selected. It displays the most recently received XYZ stage position and information about the units used. This will not always get automatically updated every time the stage moves, especially if the stage is being moved by a custom script. However you can issue a manual command to get the latest stage position information at any time as will be discussed later in this manual.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Server console</span>
+This region displays information about outgoing messages to the pardserver and incoming messages from the pardserver as well as some local pardclient notices. See figure 7.1.
+Outgoing messages from the pardclient to the pardserver are shown in <b>cyan font</b> and begin with a '&gt;' direction symbol.
+Incoming messages from the pardserver to the pardclient are shown in <b>yellow font</b> and begin with a '&lt;' direction symbol. 
+Information notices are shown in <b>white font</b>.
+Error messages are shown in <b>red font</b>.
+The format on incoming and outgoing messages take the form:
+&lt;direction symbol&gt;(&lt;speaker&gt;)[&lt;message index&gt;] &lt;triad string&gt; &lt;blob status&gt;
+Here are what these things mean:
+&lt;direction symbol&gt; - This is either '&gt;' or '&lt;' as described above.
+&lt;speaker&gt; - This is the name of the entity the message originates from. This will be the name of the pardserver or the logged in user name string of the client.
+&lt;message index&gt; - an integer representing the serial message number of the current log in session. 
+&lt;triad string&gt; - This is the message itself. It is called a triad because messages are constructed in three parts. In general each of those parts is indicated by a number in square brackets just before the contents of that part of the message ([1], [2], [3]). In the case of standard short responses from the server those bracketed triad part number strings are omitted and you just get the brief words of the triad (like 'OK Done Ready').
+&lt;blob status&gt; - If a binary large object (BLOB) is sent with the message then this is indicated with the literal string '[BLOB]' at the end of the triad message string. If no BLOB is sent with the message then this string is absent.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Preview area</span>
+This contains the main image preview display area which will show all grey when no image is displayed. The original size of this preview display area is VGA (640x480). The pixel size of this display area will never change even though the actual area on the screen may shrink if you resize it as described below. All preview images will be scaled to fit inside this area.
+In some circumstances (for example, when using the 'Scan Viewer' tab features) this preview area will be responsive to mouse click and double-click actions.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Re-sizing the GUI panes</span>
+The default area allocated to the various parts of the GUI may not be idea for all applications. For this reason you may re-size the top, middle and bottom areas with two vertical sliding controls called 'draggable transition lines' (DTL1 and DTL2 in figure 6.1).
+The coordinates bar cannot be re-sized.
+The other areas can be re-sized but not to zero - they will stop shrinking when they hit a finite limit (set internally in the program).
+The DTL1 is the transition line between the coordinates bar and the server console.
+The DTL2 is the transition line between the server console and the preview area.
+When you move your mouse cursor / pointer over any part of these transition lines, the pointer / cursor will change to an 'up-down' arrow symbol cursor indicating you may now click and drag that line up or down to resize the pane(s). If you find you cannot re-size in any direction it will be because you have reached the minimum or maximum size of that pane already.
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Login</span>
+
+This chapter describes the functions of the Login control page. You will need to be logged in to a pardserver to use many of the functions of the other control pages with some exceptions. Those exceptions - tasks that can be performed without being logged in to a pardserver - are:
+the Help control page
+the Scan Viewer (with some restrictions)
+the Co-ord. Clipboard
+running PCS scripts (but attempting to execute any PCS command that requires communication with the pardserver will result in an error).
+some functions on the Manual control page (those that do not involve communications with a pardserver)
+Figure 7.1 shows an example of the Login control page after a successful user login has occurred. Refer to figure 7.1 as you read the rest of this chapter.
+
+[IMAGE:image4.png]
+
+Figure 7.1 The Login control page as seen after a successful login. The top row of controls are to identify the pardserver. Note that the password box is cleared after a login (or login attempt) for security reasons (so no one can come along and tick the 'Show password' box when you are not at your desk and see your password). Detail on the various controls in this page are provided in the text
+For a successful login to a pardserver you will need all the following information items entered into the relevant entry boxes of the Login control page. These will be provided to you by your system administrator and all of them (except for your user name and password) may be set up to load automatically on startup of pardclient so you may not need to enter them manually at all.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Required information about the pardserver</span>
+The pardserver's network address. This will be in the form of either an IP address or a domain name and must be entered into the 'Address' box. Do not enter protocol specifiers here (like tcp:// or https://) because those are handled automatically by the pardclient program and entering them in these boxes will result in an error. Do not enter spaces here either.
+The pardserver's port number. This must be an integer between 1024 and 65535 inclusive. Only enter digits. Do not use signs ('+', '-'), spaces or any other character.
+The pardserver's public key. If you are typing or copy-pasting this manually into the 'Public key' box take care to paste all the characters exactly as they appear in the string given to you and do not add any other characters like parentheses, quote marks or spaces. The box is too short to display all the key but it will accept the whole string. Although this is for the 'public' key, the entry box is designed in password mode so that you cannot see the characters and cannot copy the string out of this box (even though you can paste into it). This design is deliberate. While some PARDUS systems may be configured for anyone in the World to be able to attempt a log in (in which case the public key may literally be public knowledge, being posted on an open website for example), other systems may be designed such that only a selected chosen and trusted group of employees / collaborators, etc. are allowed to attempt a login (from anywhere in the world). In those restrictive cases, it acts as an extra layer of security to only divulge the 'public' key to the authorised users. That way, any hacker on the internet won't be able to even attempt a login (e.g. to try and discover a user name or password by trying lots of options) if they don't have the 'public' encryption key. Thus the public key is protected in the interface and not made easy for any passer-by or shoulder surfer to discover or copy.
+The pardserver's name. This will not contain spaces.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Required information about the pardclient user</span>
+This is your user name and password. Enter them into the entry boxes provided. Your password will appear as masked characters as you enter it (like asterisks or dots). If you want to see it in plain text then you can tick the 'Show password' box. The password entry box will be automatically cleared as soon as you attempt a login.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Logging in (Client ID and Message Index)</span>
+Once all the required information is entered click the 'Log In' button to log in. If all goes well you will see some information exchanges occurring in the server console and you will see your 'Client ID' string for the session displayed in the entry box marked for it.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">The Client ID string</span>
+This is a sting constructed by the server upon successful login and it is how the server will identify you in all subsequent message exchanges. It will be displayed in the read-only entry box for it in the Login control page.
+Under normal circumstances your Client ID string will be composed of your user name followed by a string of numbers representing the data and time you logged in. If, for some reason, the server cannot construct a data-time string it will fall back to using some pseudorandom sequence of numbers after your user name to construct your client ID string instead. This pseudorandom number will be prefixed by an 'r' to let you know that this has happened and that the number does not represent a data and time.
+You will also notice the number in the read-only box labelled 'Message index' will have risen from its initial '0' level. This index keeps track of how many messages have been sent (by pardclient) and responded to (by pardserver). Each message sent by pardclient and received by pardserver causes the pardserver to increment the index by 1. Thus if a request is not received by the pardserver the message index will not advance. In this way, the message number of the reply from the pardserver will always be 1 more than the message number of the request from the pardclient that elicited that reply.
+The message index will not be advanced by the pardclient performing purely local commands (like setting the verbosity level) which do not involve sending messages to the pardserver.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Log files</span>
+When a login is successful, pardclient will open a session log file, the name of which will be composed of your client ID string and the '_Cli_' string (to distinguish it from the server log file which will also be based on your client ID string but will not have the '_Cli_' element. An example log file name is this:
+Log_Cli_parduser1_20260620_165628.txt
+This is a plain text file containing information about your session. It will be saved to the CWD by default. If the CWD is write-protected (for example, when launched from a system installation directory like C:\Program Files\PARDUS), pardclient automatically falls back to the OS system temporary directory (%TEMP% on Windows, /tmp on Linux/macOS) and displays the full saved path as an informational message (usually this will be to the terminal from which pardclient was launched and/or to the script console display in the GUI). How much information is recorded in this file will be governed by the value of the 'Verbosity' setting of pardclient. You can set the verbosity level by means of the Manual control tab or from within a PCS script (although verbosity is reset when a script terminates).
+By looking at the message index of any entry in the log files (client and server) you can correlate which server replies pertain to which client requests.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Logging out</span>
+To voluntarily log out simply press the 'Log OUT' button.
+The program will log you out automatically if you close it normally (e.g. by clicking the 'x' on the main window title bar) but it is good practice to log out with this button first before closing the program.
+If an error occurs at the server end or there is some communication error then you may get logged out by the server even if you did not want to. This event may or may not be communicated to you in the server console area depending on the nature of any communications failure.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Trouble logging in</span>
+There are some situations where you may not be able to log in. For some of these, only your system administrator can help you resolve the problem (see also p.19).
+If the pardserver is not running (perhaps it crashed or was never started in the first place by your system administrator) you will not be able to log in.
+If the pardserver is not properly configured you will not be able to log in.
+If there are network configuration issues or if you accidentally type incorrect information into the Login control page entry boxes (such as an incorrect or out of date server public key) you will not be able to log in.
+Supplying the wrong pardserver name, client user name or client password (with all other network settings working well) will elicit a helpful response in the server console from the pardserver to tell you why it is rejecting your call to log in.
+A pardserver can serve only one client at a time. If you try to log into a pardserver when someone else is already logged into it, you will get a 'Busy' rejection message in the server console.
+If the pardclient program exits abnormally while you are logged in (e.g. by a crash or power outage) then the orderly logout code that is normally sent to the pardserver to log you out may not run. This will leave you as appearing logged in as far as the pardserver is concerned. If this happens and you re-start the pardclient and attempt to log in, you will be rejected with a 'Busy' message because the server thinks it still has you logged in. In this case your pardserver administrator can cycle the server (i.e. reset it to log you off without fully shutting it down and re-starting it) and that will allow you to log in again without loosing your camera and Arduino settings from when you were last logged in.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Password policies</span>
+Depending on how your system administrator has set up your PARDUS system, you may need to follow certain password rules such as a minimum password length, use of upper case, lower case and special symbols, and so on. Your PARDUS system administrator will be provide any such policy rules to you. Some common and important password rules that are often enforced are described below.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">3 strikes and you're out</span>
+As a security measure the pardserver will refuse login to a user who supplies the wrong password 3 times. Actually, this number - 3 - can be set by the administrator to anything from 0 upwards but the default level is 3. This does not have to be 3 times in a row - just 3 times over the course of the server's up-time. So take care how you enter your password. This is called a 'StrikeOut' and if you find you can't log in check the server console for the reason - if the server says 'StrikeOut' it means it is refusing you login attempts (even if you are supplying the correct password now) because you reached your 3-strike limit at some time during the server's up-time.
+The default behaviour for the pardserver is that it will reset your strike out limit after a period of time since your last login attempt (typically 15 minutes, but your system administrator can change that limit). Your administrator can also wipe your slate clean manually at any time so you can log in normally - if you contact them to do so.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">One Time Password (OTP)</span>
+When an administrator first adds you to the system they will create a password for you and inform you of that password. This password will give you restricted access. After you log in with it the only thing you will be allowed to do it change your password (the change password window will automatically open for you after you log in with this password). If you dismiss the change password window without successfully changing your password you will immediately be logged off the system. See 'Changing your password' below for more details on how to do that.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Changing your password</span>
+As part of the PARDUS security setup, any newly added user must change their password after they log in before they can continue working. Also, any established user can change their password at any time after they are logged in by clicking the 'Change password' button on the Login control page. This will bring up the 'Change Password' window (see figure 7.2).
+The procedure to change your password is straight forward. Enter your current password at the top, then enter your desired new password underneath. You must enter this manually in both entry boxes for the new password to confirm you did not make a one-off error in typing it. The new password must conform to the currently implemented password rules (password policy) and must not be the same as your current password.
+
+[IMAGE:image5.png]
+
+Figure 7.2 The change password window
+
+When ready, click the 'Change Password' button in this window to submit your password change request to the server. If this fails you will be given an error message to explain why. It is succeeds you will be shown a popup to confirm this success <b><i>and you will also immediately be logged off the system</i></b> and the only way you can continue working with the server to log in again using your new password.
+If you are an established user you may change your mind and dismiss this 'Change Password' window without submitting your request. Nothing will have changed and you will remain logged in. If you are a new user on a OTP and you dismiss this window without changing your password, you will be immediately logged off the system.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Login with pcs-cli</span>
+The pcs-cli CLI will automatically prompt for a password if you run a script or .dove program that has any server-related commands in it. While inputting your password the terminal echo function will be turned off so you will not see any characters printing to the screen as you type - not even asterisks. Press return when you have entered your password to log in.
+The pcs-cli CLI interface also allows you to change your password voluntarily at any time (using the passwd argument) or if you are logging in on a one-time-password.
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Manual</span>
+
+This chapter describes the functions of the Manual control page. The term 'Manual' here refers to the ability to perform actions manually via the pardclient GUI controls as opposed to performing those actions by running a PCS script (which you do using the Script control page).
+Most of these manual functions are executed in the pardclient program by using your GUI input parameters to formulate the required PCS command and then executing that command as if it were a line in a PCS script. Only a relatively small proportion of possible PCS commands can be constructed this way via the Manual control page GUI so you can achieve much greater control using PCS scripts. Nonetheless it can be useful sometimes to perform occasional one-off tasks in the 'manual' GUI way and it may also be useful as an introduction to teach beginners some basic PARDUS processes before they move onto writing scripts.
+
+
+[IMAGE:image6.png]
+
+
+Manual processes can be divided into these 3 categories:
+Processes requiring login to a pardserver (this includes all motor and many image capture-related functions)
+Purely local processes (no login required)
+Forbidden commands. These may belong to either category 1 or 2 above but will not be allowed to be run via the 'free_form' option. They will be discussed in more detail later.
+The GUI controls displayed in the Manual page will vary depending on what selection you make with the Command drop-down menu (figure 8.1)
+What all the commands do and their syntax will not be explained in this chapter. That information is presented in detail in the user manual for the PCS programming language so see that reference for detailed information on the commands themselves.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Send Command button</span>
+When you make entries into the entry boxes of this page, you must press the 'Send Command' button to register those entries (i.e. make the changes). Clicking the 'Send Command' will also send your command to be processed whether it is a local command or a command requiring communication to the pardserver. There is an exception to this - you do not need to (and should not) press the 'Send Command' button when setting the 'Save Path'.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Save Path</span>
+This button brings up a file chooser to select a directory for saving images and related files (like coordinate files). This is a directory selector - not a file selector.
+You may alternatively type or copy-paste a save path in here manually. If you do this, do not include a slash at the end - just leave the directory name as the last part of the entry.
+Setting a save path is mandatory for some processes. For example, you will not be allowed to grab an image until this box is filled.
+You do not press 'Send Command' when filling this box - just putting a valid directory string in the box is all you need to do. When this path is required it will be read from the box.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Manual control of the stage</span>
+The direction buttons shown on the left of the page are for manual control of an XYZ stage. These buttons will only work if you have set up the system to have a full XYZ stage (this involves creating and maturing up the first three stepper motor structures that will form the X, Y and Z axes) and also have set acceptable motion parameters such as an acceleration profile. Details on how to do this can be found in the PCS programming language reference manual because this full stage setup can only be done using a properly constructed PCS script run via the Scrip control page.
+
+
+[IMAGE:image7.png]
+
+Figure 8.2 When the Command option is set to 'moveby_distance', the motion buttons are active, as indicated by a green border around them. However, no movement will occur when you press them unless the XYZ stage is properly set up first by running an appropriate PCS setup script.
+
+That the GUI is ready to accept button motion input signals for the 'moveby_distance' command is shown by having a green border around the motion buttons as illustrated in figure 8.2) and this will only happen when the Command menu is set to the moveby_distance option. Whenever you see this border as grey it means the motion buttons are not used for anything - clicking on them will have no effect.
+When appropriately set up, the distance each axis will move when a button is pressed will be that supplied by you in the axis edit boxes using whatever units you have set the stage to use. Even if the XYZ stage is setup correctly, if the amount of distance you enter in any of these boxes is smaller than the current step size of the motor then no movement will occur when you press the button - the distance you enter does not have to be zero, just smaller than the current step size of the stepper for that axis.
+
+The three main causes of 'no effect' when you click the motion buttons - even when they are highlighted with a green border - are one or more of the following:
+The XYZ stage is not fully set up for motion
+The distances you have entered into the boxes is too small to effect an actual movement. 
+Your axis may be at a limit (either a physical limit switch it triggered or you are at a software limit) and so no more movement in the desired direction is possible.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Interfacing the GUI to a script</span>
+You will notice there is a check box labelled 'Divert to script' under the motion buttons. When this box it ticked the border around the motion buttons turns red as shown in figure 8.3. 
+
+
+[IMAGE:image8.png]
+
+Figure 8.3 A ready-made GUI for your PCS scripts. When the 'Divert to script' button is checked the motion buttons send signals to any running script instead of generating manual stage motion commands. This allows you to use these buttons as ready-made GUI input signals for any custom running PCS script. As long as this box is checked, the buttons will not work to manually move the stage in Manual mode so remember that as a possible cause of unresponsiveness if you forget to un-check it and want to use the manual stage feature. The red border is there to remind you of this.
+
+This indicates that whenever you press any of those buttons, the ASCII character shown on the button will be immediately pasted into the 'User input' box of any running script - just as if the user had typed it there themselves. In this way you can use these buttons as a custom graphical means of accepting mouse-driven user input into your script. What you do with that input is up to you - it does not need to be used to move motor axes.
+Remember to un-check this box if you want to revert back to performing manual mode stage motion otherwise the buttons will not respond in Manual mode. The red border should serve as a visual reminder of that.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The dynamic nature of the GUI</span>
+The buttons and menu options and labels in the GUI of this page are not static but they will change depending of what selection you have made from the Command menu. As an example of this see figure 8.4 and compare it to the previous figures.
+Here the user has selected the camera_set option as their Command and the controls have now changed to those more appropriate to changing camera settings.
+In figure 8.4 you can also see the first page of the 'User Controls' menu for the camera. The options in that menu will also change depending on exactly what camera is selected because each camera driver may present a different array of user controls for manipulation.
+
+
+[IMAGE:image9.png]
+
+Figure 8.4 The GUI options shown when the user selects camera_set as their choice from the Command menu. Note how the GUI controls shown differ from those that were seen when the user made the moveby_distance Command selection.
+The list of user controls is therefore also dynamic and built 'on-the-fly' from the internally stored list of user controls declared by the camera.
+Another example of a dynamically built menu is the selection for camera save_resolution (not shown here).
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Synchronisation to PCS scripts</span>
+When a PCS script is run (see the Script chapter) any PCS commands that change some setting or option that has a GUI counterpart in this Manual control page will automatically update the value of that control with the value set in the script.
+For example, when you go to the  'save_resolution' option of the Command drop down list, the secondary resolution drop down menu (labelled 'W x H') will show the currently selected camera resolution - for example '640 x 480'. If a running script alters the resolution by running the 'save_resolution' command to 1024 x 768 then, the next time you go to the Manual control page and select the  'save_resolution' option of the Command drop down list, the secondary resolution drop down menu will show '1024 x 768' to reflect that that is what the camera is now set to.
+Thus the settings on the Manual control page are not independent of any values set via scripts running in the Script control page. 
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Get preview after command</span>
+This check box, when ticked, will automatically send a command to the server to request a preview image after the command you have currently set and sent is completed. Clearly this will only work if you have a connection to a pardcap server. Because requesting a preview image immediately after certain commands that use or change settings on the frame grabber can fail, you have the option to delay this automated preview request by a certain number of ms from the end of the main command by typing your delay time in the entry box on the right. For more information on why calling for a preview image may fail, see the entry for 'get_preview' in the PCS programming language reference manual.
+This is a convenience feature. It is exactly the same as if you had selected 'get_preview' command and hit 'Send Command' after completing your current command but it is just automatically done for you. This allows you to see any changes you may have made - either to the camera or to the stage position - without you having to manually go and select 'get_preview' and send it every time you make a change to some setting.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Free form commands</span>
+There is a Command option called 'free_form'. If you select this the interface will change to look like that shown in figure 8.5. The free text entry box at the bottom is where you may type any free form PCS command. Then click 'Send Command' to execute that command. This option allows you to run commands that are not pre-set into the Command drop down list but there are limitations on what commands you can execute in this way.
+
+[IMAGE:image10.png]
+
+Figure 8.5 The 'free_form' command setup. Enter your custom PCS command in free text in the entry box and press 'Send Command' to run it. Not all commands are allowed and you are responsible for correctly formatting the command to avoid errors and failed commands.
+
+The PCS commands that you may not perform via this free text custom command box include any commands that already have the option of being performed via the drop-down list, any commands that require the use of one or more script variables to be completed or which involve script logic like 'do_if' and 'loop_while' commands as well as some others. These are called 'forbidden commands'. If you try to run a forbidden command you will see an error message in red in the server console informing you of the fact like this:
+<b>ERROR: Command 'do_if' cannot be run from here.</b>
+
+Here is a list of the (free form) forbidden commands:
+
+
+  <tt> │ <span weight="bold" foreground="#1a5fb4">List 1        </span> │ <span weight="bold" foreground="#1a5fb4">List 2             </span> │ <span weight="bold" foreground="#1a5fb4">List 3             </span> │ <span weight="bold" foreground="#1a5fb4">List 4          </span> │ </tt>
+  <tt> ├────────────────┼─────────────────────┼─────────────────────┼──────────────────┤ </tt>
+  <tt> │ act_accel      │ fbyte_mode          │ preview_draw_buffer │ save_format      │ </tt>
+  <tt> │ act_get        │ fput_var            │ preview_draw_clear  │ save_path        │ </tt>
+  <tt> │ act_moveby     │ frame_number        │ preview_draw_colour │ save_resolution  │ </tt>
+  <tt> │ act_movereport │ frames_to_skip      │ preview_draw_cursor │ save_root        │ </tt>
+  <tt> │ act_moveto     │ fset_var            │ preview_draw_file   │ set_condexp      │ </tt>
+  <tt> │ act_set        │ fskip_size          │ preview_draw_lwidth │ set_previewpos   │ </tt>
+  <tt> │ add_lib        │ get_preview_focus   │ preview_draw_pcg    │ set_str          │ </tt>
+  <tt> │ add_var        │ get_preview_stats   │ preview_draw_save   │ set_var          │ </tt>
+  <tt> │ call_func      │ get_preview_tc      │ preview_draw_shape  │ sub_var          │ </tt>
+  <tt> │ cat_char       │ goto                │ preview_draw_show   │ tc_threshold     │ </tt>
+  <tt> │ cat_str        │ gui_buffer          │ preview_draw_string │ tmc_chconf_parse │ </tt>
+  <tt> │ cli_path       │ gui_update          │ print_clear         │ tmc_status_parse │ </tt>
+  <tt> │ def_array      │ gui_update_period   │ print_colour        │ undef_var        │ </tt>
+  <tt> │ def_func       │ loop_while          │ print_cursor        │ xyzs_finish      │ </tt>
+  <tt> │ def_var        │ make_lib            │ print_file          │ xyzs_process     │ </tt>
+  <tt> │ div_var        │ math_var            │ print_graphics      │ xyzs_scan        │ </tt>
+  <tt> │ do_if          │ max_daemons         │ print_size          │ xyzs_semino_z    │ </tt>
+  <tt> │ else           │ mul_var             │ print_value         │ xyzs_start       │ </tt>
+  <tt> │ enddo          │ poll_user           │ randpcg             │ xyzs_stepsize    │ </tt>
+  <tt> │ endloop        │ preview_draw_angles │ return              │ yuyv_bias        │ </tt>
+  <tt> │ eval_char      │ preview_draw_array  │ save_coords         │ yuyv_gain        │ </tt>
+  <tt> │ exit           │ preview_draw_blend  │ save_doubles        │ (goto labels)    │ </tt>
+
+
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Setting verbosity - a warning</span>
+You can set the verbosity level via the free form command route but be warned that if you set it to below 3 you will not see informational popups or messages and this lack of information could cause confusion.
+For example, when you select the 'grab_image' option and press the 'Send Command' button, if all the pre-requisites for taking a picture are not set a popup is normally provided to explain this and tell you what needs to be set before you can take a picture. If you set the verbosity to 2 or lower this popup will not appear. The 'grab_image' command will fail - but it will fail completely silently. You won't even be told that is has failed - you will just not see a saved image when you might otherwise expect to - and be left to wonder: 'Why isn't this working?'. Keeping the verbosity at the default level 3 will prevent such a lack of feedback.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Interrupting server communications</span>
+If the server takes longer than 4 seconds to respond to a request you will see the 'Interrupt' button appear near the bottom right of the controls as shown in figure 8.6.
+<b><i>Note that such delays may be entirely normal and nothing to be concerned about. For example, if you have requested a multi-frame average image capture, especially at high resolution or with many frames per average, this may take a long time to complete - possibly longer than 1 minute. So just wait for the process to complete and take no further action.</i></b>
+Once the interrupt button shows, if there is still no response 4 seconds later, a progress bar of '+' characters will begin to appear in the server console (also shown in figure 8.6). They will update once every 4 seconds.
+In fact, at this stage, all GUI user controls will only become responsive at 4 second intervals so if you click this interrupt button be prepared for nothing to to happen for up to 4 seconds from when you click it and keep your mouse pointer over it after you click for that time until the conformation dialogue pops up asking if you want to re-listen for a response or not.
+<b>WARNING</b>: The act of severing communications with the server via this interrupt button is a terminal even for server comms. It will sever your connection in a forceful and unmanaged way that cannot be recovered without cycling or re-starting the server. You will not be able to log off. You will not be able to log in again until the server is reset or cycled. The only benefit to you is that you will regain full control of the pardclient GUI if you need to save any work and then quit. You will not be able to run anything that requires communications with the server after performing such an interrupt. It is an emergency measure designed only to be used in cases where you have reason to believe that some unrecoverable error may have occurred such as a server crash or a permanent error in the communications line.
+
+
+[IMAGE:image11.png]
+
+
+Although this interrupt button is present in the 'Manual' controls page, it will work to interrupt server comms even if you are running a script in the Script page or performing a scan in the XYZ scan page or trying to communicate with the server on the Login page. If you want to use this interrupt button when on those pages you will first need to change to the Manual page to access the button - but remember that when you click on the tab to change pages, it may take up to 4 seconds for your click to be registered and the tab to change, so be patient. Also, if you wish to interrupt a scan on the XYZ scan page, it is much better to use the dedicated Interrupt button on that page to do it because that is a soft and controlled interrupt that will not affect your ability to keep working as a logged in user on the server. <b>Only use the interrupt button on this Manual page as a last resort</b>.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">PARDcapture timeout limit</span>
+The pardserver has a hard-coded timeout for communication with any pardcapture server set to 10 minutes based on the default value of this constant in the pardserver source code:
+
+#define PARDCAP_TIMEOUT 600 // Limit for hard timeout error report in comms
+                            // with any pardcapture server (in seconds).
+
+If a pardcapture server takes longer than this to respond to the pardserver then the pardserver will issue a timeout response error back to the pardclient which will look something like this in the server console:
+<b>&lt;(Pardus1)[0]: Explanation: recv error: Timeout occurred.</b>
+This error will have two effects:
+If you were waiting on a long delay to get a response from the pardserver, your communication process with the pardserver will recover 'normally' in that you may continue working with the server and log out as normal (unlike what would happen if you severed communications using the interrupt button).
+Any future communication with the pardcapture server may not longer work or may not work as expected until the pardserver is cycled or reset / restarted.
+If you receive this timeout error but your normal work processes with the camera might tale longer than the default 10 minutes then you should compile the pardserver (or ask your system administrator to compile the pardserver) with the PARDCAP_TIMEOUT constant set to a higher level to meet your needs.
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">XYZ Scan</span>
+
+The XYZ Scan control page allows you to set up and perform an automated XYZ scan of your specimen. This feature was designed as a convenience feature for using PARDUS with a microscope stage so the terminology is geared towards robotic microscopy. Note that while the term 'XYZ' is used here, these are actually options - you can perform a scan in any one of 0, 1, 2 or 3 dimensions according to how you set up the scan.
+A 0-dimensional scan means taking an image at a single point in space without moving the stage at all. It can be useful to do this a 'scan' as opposed to simply a 'grab_image' command, because every scan gets a certain standard documentation associated with it (which grab_image does not) and also there is the option of performing some automatic custom image processing with a scan image and this does not occur with grab_image (at least, not automatically - you would have to arrange for that processing to be done as part of a custom script if you needed it).
+Figure 9.1 shows the main controls on the XYZ scan page. Refer to this figure throughout the chapter.
+
+[IMAGE:image12.png]
+
+
+[IMAGE:image13.png]
+
+Figure 9.1 The XYZ Scan control page. <i>Top</i>: The 'Run the command below at each position (after image grab)' check box is unticked. <i>Bottom</i>: With that box ticked the command entry widget is displayed.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Pre-requisites for an XYZ Scan</span>
+A scan will only be allowed to run if the following conditions are met, so you will need to set these up (e.g. using a custom PCS script) before you will be allowed to start a scan. If you try to start a scan without all of these things in place then you will receive an information message explaining why the scan cannot proceed:
+You must be logged into a pardserver
+The full XYZ stage must exist and be properly set up for motion (homed, etc.). This is required even if your intended scan will not be using all three axes.
+You must have a pardcap server connected and set up to take images
+You must have all the pre-requisite setup done to allow the autofocus (AF) facility to activate if you select an autofocus period of &gt; 0. If the AF period is 0 it means that AF will not be used in the scan and so you will not have to fulfil this condition.
+All the entry boxes in this control page must be filled with values in an acceptable range.
+Note that the above restrictions pertain when performing a scan using this XYZ Scan page. All these restrictions make it possible to perform a scan but they do not guarantee that your scan will succeed or work as you expect. That will also depend on your choice of scan parameters provided in the entry boxes here and their relation to how you set up the XYZ stage, camera field of view, calibration, etc..
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Image format restrictions</span>
+When performing scans with this facility your choice for camera 'save as' format choices will be restricted to the following options only:
+BMP 24 bpp (called 'BMP' in pardclient) 
+BMP 8 bpp grey scale (called 'BM8' in pardclient)
+PGM P5 grey scale
+PPM P6
+PNG 24 bpp (RGB, no alpha). These are saved uncompressed, for speed.
+In fact, what actually matters is not so much the 'save as' format <i>per se</i> but what format the grabbed images are actually written to disc as. This is the 'write as' format and even if your 'save as' format is one of the above, the 'write as' format may change if you have opted to save images as raw doubles or as FITS files. For this reason you will not be allowed to proceed if the 'save as doubles' or 'save as FITS' options are selected for the camera, even if the 'save as' format is one of the above.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Using a custom script to overcome restrictions</span>
+Similar pre-requisites also apply when performing a scan in a PCS script using the xyzs_scan command. However, you may perform custom scans with your own custom PCS scripts that do not use the xyzs_scan command. In this way you can decide what the essential parameters are for your custom scan. This means that via a custom PCS script you may do things this xyzs_scan-based method cannot (such as save your scan images in 64 bit FITS and raw doubles formats).
+So custom PCS scripting is the ultimate choice for customised scanning but the xyzs_scan command, whether run via a PCS script or via this GUI control page, remains convenient, functional and useful for many purposes.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">The Save Settings button</span>
+The 'Save Settings' button in this page will allow you to save a file that is created automatically and saves all the scan-related settings that are currently set in pardclient.
+This may be useful for record keeping - although all these same settings information will automatically be appended to the end of a scan file after a successful scan so it may seem like a redundancy to have a separate GUI button to do this.
+However, the real usefulness of this button, is that by inspecting the file it creates, it can let you see at a glance which essential settings are '[Not set]' (because the file will flag them as such) and so it can give you the knowledge of what you need to set to have the scan facility enabled. Otherwise if you set this or that setting and try to run a scan, the warning popup you get may tell you only of the first or immediate settings that are not set and so preventing you from starting a scan. If you fix those setting but others are still not set then you will get a different popup, etc.
+By using the 'Save Settings' button you get to see all at once what is left to do before a scan command will be accepted instead of wading through individual popup warning messages and fixing one at a time.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Start and Finish coordinates for a scan</span>
+You need to set the X, Y and Z coordinates for the scan to start at using the entry boxes on this page. These must be entered in whatever calibration units system you have currently applied to the stage (or in atomic microsteps if you are nor using calibrated units).
+Likewise you must enter the X and Y coordinates for the endpoint of the scan. The Z coordinate of the end point is not an input parameter because either it will be the same as the start point Z if no AF is done during the scan, or it will be the last best Z coordinate of the last AF procedure if AF is done during the scan.
+You may fill these coordinate boxes in manually or you may use the 'Get Current' buttons (clicking these buttons automatically pastes the current stage position coordinates into the entry boxes) or you can use the coordinate clipboard to paste the coordinates into them (details on the use of the Co-ord. clipboard control page will be described in its own chapter) or these coordinates will be filled in automatically whenever the PCS commands xyzs_start and xyzs_finish are run in a script (so be aware that a script can overwrite whatever values you have previously set into those boxes). All values in these boxes must be &gt;= 0.0.
+When it comes to the relationship between start and finish points, here are the rules:
+If start and end coordinates are identical you will get a 0-dimensional scan (single image) or a single Z-stack (if you enter a non-zero value for 'Semi no. Z slices').
+If the start and finish X coordinates are the same but the Y coordinates differ you will get a 1D scan in Y (with or without a Z component according to your choice of 'Semi no. Z slices').
+If the start and finish Y coordinates are the same but the X coordinates differ you will get a 1D scan in X (with or without a Z component according to your choice of 'Semi no. Z slices').
+If the start and finish X and Y coordinates differ you will get a 2D scan - or a 3D scan if you enter a non-zero value for 'Semi no. Z slices'.
+You are allowed to have your start and finish coordinates in any order relative to each other and to the home positions of each axis. This means that the start point does <b><i>not</i></b> have to be closer to the home position of any axis compared to the finish point. The order merely determines the direction of the scan. The only difference this order makes is whether the scan starts at the 'left' in X and moves 'right' (or <i>vice versa</i>) and whether the scan start at the 'top' (in Y) and moves 'down' (or <i>vice versa</i>). See figure 9.2 for the effect of start/finish coordinate order on the scan paths.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Scan motion steps and field calibration</span>
+
+<span font="sans" weight="bold" size="large" foreground="#333333">X and Y motion</span>
+As shown in figure 9.2, the scan algorithm moves the stage in a snake pattern (not a raster pattern) for XY scans. If there is any X motion to be made, this is made first, then a Y motion is made in the appropriate direction, then the X direction is reversed and the next X sweep occurs, etc. The images taken at each point in a scan are called 'tiles'.
+However, figure 9.2 is only designed to show the direction of the scan steps, not the size of each step. In figure 9.2 it appears that each scan step moves the stage by an equal amount of distance in X for each step and that same equal amount of distance in Y for each Y steps.
+
+[IMAGE:image14.png]
+
+Figure 9.2 The four XY scan paths possible depending on where the start coordinate is in relation to the finish coordinate. This is for a general 2D scan where there are steps to make in both X and Y and, in the example shown, we are considering a scan that moves 4 steps in X and 3 steps in Y. In a 1D scan in X or Y the same rule applies (the scan will either start on the 'left' and travel directly to the 'right' or <i>vice versa</i> depending on the relation of the start X compared to the finish X position). Similarly for a 1D Y scan the scan path may travel from 'down' to 'up' or <i>vice versa</i>. The Z component of a scan is different - see text.
+
+In practice you get to control the distance the stage moved with each scan step and you get to dictate a different 'scan step size' distance for each of the 3 dimensions. This is done using the 'Tile dimensions' entry boxes for 'Width/X', 'Height/Y' and 'Depth/Z'. The command to set these three parameters in the PCS programming language is called xyzs_stepsize. All of these values must be &gt;= 1.0e-3. This is true even if you are not going to use them (for example if you are not going to do any Z motion, the value in the 'Depth/Z' entry box cannot be left as 0.0).
+Note that whenever the xyzs_stepsize command is run in a script, the values supplied in the PCS script will automatically populate the entry boxes in this GUI so will override anything that may have been entered here prior to running the script.
+Each of these values represents a distance and so must be entered in whatever calibration units you have set the stage to use (or atomic microsteps if you are not using real world calibration).
+These values will be the distance the stage moves at each step of the scan. Assuming your stage is well-adjusted and compensated for backlash, etc. then you can set the 'Width/X' and 'Height/Y' values to represent exactly the distance of travel required to traverse one camera field of view in X and Y then your scan will cover the specimen precisely with no overlap and no gaps (figure 9.3 a).
+However, all stages will have some degree of motion error which might be significant at the highest magnifications of microscopy. You may therefore wish to make these step sizes slightly smaller than your camera field of view in X and Y. In that case you will get some overlap in your resulting images (figure 9.3 b) which will facilitate any panoramic stitching you may wish to perform after the scan as a custom post process to build a continuous whole slide image (WSI) if you are scanning a microscope slide.
+Alternatively you may not need to scan the whole surface of a specimen, in which case you may choose to make these x and Y tile distance value larger than your camera' field of view. In that case you will get a sparse scan with 'gaps' in between the scan images (figure 9.3 c).
+Which of these options you choose is entirely up to you and your scanning needs and you have full control over this by means of these 'tile dimensions' entry boxes.
+
+
+[IMAGE:image15.png]
+
+
+Note that the number of image positions that will be visited for a scan will be automatically calculated to fit inside the start and finish coordinate range you set given the 'Tile dimensions' that you set. The calculation will err on the side of under-scanning rather than over-scanning so make sure the finish XY coordinates are at least a fixed number of tile dimension distances away from the start coordinates. For example if you have a 'Width/X' tile dimension of 1000 distance units and you want the scan to travel 4 scan steps in X, then you must make sure that your finish X coordinate is at least 4000 units distant to the start X coordinate.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Z-Scans</span>
+To add a Z component of any scan set the 'Semi No. Z slices' value to an integer &gt; 0. Let <i>n</i> be a non-zero 'Semi No. Z slices' value. Then, at every XY scan position a Z-stack of 2<i>n</i>+1 images will be captured instead of a single image. This will will be done as follows:
+1. The Z-stage will move from the current starting Z position <i>n</i> distance steps down. Where a 'distance step' is the value you set for 'Depth/Z' in the 'Tile dimensions' section of the GUI.
+2. An image will be captured and the stage will move up one distance step.
+3. Step 2 will be repeated until a total of <i>n</i> images are captured at positions below the starting Z position and the stage is back at its starting Z position.
+4. An image will be captured at this Z starting position.
+5. The stage will move up from here by one distance step and an image will be captured.
+6. Step 5 will be repeated until <i>n</i> images are captured at which point the stage will return to its starting Z position and the next XY phase of the scan will commence.
+In this way a full Z-stack is captured at every XY position in the scan. If you set the XY start and finish coordinates to be identical to each other (as for a 0-dimensional scan) and set 'Semi No. Z slices' value to an integer &gt; 0, this converts your 0-dimensional scan into a 1D scan in Z - i.e. a Z-stack at a single XY position.
+Note that whenever the xyzs_semino_z command is run in a PCS script, the value supplied in the script will be written to the GUI entry box for it here so will overwrite anything you have manually entered here.
+<b>⚠️ </b><b>SAFETY WARNING</b>: You must take care with your choices for <i>n</i> and the 'Depth/Z' tile distance so that the Z stage does not reach its homed point before all <i>n</i> images are captured in one direction, or crash into the specimen slide when performing the <i>n</i> steps in the other direction.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Auto-focus Period</span>
+This must be 0 or some positive integer. This is the interval between XY scan steps that an autofocus (AF) search is performed. If you set it to 0 then the AF search will never be triggered. If you set it  to 1 then an AF search will be done at every single step of the scan. If you set it to 2 then an AF search will take place at every other step of the scan, and so on.
+If you set this to any value &gt; 0 then you must have issued the PCS commands required to set up the AF search before you attempt to start the scan or the scan will not comments. Those required PCS commands are af_setup and af_ccrit. See the PCS programming language reference manual for detail on those and also on the behaviour of the AF search (for example, the relationship between AF search behaviour and the tissue content thresholds).
+Note that whenever the xyzs_af_period command is run in a PCS script, the value supplied in the script will be written to the GUI entry box for it here so will overwrite anything you have manually entered here.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Image processing during a scan</span>
+You have the option to perform a custom image process on every image as it is captured in a scan. This custom process is run on every image in a scan, including every Z-plane image when performing Z-scans (either alone or as part of an X, Y or XY scan).
+To apply this option tick the box labelled 'Run the command below at each position (after image grab)' and, as shown in figure 9.1, bottom, a text entry box will appear for you to type your custom command. As long as that box is ticked, your custom command will be applied during the scan. You will not be able to change or edit these controls while the scan is running.
+Note that whenever the xyzs_process command is run in a PCS script, the value supplied in the script will be written to the GUI text entry box for it here so will overwrite anything you have manually entered here. Likewise the script command will cause the check box here to be ticked or unticked according to its value in the script.
+If the check box is ticked, the command you entered in the edit box will be run by being spawned as a non-blocking process on the underlying OS. For details of how to form the command string and the limits on the number of processes that can be run in parallel on your OS (to prevent your PC from becoming grindingly slow) by means of setting the max_daemons parameter, see the PCS programming language reference manual under xyzs_process.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Weights files</span>
+One of the things you can do with this feature is apply a custom machine vision program to each image that will output a floating point ASCII number into a text file for every image, that number representing the 'weight' or likelihood of a structure of interest being present in the processed image. In cases where no image was saved due to no tissue being detected you will still need to make your program output a number but this should be -1.0. For all actual images the weight must be &gt;= 0.0 but there in no stipulation on an upper limit - just that is it a valid positive float number. When the weights are read, all non-negative weights will be scaled into a standard range inside pardclient for display purposes. In this way you can create a weights file for the scan which you can load together with the scan for viewing as will be explained in the chapter on the Scan Viewer control page (see p.72). 
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Starting and stopping a scan</span>
+To start a scan simply click the 'START' button. If all settings are satisfactory the scan will begin. Otherwise you should receive some popup explaining why is can't be done.
+To stop a scan (without waiting for it to finish) you can click the 'Interrupt' button.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The scan file</span>
+Each scan is accompanied by a log file called the scan file. This is a plain text file that records the settings used for that scan and lists the names of all images taken during the scan in order. If an image wasn't taken at any scan point due to tissue thresholding determining that no tissue was present at that point then the image 'file name' entry will be recorded as NoTissue for that scan point.
+This scan file may be used for logging and documenting purposes but also to load the scan into the Scan Viewer as will be described in the chapter on the Scan Viewer control page.
+The name of this scan file will be formed by the root file name used to save the images with the string "_xys.xys" appended to it.
+The format of this automatically generated file is important and must not be corrupted (for example by manual editing) otherwise the scan viewer will not be able to load the scan.
+All the information you would get by using the 'Save settings' button discussed earlier will automatically also be added to the end of the scan file so there is no need to use that facility separately here. You can also add your own ad hoc notes to the end of the scan file because the program stop reading and parsing it after the 'exit' command is encountered. Anything below that can be used as a free text scratch pad.
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Script</span>
+
+The Script control page is where you load, compile, decompile and run PCS scripts or pre-compiled .dove programs. PCS scripts cannot be edited here - only loaded, checked for correct syntax and correct initial values, compiled, decompiled, linked (if required) and run. The PCS programming language compiler, linker and run engine are all built in to pardclient. They can also be accessed via the stand-alone command line program pcs-cli.
+
+[IMAGE:image16.png]
+
+
+[IMAGE:image17.png]
+
+
+[IMAGE:image18.png]
+
+Figure 10.1 The Script control page. <i>Top</i>: As seen when no script is loaded. <i>Middle</i> and <i>Bottom</i>: As seen when a script is loaded but not running. The script console is the main text area with black background.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The script console</span>
+The script console is a UTF-8 Unicode-capable text display area with a black background and its size can be changed with the draggable transition line control as explained on p.23 . The user can control font size and colour of printed output in a running script via PCS commands but the default colour scheme for text messages emitted by pardclient to this console when not running a script is as follows:
+Standard messages are shown in <b>cyan font</b>
+Script source code lines are shown in <b>green</b><b> font</b>
+Error messages are shown in <b>red</b><b> font</b>
+Text from script print commands are shown in <b>white font</b> (the default) or in the user's custom colour.
+The script console has a vertical scroll function but it also has a limited capacity. Any more text added when this capacity it reached will cause the earliest text to 'drop off' the buffer.
+You may clear the text in the console manually by clicking on the 'Clear' button.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Verbosity control</span>
+The amount of text messaging displayed here by default is regulated by the default Verbosity value. This is set to a low value (currently 1) when pardclient is first started - or this can be customised at start-up by providing a config file with your own choice of default verbosity in the config file. The Verbosity level can be altered at will within a running script but it will always be set to the current default value before and after script execution. The user can control the default Verbosity level by means of a check box in the script tab labelled 'Verbose' shown in figure 10.1. When this is checked the default Verbosity is set to 3. When it is unchecked, the default Verbosity is set to 1. When it is set to 1, loading a script by drag-drop or via the file dialogue will result in just basic acknowledgement messages in the the script console area as shown in the middle panel of figure 10.1. When the box is checked (or the default Verbosity is set to 3 via the config file) then you will see the whole listing printed out at both the pre-processing and syntax checking phase of loading a script. This can be quite a slow process for scripts with thousands of lines - especially if you are using a software emulated terminal as in the default software Cairo renderer in Windows without a graphics card. Hence keep the default verbosity low for speedier loading and only enable high verbosity if you have hardware graphics accelerated rendering or if you really need to see the individual lines of the script being processed as it is loaded. 
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Loading and checking a script</span>
+You can have up to two scripts loaded simultaneously - the main script and a stop script (also called an 'interrupt script'). The main script may be loaded via drag-drop into the script console area or via a file chooser dialogue that is summoned when the user clicks the 'Load Script' button. This button will be made effectively inactive while a script is running.
+Two types of script can be loaded this way:
+Script source files: These are the plain text script file that you can edit in a text editor and have the extension .pcs
+Dove programs: These are scripts that have been previously compiled into a static binary executable file known as <b><i>d</i></b>irect <b><i>o</i></b>bject-<b><i>v</i></b>alue <b><i>e</i></b>xecutable programs and have the extension .dove 
+Loading a script source file automatically pre-processes the script, checks the script for syntax and initial values for variables to make sure they 'make sense' in the context of the PCS programming language and they undergo an 'ahead of time' (AOT) linkage stage to pre-compute any aspect of the program that does not change at run-time - there is no separate 'syntax checker' function. Once the syntax check and AOT linking has passed successfully, the program is then compiled into RAM and any libraries required are linked to it so that it is ready for execution.
+Loading a .dove program triggers a faster route. Because dove programs have already gone through a pre-process, syntax check, compilation and library linkage stages (all .dove files are complete static builds and already include any library code they require to run and they do not depend on any header files) they go directly to the AOT linker after which they are ready to run.
+The script processing and running abilities of this page are available even when the user is not logged into a pardserver. If the user is not logged in when a script is loaded the diagnostic output is directed to the script console as well as the terminal from which pardclient was run (assuming is was run from a terminal as opposed to simply double-clicked from a file browser or desktop icon). When the user is logged in, the output is solely via the script console. See figure 10.1.
+Only if a script passes all its pre-processing, checking, compiling and linkage stages without error will you then be allowed to run it.
+Once successfully loaded, you can always check what main script is currently loaded by hovering your mouse pointer over the 'Load Script' button and a tool-tip will appear showing the currently loaded main script with its full path.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Compiling a script to a .dove file</span>
+If you have a PCS source file and you want to compile it into a .dove static executable file the procedure is as follows: First check the box labelled '(De)Compile'. Next load your source file. The source file will be loaded, pre-processed compiled and linked and, if all that is successful you will automatically be presented with a file save dialogue box to save the resulting binary file as a .dove file. After that you can continue to run the program as usual. The .dove file will contain all the code required to run the program including any code from libraries that the source specifies with 'add_lib' commands, as well as any definitions or includes in any header files. So the .dove file will be a completely static build. If you have .dove files associated with the pcs-cli program in your desktop, then simply double-clicking a .dove file will run the program (via pcs-cli).
+This procedure is the same whether your original source PCS file was for a 'normal' runnable script or whether it was for making a library.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Making ('archiving') a library .pcl file</span>
+Binary linkable library files (.pcl files) are made by running a PCS source program that has the 'make_lib' command in it and which also are written to a certain specifications (described in detail in the manual for the PCS programming language).
+Such a script may be in source form (.pcs) or pre-compiled to binary form (.dove) as described above.
+When you run such a script, the only thing that will happen is that it will be archived into a binary library file and, if there are no errors in the archiving process, you will be presented with a file save dialogue when that is complete. This will allow you to save the resulting .pcl file. Such a file can them be incorporated into other PCS programs using the 'add_lib' command. See the PCS programming language manual for more detail.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Decompiling a binary (.dove or .pcl) into PCS source code </span>
+If you have a binary compiled file - whether .dove or .pcl - and you want to convert it into editable text PCS source code you can easily do this either with the command line tool pcs-cli as described previously or via the GUI of pardclient. To use pardclient as a decompiler for a .pcl file - simply load the .pcl file into the script tab by drag-drop or via the file dialogue and the decompilation process will begin immediately regardless of the state of the '(De)Compile' check box. This is because there is no other action that pardclient can perform on such files.
+To de-compile a .dove program, first check the box labelled '(De)Compile'. Next load your .dove file. The decompilation process will then commence.
+Regardless of whether you have decompiled a .pcl or a .dove file, once the decompilation process completes successfully you will be presented with a save dialogue to save the resulting PCS source code as a .pcs file.
+The resulting PCS file will contain all the source code that the binary had in it - including the source code for any libraries that were linked in it. It will also be in the form of an already pre-processed file so you will not see any pre-processor macros and the file will not depend on any libraries because these have already been dealt with during the original pre-processing of the binary you have just decompiled. The arguments will be the same but will have only one space between each argument - you will lose any comments and you will lose any custom use of white space (like line indentations or any custom spacing of arguments to make code look 'tidy' in some cases) that may have been present in the original source. If you want 'comments' to survive the compilation and decompilation process then put those comments as arguments in null commands and they will survive because the null_command and its arguments will not get stripped out by the pre-processor. The line numbering in the resulting PCS will be identical to the binary file. Library code included in .dove files will have the line numbers that the included library lines had after they were included into the .dove file.
+The resulting PCS file should be fully runnable without being dependent on any external header or library files.
+
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Running a script</span>
+A script is run in pardclient by clicking the 'RUN' button or by supplying its name to pcs-cli on the command line (and this latter route can be automated to simply double-clicking a .dove file if .dove files are associated with pcs-cli via the desktop file-association mechanism on your computer). In pardclient, while the script is running the 'RUN' button will become insensitive. Printed output from a running script will appear in the script console and effects of the script may be seen in the preview area and in the effect it has on any actuators and cameras and on the local PC (audible beeps, file IO on disc and the effects of any spawned OS processes).
+For programs run via pcs-cli, printed output will be seen in your terminal (or terminal emulator) and graphics that would normally be displayed in pardclient's VGA display area may be seen and monitored by means of an external image viewer set to view the p6 ppm VGA preview image written to disc if the PCS script issued the cli_path command to allow for such disk image output (the PCS Programming Language user manual gives more details on how to do such monitoring and on the cli_path command).
+Informational warnings, errors or general information that arise due to the processing or actions of a running script may be shown in the script console, the server console or both (or the terminal for pcs-cli).
+While a script is running you will notice that the layout of controls to the left of the script console in pardclient will change. The changes are as follows (see figure 10.2):
+The 'Load script' button will remain actively clickable but nothing will happen when you click it. Mouse-over will produce a tool-tip showing what main script is currently running.
+A new entry box will appear labelled 'User Input'
+The 'Run' button will become insensitive
+The 'Interrupt script' check box will get replaced with an 'Interrupt' button.
+
+[IMAGE:image19.png]
+
+Figure 10.2 When a script is running, the GUI controls on the left change as shown. Compare to figure 10.1 and see text.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Interrupting a script</span>
+Under most circumstances a script will terminate when it reaches its normal conclusion and reaches the 'exit' command.
+If you do not want the script to run to completion (for example if it seems to be 'stuck' in some kind of loop abnormally or if there is some hardware problem or if it is not progressing as you would expect, etc.) then you can terminate it with the 'Interrupt' button.
+This will stop the script and then automatically run your choice of interrupt script if this option has been chosen (as described below). Otherwise it will just stop the current script. If verbosity it set to a level that produces a pop-up notice to notify you of the termination of the script, then any interrupt script will run only after you dismiss that notice, otherwise the interrupt script will run as soon as the main script terminates.
+Some scripts intentionally block GUI responsiveness, In that case you will not be able to press this interrupt button to stop them - but in these circumstances you can still stop a script with a Ctr+c interrupt issued on the OS command window / terminal window from which pardclient was run (pressing Ctrl+c while focus is on the pardclient GUI window itself will have not terminate anything). See the section 'Escaping a locked (busy) script' below for more details on this.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">The interrupt script</span>
+An interrupt script (also called a <i>stop script</i>) is a script that is run automatically and immediately after the main running script is terminated by means of interruption (i.e. by pressing the 'Interrupt' button). However 'immediately' is qualified by saying that if the verbosity level is set to notify you of the interruption with a pop-up notice then the stop script will only commence after you dismiss that notice. This interrupt script option is provided as a safety feature because an interrupt script can perform certain 'clean up' or safety steps that would otherwise have been performed by the main running script if it had been allowed to complete normally instead of being forcefully terminated.
+A specific example use case is to implement a script-level kill switch for the XYZ stage. Such a script might simply disable all motors then exit. Thus if you find you have to interrupt your main script because the stage shows undesired motion or for any other reason, pressing the 'Interrupt' button will not only terminate the main script but will then also automatically run the interrupt script that will cause motor deactivation, relieving pressure on the object and/or prevent damage to the motors and drivers and stage mechanism.
+The following explains how to use the interrupt script option. Before the main script is run you will notice that there is a check box at the bottom of the controls labelled 'Interrupt script' (figure 10.1). If you check this box you will be presented with a file chooser dialogue to select a script. If you cancel this selection dialogue or if the script you select cannot pass all the required validation checks then the check box will revert to its un-checked state. If you select a script and it passes the validation checks and gets compiled and linked ready to run then this check box will remain checked until you un-check it.
+If this box is checked when you hit the 'RUN' button then, while your main script is running you will see that the text on the 'Interrupt' button which change to bold red font indicating that an interrupt script is armed and ready to run upon interruption.
+Note that an Interrupt script will not be run after normal exit from the main script - only after interruption.
+If you un-check the 'Interrupt script' box then not only will your interrupt script not be used but it will also get discarded. The next time you check the box you will again see the file chooser to select a different (or the same) interrupt script. Thus you can change and interrupt script by simply un-checking then re-checking this box.
+An interrupt script may be used with pcs-cli as described in the section on the command line options of pcs-cli earlier in this manual.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Effect of loading a script on the default file search path</span>
+When you successfully load a script - either a main script or an interrupt script - the full path which that script is on will automatically become the default search path for looking for include files and library files. If your main script and interrupt script are in different directory paths, then this default lookup directory will be set to whatever script you load - so it will end up as the path of whichever of those two types of script you load last.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Escaping a locked (busy) script</span>
+The default setting when starting to run a script in pardclient is that the GUI responsiveness is at maximum. This means that a complete GUI polling loop is conducted after every single line of PCS script code is run. While this provides maximum responsiveness of the GUI so you can swap tabs, use other buttons or click on the 'Interrupt' button in the script tab to manually terminate a script quite easily, it also has a significant speed cost to the running script. This continuous polling slows down local PCS processes and loops by a massive factor or around 150x (they run 150 time slower with this default GUI responsiveness level active).
+For this reason, the PCS script writer has the option to change this default GUI polling period and even turn it off altogether with the gui_update_period PCS command. While setting this to 0 (= turn off GUI polling) or to a high number (= reduce polling frequency) can dramatically speed up script execution, it can also make the GUI unresponsive, meaning that you will not be able to terminate a script using the 'Interrupt' button. In such cases you can still force a script to terminate by clicking on the OS terminal window that pardclient was run from (e.g. the Windows Command window or Linux terminal window) and perform a Ctrl+c interrupt. This should terminate a running script cleanly - without closing the program. It works in just the same way as if you had clicked the 'Interrupt' button and you can continue to use pardclient as normal after the script terminates.
+In regards to using performing a Ctrl+c key combination note the following points:
+While focus is on the actual pardclient GUI window this will have no effect. You must switch focus to the OS command prompt window that pardclient was run from.
+If a script is not running then this Ctrl+c action will forcibly terminate pardclient itself - without giving you any warning or opportunity to log out or save your work. Therefore only click the Ctrl+c combination once and only do it while a script is running in order to avoid this forced shut down.
+In regards to PCS programs run via pcs-cli, the 'gui update' is not a null command but it is lot more light-weight. In CLI mode this update drains any GLib background sources (such as timers or async I/O) without GUI overhead. Also, when using pcs-cli, pressing Ctrl+c on the terminal will interrupt the script - there is no GUI interrupt button option here so that is your only way to interrupt a running script.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Interactive user input</span>
+The 'User Input' entry box that appears while a script is running (figure 10.2) is to allow user interactive input to a script. The entries here are accessed inside a running script via the poll_user PCS command. This is also the entry box that gets populated by the ASCII character from the face of the motion control buttons when those buttons are diverted to script as discussed on p.35 .
+For pcs-cli the poll_user command will accept input from the terminal or terminal emulator from which you are running the script. Because seeing an input cursor or seeing text input on the terminal may interfere with other terminal graphics output by a script (there is no neat separate input GUI entry box with pcs-cli - the same terminal display area is used for input and output) the PCS programming language has facilities to hide the input cursor and to hide any input text (e.g. using the print_graphics command). See the PCS Programming Language user manual for details.
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Camera Settings</span>
+
+This is an informational page without interactive user controls. It tells you 3 things:
+How many cameras you are connected to (if any).
+Which camera is the currently selected one.
+What settings are available on the currently selected camera with information as to their acceptable range of values and the currently selected value for each setting.
+In the example shown in figure 11.1 you can see that we have two camera connections and we are currently using camera 1 which has the settings shown.
+
+
+[IMAGE:image20.png]
+
+Figure 11.1 The Camera Settings control page shows the controls for camera 1 out of a total of 2 connected cameras. Camera 1 settings are showing because that is the currently selected camera.
+
+If we now go over to the Manual control page and change the currently selected camera to camera 2 (as shown in figure 11.2), the next time we move to the Camera Settings control page we see that the settings displayed are for camera 2 (of 2) as shown in figure 11.3.
+
+[IMAGE:image21.png]
+
+
+[IMAGE:image22.png]
+
+Figure 11.2 Changing the currently selected camera from 1 (top image) to 2 (bottom image). After we hit the 'Send Command' button the new camera selection is put into effect.
+
+
+[IMAGE:image23.png]
+
+Figure 11.3. Now that we have changed the current camera, the Camera Settings page confirms this by showing we are looking at camera 2 (of 2) and displaying the settings for camera 2.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The script helper facility</span>
+Although you may copy text from the Camera Settings display here and paste it elsewhere, pardclient has a convenience feature designed to make copying and using camera settings data (for example in PCS scripts) easier.
+Whenever you log into a pardserver that has one of ore camera attached, pardclient will automatically create a plain text file of the settings for each camera. This is output to the CWD by default. If the CWD is write-protected (for example, when launched from a system installation directory like C:\Program Files\PARDUS), pardclient automatically falls back to the OS system temporary directory (%TEMP% on Windows, /tmp on Linux/macOS) and displays the full saved path as an informational message (usually this will be to the terminal from which pardclient was launched and/or to the script console display in the GUI). These camera settings files will be named 'PCamSet_#.txt' where '#' will be replaced by the actual camera number (1, 2, 3, etc.).
+Below is an example of the camera settings file for camera 2 in the examples used in this chapter. The file begins as shown here:
+PCamSet 1 20
+
+Camera number 2
+
+
+idx: 0
+name : User Controls
+ctrl : 9961473
+min  : 0
+max  : 0
+step : 0
+curr : 0
+mendx: 0
+
+idx: 1
+name : Brightness
+ctrl : 9963776
+min  : -64
+max  : 64
+step : 1
+curr : 0
+mendx: 0
+
+idx: 2
+name : Contrast
+ctrl : 9963777
+min  : 0
+max  : 100
+step : 1
+curr : 50
+mendx: 0
+
+It continues to list each camera setting entry in this manner and then, at the end has this 'script helper' section:
+Script Helper:
+
+#define USER_C 9961473
+#define BRIGHTNESS 9963776
+#define CONTRAST 9963777
+#define SATURATION 9963778
+#define HUE 9963779
+#define WHITE_BA 9963788
+#define GAMMA 9963792
+#define POWER_LF 9963800
+#define WHITE_BT 9963802
+#define SHARPNESS 9963803
+#define BACKLIGHT_C 9963804
+#define CAMERA_C 10092545
+#define AUTO_E 10094849
+#define EXPOSURE_TA 10094850
+#define EXPOSURE_DF 10094851
+#define PAN_A 10094856
+#define TILT_A 10094857
+#define FOCUS_A 10094858
+#define FOCUS_AC 10094860
+#define ZOOM_A 10094861
+
+This lists each setting control ID number as a #define for use in a PCS script so you don't have to keep setting camera controls by their ID number in the source code. The names of each #define are generated by a simple algorithm from the original control name so, for example 'Exposure Time, Absolute' becomes 'EXPOSURE_TA'. These auto-generated name contractions may not be ideal but you can, of course, edit them to something you find more helpful. For example, you might want to change 'WHITE_BA' to 'WHITEBAL_AUTO'. You should check that none of the automatically generated contracted names here are identical to each other before copy-pasting this section into a PCS script or PCs header file.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">User controls vs Camera controls</span>
+You will notice that the controls are classified under these two headings. The main difference between them is that 'user controls' refer to the digital post-processing of the image after it has been captured by the camera sensor (such as contrast, brightness, and hue). They modify the image data mathematically, rather than changing how the sensor initially captures raw light.
+On the other hand, 'camera controls' directly affect the raw capture process at the sensor and lens level. They control physical hardware elements, such as moving the focus lenses, adjusting the mechanical iris, or changing electronic shutter characteristics and exposure times.
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Scan Viewer</span>
+
+The Scan Viewer control page allows a previously recorded scan made using the xyzs_scan command (run either from a PCS script or from the XYZ Scan control page) to be loaded and examined. This control page is partially functional even if the user is not logged into a pardserver. The limitations for such a user is that the 'Go To XYZ', 'Sync. Stage' and 'Sync. Camera' facilities will not be available to them. Also, you will not be able to enter or use the facilities of the Scan Viewer page during a live scan.
+The main controls, as seen before any scan is loaded, are shown in figure 12.1
+
+[IMAGE:image24.png]
+
+Figure 12.1 The Scan Viewer controls. No scan is loaded at this stage.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Loading a scan</span>
+To load a scan simply drag-drop the .xys scan file onto this page or use the 'Load XYZ Scan' button to raise a file chooser dialogue and select the scan file of the scan you want to load. If all goes well the scan will load and render in the preview area as shown in figure 12.2
+
+[IMAGE:image25.png]
+
+Figure 12.2 When a scan is loaded, the full path is displayed in the read-only edit box labelled 'Scan loaded' and the scan is rendered in the preview area. As yet no scan tile is selected. This is actually a full XYZ scan with a total of 17 Z planes. The currently shown preview was made from all the tiles at Z-plane = 8 and this is indicated by the number '8' in the spin-box control labelled 'Z:' just to the right of the 'Load Weights' button.
+The file name and full path will be displayed in the read-only edit box labelled 'Scan loaded'. At this stage the preview area will be sensitive to click and double-click events as part of the the scan examination facilities provided. Also, several of the buttons that were previously greyed out will be come active and available for use. These are the the 'View full image',  'Go To XYZ', 'Sync. Stage' and 'Sync. Camera' buttons - but the latter 3 facilities will only be available to logged-in users.
+When loading a scan that has a Z component, the default position is for the middle plane in Z to be used to construct the preview. Z planes are labelled from 0 to 2<i>n</i>, where <i>n</i> is the value of 'Semi No. Z slices' used to make the scan (see p.49). The middle plane will therefore be plane <i>n</i>.
+For example, the scan illustrated in figure 12.2 is a full 3D scan (X, Y and Z). This was made using 'Semi No. Z slices' set to 8 (so <i>n</i>=8) and so there will be a total of 17 Z planes (= 2<i>n</i>+1) and they will be labelled 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 in the order in which they were captured such that Z plane 0 is the lowest, Z plane 17 the highest and Z plane 8 is the exact middle of the Z-sweep. When this scan is loaded it will have the preview image made from the Z=8 images and you will see the number 8 in the spin box control labelled 'Z:' to indicate that this is the current Z plane being displayed in the preview image - as is shown in figure 12.2 . Using this Z spin box control you can select any one of the 17 Z planes. With each selection a new preview image is built using tiles from the selected Z plane. If there is a full image viewer window open, adjusting the Z level via this spin box control will not automatically update the full image view - that will get updated the next time you double-click a tile (or single click a tile and press the 'View Full Image' button. This is discussed in more detail next.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">The Coordinates bar</span>
+When a scan is loaded the coordinates shown on the coordinates bar will be those of the tiles of the scan rendered in the preview area rather than those of the live XYZ stage. These coordinates will update automatically as your mouse cursor moves over the scan preview.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Selecting and viewing tiles</span>
+Each image in a scan render is called a 'tile'. The tiles in the preview area are scaled versions of the full images captured as part of the scan. 
+To see the full resolution image of any tile, first select the tile with a single left click on the preview area and then click the 'View Full Image' button or, alternatively, simply double-click the tile and you will not need to use the 'View Full Image' button because the tile will automatically load into the full image viewer. If you click the 'View Full Image' button when there is no tile selected on the preview you will get a popup notice telling you that it can't display anything because you have not made a selection.
+When a selection is made the coordinates of the selected tile (as recorded at the time of the live scan) are displayed in the X, Y, Z entry boxes to the right of the 'Go To XYZ' button.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Selected tile colour</span>
+When a tile is selected it will be shaded with the colour you currently have selected via the 'Selected' colour swatch. This is shown as an orange colour button near the top right of figures 12.1 and 12.2. You can change this selected tile colour at any time by simply clicking on that colour swatch button to bring up a colour selection palette and make you selection.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Non-tissue colour</span>
+When a scan is made an image of the specimen may not be taken at every point in the scan if tissue thresholding is setup. In this case if the camera detects there is no tissue (i.e. relevant specimen information) in the field of view, instead of capturing an image it will report 'No tissue' and the 'No tissue' flag will take the place of an image name in the list of image names in the scan file. When performing a scan render, when the render engine sees this entry it paints the tile for that image in the colour currently selected as the 'Non-tissue' colour from the colour swatch seen at the top right of the controls in figures 12.1 and 12.2. You can change this non-tissue tile colour at any time by simply clicking on that colour swatch button to bring up a colour selection palette and make you selection. An example of a high resolution scan with non-tissue colour of green is shown in figure 12.3
+
+[IMAGE:image26.png]
+
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Clearing a selection</span>
+When you select a tile this causes the selected tile to be shaded in the selected colour. This might, in some circumstances, cause a visual distraction when looking at the preview. If that is the case you can clear that selection, and so remove the colour shading, by clicking the 'Clear selected' button. 
+
+<span font="sans" weight="bold" size="large" foreground="#333333">The full image viewer</span>
+The full image viewer window shows the currently selected tile at this native captured resolution. You can bring this window up by double-clicking a tile on the image preview or clicking the 'View Full Image' button on the main window controls once a tile has been selected (as described above). Figure 12.4 shows the full image viewer window.
+
+[IMAGE:image27.png]
+
+Figure 12.4 The full image viewer shown beside the main window. The full image viewer window shows the currently selected tile at its full capture resolution. The name of the image file loaded into the full image viewer is shown it the title bar of the window.
+
+
+
+  <tt> │ <span weight="bold" foreground="#1a5fb4">Key            </span> │ <span weight="bold" foreground="#1a5fb4">Action                               </span> │ </tt>
+  <tt> ├─────────────────┼───────────────────────────────────────┤ </tt>
+  <tt> │ Up arrow /      │ Move selection one place up (in Y)    │ </tt>
+  <tt> │ Number pad 8    │                                       │ </tt>
+  <tt> │ Down arrow /    │ Move selection one place down (in Y)  │ </tt>
+  <tt> │ Number pad 2    │                                       │ </tt>
+  <tt> │ Left arrow /    │ Move selection one place to the left  │ </tt>
+  <tt> │ Number pad 4    │                                       │ </tt>
+  <tt> │ Right arrow /   │ Move selection one place to the right │ </tt>
+  <tt> │ Number pad 6    │                                       │ </tt>
+  <tt> │ 'a'             │ Move to next focus plane up           │ </tt>
+  <tt> │ 'z'             │ Move to next focus plane down         │ </tt>
+  <tt> │ Home            │ Move to the very first tile in a scan │ </tt>
+  <tt> │ End             │ Move to the very last tile in a scan  │ </tt>
+  <tt> │ Escape          │ Close the full image viewer window.   │ </tt>
+
+
+Table 12.1 The actions associated with pressing various keys when focus is in the full image viewer window.
+The full image viewer window, when it has focus, will respond to keyboard input as shown in table 12.1. This shows that you can navigate to various tiles in the preview (and simultaneously see the selection in the full image viewer window) with intuitive key strokes, making it easy to navigate the scan.
+Note that for a scan with a Z component, when you change the Z level of the full image being viewed by means of the 'a' or 'z' keys, that newly selected Z level will pertain to all other images you see as you move around in X and Y with the arrow keys but it will not automatically update the Z level of the preview image displayed in the main window. To change that preview image Z level you must use the Z spin box control in the main window as discussed previously. 
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Weights</span>
+
+<span font="sans" weight="bold" size="large" foreground="#333333">File format and origins of a weights file</span>
+As introduced on p.51, a scan may have an accompanying weights file. A weights file is a plan text file and its name should have the extension '.xyw' because that is what the file chooser here will filter for. To be loaded and interpeted properly by the pardclient parser, a weights file must obey the following formatting rules.
+The file must contains a list of floating point numbers in ASCII format with each number on a separate line. The newline is the only delimiter that must be used. The numbers must not be enclosed in quote marks of any kind and must not have commas or other delimiter characters.
+Blank lines will be ignored by the parser. They are allowed and will not cause any problems.
+Lines beginning with a hash character, '#', are also ignored so you can use the hash to enter comment lines in the weights file.
+There must be one floating point number entry line for every tile in the scan these weights pertain to. The weights numbers must occur in the exact same order as the images for the scan are listed in the scan file. For 'images' that are marked as 'NoTissue' in the scan file the weights file should show a value of -1.0. Otherwise all weights must be &gt;= 0.0. There is no upper value limit but all values must be valid float numbers (not 'NaN' or other error code).
+A weights file that has no contrast in the weights number values will be rejected (so if every non -1.0 weight entry has a value of 0.5, for example, there is no contrast and that file will be rejected if you try to load it).
+How you create a weights file is entirely up to you. You may create it during a scan with the custom image process facility allowed for scans (p.50) or you may create it after a scan using some custom post processing on all the images in the scan. As long as the weights file follows the format specified above it should be acceptable to use as a weights file for its accompanying scan for the purposes of loading it into the scan viewer.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Loading a weights file</span>
+You may only load a weights file if a scan is already loaded. The weights file you load must be a match for the scan that is currently loaded i.e. it must have as many weights entries as there are tiles in the currently loaded scan.
+To load the weights file simply drag-drop the .xyw file onto this page or click the 'Load Weights' button to bring up a file chooser and select your weights file. As soon as you complete this process the chosen file will be read, checked for correct syntax and number and type of weights and, if all those checks pass, the weights values will be scaled to values between 0 and 1. This is a linear scaling based on the actual minimum and maximum values of the weights read from the file - the minimum will be mapped to 0 and the maximum to 1 and everything in between will be scaled proportionately into that 0-1 range. This scaling is done inside pardclient and will not alter the actual values recorded in the weights files. Once the scaling is done, the weights will be rendered over the image.
+The rendering will make those tiles that are associated with lower weights darker (with any tiles associated with weight 0 being totally black) and those files associated with higher weights less dark (with those tiles associated with a weight of 1.0 being of normal brightness). Thus the tiles in the preview will be displayed over a range from normal brightness to black depending on their weight. An example of a weights rendering is shown in figure 12.5. Note that if you had any tile selected before loading a weights file, that selection will be cleared just prior to rendering. You may continue to select tiles as normal after the weights have been rendered.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Examining weights</span>
+As you select each tile in the preview, the actual (scaled) weight value associated with that tile will be displayed in the read-only entry box on the lower right labelled 'Weight'.
+The illustration in figure 12.5 is a very simple example of weights rendering in a very small scan (size 3x2 tiles). The real utility of the weights facility in practice can be seen in a much higher resolution whole slide scan of the granulomatous lymph node stained with the ZN stain to pick out mycobacteria (for diagnosis of TB) introduced in figure 12.3. In the general case for non-immunocompromised patients, ZN positive bacilli are usually very sparse and may take a long time of dedicated screening to pick them out and they may be so sparse as to be missed by even a temporary lapse in concentration of the screener.
+
+
+[IMAGE:image28.png]
+
+Figure 12.5 A weights file is loaded and rendered. The tile top left has a weight of 0.0 so is shown totally black. The tile bottom left has a weight of 1.0 so is shown with its normal brightness. All tiles in between have a gradation of weights and hence are displayed with a gradation of shading according to their weight.
+This example lymph node scan is shown again in figure 12.6 with its associated weights file rendering. In this case the images were processed with a machine vision algorithm that outputs the likelihood of a positive TB bacillus in each image. This likelihood number is the weight. The higher the weight, the greater the likelihood of a diagnostic bacillus in the field.
+You can see that the weights file rendering immediately draws the attention of the screener to a small number of very 'bright' hotspots in the scan and the slide screener can concentrate examination for bacilli there while their concentration is fresh and they are not tired. Only if those image fields lack bacilli should the whole slide be screened as normal.
+
+[IMAGE:image29.png]
+
+Figure 12.6 Example of using the weights file render to assist in medical diagnosis of rare events. In this case the weights rendered view (right) correlate with the likelihood of the presence of AAFB (tuberculosis bacilli) in this scan of a ZN-stained lymph node. See text for details. This also indicates the effect of the 'Toggle Weights' button
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Toggling the weights display</span>
+Because the weights rendering partially obscures the underlying scan, there is a quick way to toggle between the plain scan preview render and the weighted render by simply pressing the 'Toggle Weights' button (figure 12.5 and 12.6).
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Ejecting the weights</span>
+The currently loaded weights file will be ejected if the user ejects the main scan (with the 'EJECT XYZ Scan' button).
+Although there is no 'Eject Weights' button to eject only the currently loaded weights file, leaving the underlying scan loaded, you can achieve this exact effect by simply attempting to load a weights file that is not properly formatted or has the wrong number of weights (not equal to the number of tiles in the scan). In this case the currently loaded weights will be ejected by internal processes of pardclient in preparation for loading the new weights but, because the new weights will fail the checks, they will not be loaded. The ultimate effect is the ejection of the existing weights leaving the underlying scan intact.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Hardware syncing</span>
+If the user is logged in to a pardserver and connected to the XYZ microscope stage and camera there are some added features of the Scan Viewer available to them.
+For these hardware features to be of maximal benefit it is highly recommended that the currently attached camera is the same as the camera that captured the scan (or at least, functionally compatible with the scan capture camera) and the stage is the same as the stage that was used to capture the scan (or at least be of the same specifications as the stage used to capture the scan). Attempting the following hardware actions on a different or incompatible camera or a stage with different specifications to the scan capture stage may result in unexpected,undefined and/or unwanted behaviour or errors.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Syncing to the camera</span>
+The user may automatically set the image save resolution of the attached camera to the resolution used to take the scan images as recorded in the scan file by pressing the 'Sync. Camera' button.
+Only the save resolution of the camera is synced in this operation because there is no foolproof way of automatically syncing all other features of the camera setup used during the scan. For example, if a flat field correction image was used during the scan, that same correction image may no longer be appropriate because the illumination pattern and number and position of any dust specs along the imaging train may have changed in the time between when the scan was first taken and now.
+Thus, if full camera synchronisation is required the remaining steps will need to be taken, as appropriate, by the user. A list of all camera settings used during the scan will be present in the scan file to act as a reference and guide to the user for that purpose.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Syncing to the stage</span>
+In order to use the 'Go To XYZ' feature described later, the stage must be set up with the same microstep size, calibration features and other mechanical parameters as were in effect at the time the scan was made. This can be done automatically by clicking the 'Sync. Stage' button.
+This will read the following parameters from the scan file and attempt to set them the same on the currently connected XYZ stage:
+Maximum microstep denominator
+Current microstep denominator
+Direction 1 value for X (1 or 0)
+Direction 2 value for X (1 or 0)
+Direction 1 value for Y (1 or 0)
+Direction 2 value for Y (1 or 0)
+Units name for X (it is assumed that Y and Z will be using the same units so these will not be checked or synced separately).
+Units used (units type) for steppers
+Calibration factor at the maximum microstep denominator for X
+Calibration factor at the maximum microstep denominator for Y
+Calibration factor at the maximum microstep denominator for Z
+Acceleration profile (act_accel parameters) for steppers
+In addition, for a stage to be considered 'synced', the X and Y axes must be homed to the same limits as they were homed when the scan was performed. However, if the syncing function detects either of these axes are not homed (or homed to a different limit than was used during the scan) it will not attempt to automatically home the axis because homing may require certain manual interventions (like removing the slide to prevent damage). Instead it will pop up a message informing you that you need to do it. A 'fully synced' signal will not be set in the program unless such homing is performed and confirmed. So if, you get this message, home the required axis / axes and then click the 'Sync. Stage' button again to re-assess sync status.
+Only if all the above items are successfully synced with the stage be marked as 'fully synced' with the current scan and only then will you be allowed to use the 'Go To XYZ' button facility (the camera does not have to be synced for use of the 'Go To XYZ' facility, only the stage).
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Coordinates sync (Homing sync)</span>
+Syncing to coordinates is an optional procedure but it may be very useful to do for the most accurate performance of the 'Go To XYZ' facility.
+You can instigate a coordinates sync (also called a homing sync) by ensuring you have made  tile selection prior to clicking on the 'Sync. Stage' button. Conversely, if you do not want to perform a homing sync then make sure you have no tile selected (click the 'Clear selected' button) before you click the 'Sync. Stage' button.
+Due to inevitable mechanical and electronic noise errors in the stage mechnism and limit switch, etc., even if you use the exact same stage, the actual precise position of the X stage achieved with, say, 105769 atomic mictosteps after homing X to limit switch 1 on one occasion, will not be exactly the same as the actual precise position of the X stage achieved with 105769 atomic microsteps achieved after homing to the same limit switch on another occasions. The same can be said for the Y and Z axes.
+Thus, simply homing the stage to the same limits as were used for the actual scan (which is the bare minimum requirement for syncing the stage) is likely to still result in some positional error when you attempt to go to a specific coordinate position for an image tile as recorded in the scan file.
+To compensate for this and make re-positioning to the same coordinates as accurate as possible, even on a different day let alone a different homing session, the option to do a homing sync / coordinate sync is provided.
+If you perform a coordinate sync, by ensuring a tile is selected when you click the 'Sync. Stage' button, the program will note the current coordinate position of the stage and compare those coordinates to the recorded X, Y and Z coordinates of the image tile that is currently selected. If any of these coordinates differ pardclient will send a command to the server to update the current stepcount of the relevant motor to be equal to the coordinate recorded in the scan file - for each axis. So, by the end, it will be guaranteed that he stage axes motor step counts will precisely match the step counts (coordinates) recorded in the scan file for the currently selected tile. That's it.
+In order for this to be useful as a syncing procedure, it is up to you to first, manually move the stage such that the current live camera field of view matches, as perfectly as you can get it, the full image of the selected tile (and you must be using the same camera with the same resolution settings as the camera used to capture the scan - or at least a camera with a live field of view that matches the camera used to make the scan). So, by ensuring the current live view image is the same (field) as the currently selected tile and then clicking 'Sync. Stage' you will guarantee that the coordinates recorded for that tile are now also the coordinates of the actual axis motors of your live stage. It will be as if the axes were 'perfectly' homed to the exact same position as they were when you made the scan.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Go To XYZ</span>
+You must be logged in and have an XYZ stage to use this. With the stage synced to the currently loaded scan, if you select any tile in the preview and click the 'Go To XYZ' button the stage will be instructed to go to the coordinates of the currently selected tile.
+This gives you a very powerful ability to examine the specimen at specific locations having been guided by what you see in the scan images. It may be that you need to examine the area with a different set of focus planes or different optical modality (like fluorescence or phase contrast) to what was used for the scan. Or it may be that you want to look down the ocular of the microscope to see the 'live' optical image to confirm something you have seen on the scan (like the presence of an AAFB to confirm TB diagnosis after seeing 'possibly' positive images on the scan that are not, in the digital recorded image, entirely clear-cut). Whatever your reasons, this Go To facility enhances your ability to examine the specimen that has been scanned.
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Co-ord. Clipboard</span>
+
+The Co-ord. Clipboard control page is a convenience faculty to allow you to copy coordinates from one part of the GUI into entry boxes in other parts of the GUI. Refer to figure 13.1 for the rest of this chapter. The working principles are as follows:
+This only copies or pastes floating point numbers or integers. It is not a general text copy/paste facility.
+This will copy or paste up to 3 such numbers in one go.
+Pressing one of the 'Copy' buttons will copy the numbers from a specific set of text entry boxes or an entry box into the 'Clipboard current text' entry box in this control page (shown in figure 13.1).
+Pressing the 'Paste to Source' button will paste the numbers in the 'Clipboard current text' entry box into the 'Copy/Paste Source' entry box(es). How those source entry boxes are selected will be explained in detail in the rest of this chapter.
+
+[IMAGE:image30.png]
+
+Figure 13.1 The Co-ord. Clipboard control page. Whatever 3 numbers are in the 'Clipboard current text' entry box will be copied into the 1, 2 or 3 coordinate entry boxes that are currently marked as being the 'Copy/Paste Source'. Se text for details.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The 'Copy/Paste Source'</span>
+The entry box or boxes that act as the source of numbers to copy from (when you press the 'Copy from Source' button) or paste into are called the 'Copy/Paste Source' entry box (or boxes). The source is selected according to the control page currently active and by which edit box user input focus is currently in. The rules will be explained below but you do not need to 'guess' as to what is currently the source because every time the source changes a message will be printed in the server console to let you know exactly what is the 'Copy/Pates Source'. For example here is a series of sequential printouts in the server console that were printed as a result of moving tabs and focus into various entry boxes:
+<b>Copy/Paste Source</b><b>: Manual Commands XYZ</b>
+<b>Copy/Paste Source: Manual Commands Z-Only.</b>
+<b>Copy/Paste Source: XYZ-Scan Start XYZ.</b>
+<b>Copy/Paste Source: Manual Commands XYZ</b>
+Also, the currently selected copy/paste source is displayed directly under the 'Paste to Source' button as shown in figure 13.1. Thus there can be no doubt where you are sending the text to when you click it.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">How the Copy/Paste Source is chosen</span>
+The rules for selecting what / which entry box(es) constitute the current 'Copy/Paste Source' are as follows:
+When the 'Manual' control page is selected the source will be the entry boxes marked as for X, Y and Z as long as the 'Z' box does not have focus. If the 'Z' box has input focus then the source will ONLY be the Z entry box - the X and Y boxes will be ignored in any copy/paste operation in that case. Note that, according to the dynamic nature of the GUI in the Manual controls page, all 3 of those entry boxes may not be displayed and if any of them are displayed they may not be labelled as X, Y or Z. Nevertheless, the copy/paste action will pertain to whichever are showing at the time no matter what they are labelled as.
+If the XYZ Scan control page is selected the source will, by default, be the 'Start at' X, Y and Z entry boxes unless you have set input focus to either of the 'Finish at' X and Y entry boxes (in which case they will become the source). If you deliberately set focus to either the X or Y 'Start at' entry boxes then the full set of three (X, Y and Z) 'Start at' entry boxes will be the source but if you set input focus in the 'Start at' Z entry box this this Z box alone will be the source - the X and Y boxes will be ignored in any copy/paste operation in that case.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151"></span>
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Alternative sources to copy from</span>
+While the 'Copy/Paste Source' boxes are the only boxes that can be pasted to, there are two more 'read-only' sources where coordinates may be copied from and into the 'Clipboard current text' box ready to be pasted. These alternative sources are:
+The X, Y and Z entry boxes next to the 'Go To XYZ' button in the Scan View control page
+The values shown in the Coordinates bar for the current live XYZ stage (not the values shown in the coordinates bar when viewing a scan in the Scan View control page). Note that it is the values displayed in this bar that are copied. If the coordinates bar values have not been updated or synced to the stage then these values may not represent the actual current stage position. You can address that by issuing the manual command 'get_axes' to update these coordinates bar labels and sync them to the latest stage coordinates prior to pressing the 'Copy from CurrPos' button.
+The system copy source: The  'Clipboard current text' box is editable so you can use your native OS clipboard to copy from any (e.g.) text file and paste directly into that text box - or you can manually enter values into that box via the keyboard. If using any of these generic input method just be sure to only use numbers and only a maximum of 3 numbers otherwise an error popup will be thrown if you do not conform to these rules and then try to press the 'Paste to Source' button.
+You copy from these sources to the 'Clipboard current text' box by clicking the dedicated 'Copy' buttons for them (shown in figure 13.1). 
+
+
+
+
+
+
+<span font="sans" weight="bold" size="xx-large" foreground="#1a5fb4">Help</span>
+
+The Help control page provides you with tools to load, read and search custom help files as well as providing the usual 'About' and software licence information.
+
+[IMAGE:image31.png]
+
+Figure 14.1 The Help control page showing the About box when the 'About / License' button is pressed. However, this page can also load and display searchable custom help documents. See text for details.
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Load and search a custom file</span>
+Simply drag-drop your help file onto the text area or click the 'Load Help File' button to bring up a file chooser to select a file to load. You may load files in plain text format or Pango markup format. The file chooser will offer these in the form of 'Plain text files' (.txt files) and 'Pango markup files' (.pango files).
+Once a file is loaded you may search the text by entering your search term in the entry box provided and hit 'Return' to search forwards or 'Shift+Return' to search backwards.
+Note: Searching for terms that bridge mixed-formatting styles (e.g. searching for 'bold text' when formatting applies only to the word 'bold') may cause highlighting anomalies.
+The search is not case sensitive.
+An example of a rendered help file is shown in figure 14.2. The text is word-wrapped (so there is no horizontal scrollbar control). You can expand the viewable area vertically using the draggable transition line controls discussed on p.23 and this expanded view is shown in figure 14.2. You can also enlarge the viewable area by re-sizing the main window. See below for how to scale the font size.
+
+[IMAGE:image32.png]
+
+Figure 14.2 This shows a help file loaded (the PCS programming language reference manual in .pango format). Note that the view area size has been expanded for ease of viewing. You can also make the font sizes bigger or smaller using the control on the lower left labelled 'Text size (points)' currently set at 10. 
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151"></span>
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The Pango format</span>
+In order for it to render correctly, any file you write with a .pango extension must follow the rules of the Pango markup language, alongside special image tags.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Basic Text Formatting</span>
+Use standard tags to style your text. Every opening tag must have a matching closing tag.
+&lt;b&gt;Bold Text&lt;/b&gt;
+&lt;i&gt;Italic Text&lt;/i&gt;
+&lt;u&gt;Underlined Text&lt;/u&gt;
+&lt;s&gt;Strikethrough Text&lt;/s&gt;
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Unicode characters</span>
+Unicode characters can be typed directly between the tags exactly like standard ASCII text. However, you must follow these rules:
+<b>1. </b><b>File Encoding</b>: The file must be saved with UTF-8 encoding (not UTF-16, UTF-32, or Windows-1252/ANSI).
+<b>2. </b><b>Direct Typing</b>: Users can mix languages freely. For example, this is completely valid Pango Markup:
+Text can be mixed: &lt;b&gt;日本語&lt;/b&gt;, &lt;i&gt;العربية&lt;/i&gt;, and 🚀!
+<b>3. </b><b>Escaping is Only for Syntax</b>: You only need to escape the three XML structural characters (&amp;amp; for &amp;, &amp;lt; for &lt;, &amp;gt; for &gt;). You do not need to use complicated hex codes for non-Latin alphabets or emojis.
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Advanced Styling (&lt;span&gt;)</span>
+Use the &lt;span&gt; tag with attributes to change colors, sizes, and fonts:
+<b>Colors:</b>
+&lt;span foreground="blue"&gt;Blue Text&lt;/span&gt;
+or 
+&lt;span foreground="#FF5733"&gt;Hex Color&lt;/span&gt;
+<b>Size: </b>
+&lt;span size="x-large"&gt;Big Text&lt;/span&gt;
+or
+&lt;span size="14000"&gt;14pt Text (points multiplied by 1024)&lt;/span&gt;
+<b>Font:</b>
+&lt;span font_family="Monospace"&gt;Fixed width text&lt;/span&gt;
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Special Character Escaping (Mandatory)</span>
+Because the file uses an XML-like syntax, you cannot use the characters &lt;, &gt;, or &amp; directly in your text. You must escape them:
+Change &amp; to &amp;amp;
+Change &lt; to &amp;lt;
+Change &gt; to &amp;gt;
+
+<span font="sans" weight="bold" size="large" foreground="#333333">Inserting Images</span>
+To insert an image, place its absolute or relative path on a standalone line using this syntax (but using directory separators that are appropriate to your OS):
+[IMAGE:/path/to/image.png]
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">The plain text format</span>
+Files ending in .txt will be rendered as plain text.
+Plain text documents may use UTF-8 Unicode characters directly. There is no need to use escape sequences. The file must be saved with UTF-8 encoding (not UTF-16, UTF-32, or Windows-1252/ANSI).
+
+<span font="sans" weight="bold" size="x-large" foreground="#f66151">Font size</span>
+You may scale displayed text using the 'Text size (points)' control shown at the bottom of the Help page controls in figure 14.1
+
+[End of Document]

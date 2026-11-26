@@ -1,0 +1,121 @@
+Pardus pcs 1
+
+verbosity 1
+
+#include stdpard.pch
+
+def_var string msg _
+
+#define CHAR1 0
+#define CHAR2 8
+
+def_var int base+5 0
+
+def_func main
+ # Allocation: 16 total elements for 2 custom characters
+ def_array int pcg_ar 16 0
+
+ # Load the two custom character data
+ # First char
+ set_var pcg_ar[0]  0b00000000000000000000000000111100   # Row 1
+ set_var pcg_ar[1]  0b00000000000000000000000000010010   # Row 2
+ set_var pcg_ar[2]  0b00000000000000000000000000010010   # Row 3
+ set_var pcg_ar[3]  0b00000000000000000000000000111100   # Row 4
+ set_var pcg_ar[4]  0b00000000000000000000000001000010   # Row 5
+ set_var pcg_ar[5]  0b00000000000000000000000010000001   # Row 6
+ set_var pcg_ar[6]  0b00000000000000000000000011111111   # Row 7
+ set_var pcg_ar[7]  0b00000000000000000000000000000000   # Row 8
+
+ # Second char
+ set_var pcg_ar[8]  0b00000000000000000000000000011000   # Row 1
+ set_var pcg_ar[9]  0b00000000000000000000000001111110   # Row 2
+ set_var pcg_ar[10] 0b00000000000000000000000011111100   # Row 3
+ set_var pcg_ar[11] 0b00000000000000000000000011110000   # Row 4
+ set_var pcg_ar[12] 0b00000000000000000000000001111100   # Row 5
+ set_var pcg_ar[13] 0b00000000000000000000000000011000   # Row 6
+ set_var pcg_ar[14] 0b00000000000000000000000000000000   # Row 7
+ set_var pcg_ar[15] 0b00000000000000000000000000000000   # Row 8
+
+ def_array int master_gar 22 0
+
+ # =================================================================
+ # STEP 1: GSI_TYPE_ENV (-1) - Setup Environment Variables
+ # =================================================================
+ set_var master_gar[0]  GSI_TYPE_ENV
+ set_var master_gar[1]  OP_PREVIEW_DRAW_COLOUR
+ set_var master_gar[2]  91     # R
+ set_var master_gar[3]  255    # G
+ set_var master_gar[4]  91     # B (Bright Light Green Color)
+ 
+ set_var master_gar[5]  OP_PREVIEW_DRAW_CURSOR
+ set_var master_gar[6]  80     # X
+ set_var master_gar[7]  80     # Y
+
+ # =================================================================
+ #  GSI_TYPE_STRING (-3) - Render Text
+ # =================================================================
+ set_var master_gar[8]  GSI_TYPE_STRING
+ set_var master_gar[9]  2     # Font Size Scale = 2
+ set_var master_gar[10] 256    # Bg R 256 = default
+ set_var master_gar[11] 256    # Bg G 256 = default
+ set_var master_gar[12] 256    # Bg B 256 = default
+ set_var master_gar[13]  0     # Invert 0 = don't
+ set_var master_gar[14] 80     # 'P'
+ set_var master_gar[15] 67     # 'C'
+ set_var master_gar[16] 83     # 'S'
+ set_var master_gar[17] 32     # space
+ set_var master_gar[18] 79     # 'O'
+ set_var master_gar[19] 75     # 'K'
+ set_var master_gar[20] 33     # '!'
+
+ # =================================================================
+ # ADD TERMINATION BLOCK TOKEN (-6)
+ # =================================================================
+ set_var master_gar[21] GSI_TYPE_END
+
+ call_func cls
+
+ # Execute the virtual machine using the correct array dereference syntax
+ preview_draw_array master_gar[0]
+
+
+ set_str msg Press [Enter] to continue ...
+ print_value msg 2
+ poll_user ON ON msg
+
+ # call_func cls
+
+
+ # =================================================================
+ # STEP 2: REPROGRAM THE 'O' AND 'K' ASCII CHARACTERS RUNTIME SLOTS
+ # =================================================================
+ # Map character 'O' (79) to the first 8 elements starting at index 0
+ preview_draw_pcg 79 pcg_ar[CHAR1]
+
+ # Map character 'K' (75) to the next 8 elements starting at index 8
+ preview_draw_pcg 75 pcg_ar[CHAR2]
+
+ # =================================================================
+ # STEP 3: RESET CURSOR REGISTERS & RE-RENDER THE STRING BLIT OVERLAY
+ # =================================================================
+ # Update cursor destination points to render lower on screen for visual contrast
+ set_var master_gar[6]  80     # X
+ set_var master_gar[7] 140     # Y (Moved down to see the difference clearly)
+
+ # Execute rendering pipeline with our newly active custom font bitmaps
+ preview_draw_array master_gar[0]
+
+
+
+return
+
+def_func cls
+# Initialize, clear, and display the preview overlay canvas
+preview_draw_buffer 1
+preview_draw_clear
+preview_clear
+preview_draw_show
+preview_draw_blend 0
+return
+
+exit

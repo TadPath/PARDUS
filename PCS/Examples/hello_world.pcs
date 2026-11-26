@@ -1,0 +1,9 @@
+Pardus pcs 1
+
+verbosity 2
+
+print_value Hello_World! 2
+
+exit
+
+

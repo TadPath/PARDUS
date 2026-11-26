@@ -1,0 +1,264 @@
+Pardus pcs 1
+verbosity 1
+gui_update_period 0
+###############################################################################
+#                                                                             #
+#  pcs_throughput.pcs                                                         #
+#                                                                             #
+#  An instrument, not an application: it measures the sustained execution     #
+#  rate of the PCS interpreter, in interpreted lines per second, separately   #
+#  for the five classes of operation that dominate scientific code.           #
+#                                                                             #
+#  Why this exists                                                            #
+#  --------------                                                             #
+#  Every proposal in the accompanying document carries a cost estimate of     #
+#  the form  T = L / R , where L is the number of interpreted lines the       #
+#  algorithm requires (a quantity that can be counted exactly from the        #
+#  algorithm) and R is the interpreter throughput (a quantity that can only   #
+#  be measured on the target machine).  This script measures R.  Until it     #
+#  has been run, every time estimate in that document is a conjecture.        #
+#                                                                             #
+#  Convention for counting lines                                              #
+#  -----------------------------                                              #
+#  A loop iteration is counted as the number of coding lines the interpreter  #
+#  must fetch, parse and act upon in one pass of the loop body, INCLUDING     #
+#  the terminating endloop (which performs the jump) but excluding the        #
+#  loop_while line.  Whether the interpreter re-fetches the loop_while line   #
+#  on each pass is an implementation detail of pardclient; if it does, the    #
+#  true line count is one greater per iteration than the figure used here     #
+#  and the reported rate is therefore a CONSERVATIVE LOWER BOUND, low by      #
+#  between 14 and 33 per cent depending on the test.  Costing an algorithm    #
+#  with a lower bound on the rate yields an upper bound on the run time,      #
+#  which is the direction in which one wishes to be wrong.  The per-iteration #
+#  line count for each test is stated in the comment above that test and is   #
+#  held in the variable bm_lpi so that the arithmetic is auditable.           #
+#                                                                             #
+#  Reading the result                                                         #
+#  ------------------                                                         #
+#  The figure of merit is the microseconds-per-line column.  A modern PC      #
+#  running a C interpreter of this design should be expected to fall          #
+#  somewhere between 1e5 and 1e7 lines per second; the spread between the     #
+#  integer test and the string test indicates how strongly the cost is        #
+#  dominated by parsing rather than by arithmetic, which in turn governs      #
+#  whether it is worth hand-unrolling the inner loops of a numerical kernel.  #
+#                                                                             #
+#  Adjust bm_n downwards if a test takes uncomfortably long on your machine;  #
+#  the reported rates are normalised and so remain comparable.                #
+#                                                                             #
+#                                            Prepared for the Prof, 24.09.2026#
+###############################################################################
+
+# --- configuration -----------------------------------------------------------
+#define BM_ITERATIONS 200000   # iterations per test
+#define BM_ARRAYSIZE  1000     # working array length for the indexing test
+
+# --- state -------------------------------------------------------------------
+def_var   int    bm_i      0       # loop counter
+def_var   int    bm_j      0       # secondary index (array test)
+def_var   int    bm_t0     0       # monotonic start stamp
+def_var   int    bm_ms     0       # elapsed milliseconds for the test
+def_var   int    bm_lpi    0       # interpreted lines per iteration for the test
+def_var   float  bm_lines  0.0     # total interpreted lines in the test
+def_var   float  bm_rate   0.0     # lines per second
+def_var   float  bm_usec   0.0     # microseconds per line
+def_var   float  bm_x      0.0     # float scratch
+def_var   string bm_s      0.0     # string scratch (defined numeric: see note)
+def_var   string bm_msg    _       # console message
+def_array float  bm_arr    BM_ARRAYSIZE 1.0
+
+# NOTE on bm_s: the script checker evaluates a string variable's DEFINED value,
+# not any value a later set_str gives it.  A string that may ever be used in a
+# numerical context must therefore be defined as a number, hence 0.0 and not _.
+
+def_func main
+    print_clear
+    set_str bm_msg PCS interpreter throughput benchmark
+    print_value bm_msg 2
+    set_str bm_msg Iterations per test:
+    add_var bm_msg Space
+    add_var bm_msg BM_ITERATIONS
+    print_value bm_msg 2
+    set_str bm_msg ----------------------------------------------------------
+    print_value bm_msg 2
+
+    # =========================================================================
+    # TEST 1 - integer arithmetic
+    #   body: add_var, set_condexp, endloop  ->  3 lines per iteration
+    # =========================================================================
+    set_var bm_lpi 3
+    set_var bm_i 0
+    set_var bm_t0 Millis
+    set_condexp bm_i < BM_ITERATIONS
+    loop_while Condexp
+        add_var bm_i 1
+        set_condexp bm_i < BM_ITERATIONS
+    endloop
+    milliduration bm_t0 bm_ms
+    set_str bm_msg 1. integer add
+    call_func bm_report
+
+    # =========================================================================
+    # TEST 2 - floating point transcendental via math_var
+    #   body: set_var, math_var, add_var, set_condexp, endloop  ->  5 lines
+    # =========================================================================
+    set_var bm_lpi 5
+    set_var bm_i 0
+    set_var bm_t0 Millis
+    set_condexp bm_i < BM_ITERATIONS
+    loop_while Condexp
+        set_var bm_x bm_i
+        math_var bm_x sqrt
+        add_var bm_i 1
+        set_condexp bm_i < BM_ITERATIONS
+    endloop
+    milliduration bm_t0 bm_ms
+    set_str bm_msg 2. math_var sqrt
+    call_func bm_report
+
+    # =========================================================================
+    # TEST 3 - array indexing (the dominant cost in every numerical kernel)
+    #   body: set_var, mul_var, set_var, add_var, imod, set_condexp, endloop
+    #         ->  7 lines
+    # =========================================================================
+    set_var bm_lpi 7
+    set_var bm_i 0
+    set_var bm_j 0
+    set_var bm_t0 Millis
+    set_condexp bm_i < BM_ITERATIONS
+    loop_while Condexp
+        set_var bm_x bm_arr[bm_j]
+        mul_var bm_x 1.000001
+        set_var bm_arr[bm_j] bm_x
+        add_var bm_j 1
+        math_var bm_j imod BM_ARRAYSIZE
+        add_var bm_i 1
+        set_condexp bm_i < BM_ITERATIONS
+    endloop
+    milliduration bm_t0 bm_ms
+    set_str bm_msg 3. array read-modify-write
+    call_func bm_report
+
+    # =========================================================================
+    # TEST 4 - function call overhead
+    #   body: call_func, set_condexp, endloop      ->  3 lines
+    #   plus inside bm_null: add_var, return       ->  2 lines
+    #   ->  5 lines per iteration
+    # =========================================================================
+    set_var bm_lpi 5
+    set_var bm_i 0
+    set_var bm_t0 Millis
+    set_condexp bm_i < BM_ITERATIONS
+    loop_while Condexp
+        call_func bm_null
+        set_condexp bm_i < BM_ITERATIONS
+    endloop
+    milliduration bm_t0 bm_ms
+    set_str bm_msg 4. call_func round trip
+    call_func bm_report
+
+    # =========================================================================
+    # TEST 5 - string construction (the cost of formatted output and of any
+    #          algorithm that manipulates text, e.g. a FITS header parser)
+    #   body: set_str, add_var, add_var, add_var, set_condexp, endloop
+    #         ->  6 lines
+    # =========================================================================
+    set_var bm_lpi 6
+    set_var bm_i 0
+    set_var bm_t0 Millis
+    set_condexp bm_i < BM_ITERATIONS
+    loop_while Condexp
+        set_str bm_s 0.0
+        add_var bm_s bm_i
+        add_var bm_s Space
+        add_var bm_i 1
+        set_condexp bm_i < BM_ITERATIONS
+    endloop
+    milliduration bm_t0 bm_ms
+    set_str bm_msg 5. string build
+    call_func bm_report
+
+    set_str bm_msg ----------------------------------------------------------
+    print_value bm_msg 2
+    set_str bm_msg Use the slowest relevant rate when costing an algorithm.
+    print_value bm_msg 2
+return
+
+# -----------------------------------------------------------------------------
+# bm_null - an empty callee, to isolate the cost of the call itself.
+#           Its add_var is the only work it does and is counted above.
+# -----------------------------------------------------------------------------
+def_func bm_null
+    add_var bm_i 1
+return
+
+# -----------------------------------------------------------------------------
+# bm_report - convert (bm_lpi, bm_ms) into a rate and print one result row.
+#             Guards against a zero elapsed time, which would otherwise be a
+#             divide-by-zero and terminate the script.
+# -----------------------------------------------------------------------------
+def_func bm_report
+    set_condexp bm_ms < 1
+    do_if Condexp
+        set_var bm_ms 1              # floor at 1 ms; rate becomes a lower bound
+    enddo
+    set_var bm_lines BM_ITERATIONS
+    mul_var bm_lines bm_lpi          # total interpreted lines executed
+    set_var bm_rate bm_lines
+    mul_var bm_rate 1000.0           # lines per second = lines * 1000 / ms
+    div_var bm_rate bm_ms
+    set_var bm_usec 1000000.0
+    div_var bm_usec bm_rate          # microseconds per interpreted line
+
+    add_var bm_msg Space
+    add_var bm_msg Space
+    add_var bm_msg ms:
+    add_var bm_msg Space
+    add_var bm_msg bm_ms
+    add_var bm_msg Space
+    add_var bm_msg Space
+    add_var bm_msg lines/s:
+    add_var bm_msg Space
+    add_var bm_msg bm_rate
+    add_var bm_msg Space
+    add_var bm_msg Space
+    add_var bm_msg us/line:
+    add_var bm_msg Space
+    add_var bm_msg bm_usec
+    print_value bm_msg 2
+return
+exit
+
+###############################################################################
+# SCRATCHPAD - ignored by the interpreter
+#
+# Interpretation of the five tests
+# --------------------------------
+# T1 gives the floor: the pure fetch-parse-dispatch cost of the simplest
+#    possible statement.  Call this rate R1.  No PCS algorithm can run faster
+#    than L/R1.
+# T2 - T1 isolates the marginal cost of a libm call made through the dynamic
+#    dispatch mechanism of math_var.  If this difference is small, trigonometric
+#    recurrences (Chebyshev / rotation-by-recurrence) buy little and the clearer
+#    direct evaluation should be preferred in a Lomb-Scargle or FFT kernel.
+# T3 is the number that actually governs numerical work, because every inner
+#    loop of an FFT, a back-projection or an N-body force evaluation is
+#    dominated by indexed array traffic rather than by arithmetic.  Use R3 when
+#    costing those.
+# T4 tells you whether to write a numerical kernel as a function or to inline
+#    it.  If the call round trip costs more than a few simple statements, the
+#    inner loops of the library headers should be written out in line, at some
+#    cost in readability, and the function form kept for the outer levels.
+# T5 governs header parsing and report generation only; it is irrelevant to
+#    the inner loops but dominates a FITS reader's header phase.
+#
+# A worked example of the use of these numbers
+# --------------------------------------------
+# Filtered back-projection of a 256 x 256 slice from 180 projections of 256
+# detector bins requires approximately
+#     180 * (2 * 25 * (512/2) * log2(512) + 512 * 10)   lines of filtering
+#   + 180 * 65536 * 15                                  lines of back-projection
+#   = 2.2e7 + 1.8e8  =  2.0e8 interpreted lines.
+# At R3 = 1e6 lines/s that is about three and a half minutes; at R3 = 1e5 it is
+# about half an hour.  Either is acceptable for an overnight demonstration, but
+# the difference decides whether the reconstruction can be shown live.
+###############################################################################

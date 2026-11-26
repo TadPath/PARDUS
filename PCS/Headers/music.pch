@@ -1,0 +1,407 @@
+Pardus pch 1
+
+##############################################
+#                                            #
+# music.pch                                  #
+#                                            #
+# A helper file for tone generation with the #
+# PCS programming language.                  #
+#                            PJT 24.11.2026  #
+#                                            #
+##############################################
+
+
+# =========================================================================
+# PARDUS SYSTEM INCLUDE DEFINITION FILE: music.pch
+# Unified Equal-Tempered Frequency Directory (Literal Hertz Units)
+# Reference Standard: A4 = 440 Hz
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# Notes ending in _16 are for 16-bit timers with a prescaler of PWM_PSC_8
+# Notes ending in _8  are for 8-bit timers with a prescaler of PWM_PSC_256
+# -------------------------------------------------------------------------
+
+# --- OCTAVE 1 (SUB-BASS RANGE) ---
+#define C1_NATL_16    33      # Target:  32.70 Hz -> Generates:  33.00 Hz (Error: +0.30 Hz)
+#define C1_SHRP_16    35      # Target:  34.65 Hz -> Generates:  35.00 Hz (Error: +0.35 Hz)
+#define D1_NATL_16    37      # Target:  36.71 Hz -> Generates:  37.00 Hz (Error: +0.29 Hz)
+#define D1_SHRP_16    39      # Target:  38.89 Hz -> Generates:  39.00 Hz (Error: +0.11 Hz)
+#define E1_NATL_16    41      # Target:  41.20 Hz -> Generates:  41.00 Hz (Error: -0.20 Hz)
+#define F1_NATL_16    44      # Target:  43.65 Hz -> Generates:  44.00 Hz (Error: +0.35 Hz)
+#define F1_SHRP_16    46      # Target:  46.25 Hz -> Generates:  46.00 Hz (Error: -0.25 Hz)
+#define G1_NATL_16    49      # Target:  49.00 Hz -> Generates:  49.00 Hz (Error:  0.00 Hz)
+#define G1_SHRP_16    52      # Target:  51.91 Hz -> Generates:  52.00 Hz (Error: +0.09 Hz)
+#define A1_NATL_16    55      # Target:  55.00 Hz -> Generates:  55.00 Hz (Error:  0.00 Hz)
+#define A1_SHRP_16    58      # Target:  58.27 Hz -> Generates:  58.00 Hz (Error: -0.27 Hz)
+#define B1_NATL_16    62      # Target:  61.74 Hz -> Generates:  62.00 Hz (Error: +0.26 Hz)
+
+# --- OCTAVE 2 (BASS RANGE) ---
+#define C2_NATL_16    65      # Target:  65.41 Hz -> Generates:  65.00 Hz (Error: -0.41 Hz)
+#define C2_SHRP_16    69      # Target:  69.30 Hz -> Generates:  69.44 Hz (Error: +0.14 Hz)
+#define D2_NATL_16    73      # Target:  73.42 Hz -> Generates:  73.05 Hz (Error: -0.37 Hz)
+#define D2_SHRP_16    78      # Target:  77.78 Hz -> Generates:  77.52 Hz (Error: -0.26 Hz)
+#define E2_NATL_16    82      # Target:  82.41 Hz -> Generates:  82.64 Hz (Error: +0.23 Hz)
+#define F2_NATL_16    87      # Target:  87.31 Hz -> Generates:  87.00 Hz (Error: -0.31 Hz)
+#define F2_SHRP_16    93      # Target:  92.50 Hz -> Generates:  92.59 Hz (Error: +0.09 Hz)
+#define G2_NATL_16    98      # Target:  98.00 Hz -> Generates:  98.04 Hz (Error: +0.04 Hz)
+#define G2_SHRP_16    104     # Target: 103.83 Hz -> Generates: 103.84 Hz (Error: +0.01 Hz)
+#define A2_NATL_16    110     # Target: 110.00 Hz -> Generates: 110.01 Hz (Error: +0.01 Hz)
+#define A2_SHRP_16    117     # Target: 116.54 Hz -> Generates: 116.96 Hz (Error: +0.42 Hz)
+#define B2_NATL_16    123     # Target: 123.47 Hz -> Generates: 124.01 Hz (Error: +0.54 Hz)
+
+# --- OCTAVE 3 (LOW RANGE) ---
+#define C3_NATL_16    131     # 130.81 Hz
+#define C3_SHRP_16    139     # 138.59 Hz
+#define D3_NATL_16    147     # 146.83 Hz
+#define D3_SHRP_16    156     # 155.56 Hz
+#define E3_NATL_16    165     # 164.81 Hz
+#define F3_NATL_16    175     # 174.61 Hz
+#define F3_SHRP_16    185     # 185.00 Hz
+#define G3_NATL_16    196     # 196.00 Hz
+#define G3_SHRP_16    208     # 207.65 Hz
+#define A3_NATL_16    220     # 220.00 Hz
+#define A3_SHRP_16    233     # 233.08 Hz
+#define B3_NATL_16    247     # 246.94 Hz
+
+# --- OCTAVE 4 (MIDDLE NOTES) ---
+#define C4_NATL_16    262     # 261.63 Hz (Literal frequency parameters)
+#define C4_SHRP_16    277     # 277.18 Hz
+#define D4_NATL_16    294     # 293.66 Hz
+#define D4_SHRP_16    311     # 311.13 Hz
+#define E4_NATL_16    330     # 329.63 Hz
+#define F4_NATL_16    349     # 349.23 Hz
+#define F4_SHRP_16    370     # 369.99 Hz
+#define G4_NATL_16    392     # 392.00 Hz
+#define G4_SHRP_16    415     # 415.30 Hz
+#define A4_NATL_16    440     # 440.00 Hz
+#define A4_SHRP_16    466     # 466.16 Hz
+#define B4_NATL_16    494     # 493.88 Hz
+
+# --- OCTAVE 5 (TREBLE RANGE) ---
+#define C5_NATL_16   523     # 523.25 Hz
+#define C5_SHRP_16   554     # 554.37 Hz
+#define D5_NATL_16   587     # 587.33 Hz
+#define D5_SHRP_16   622     # 622.25 Hz
+#define E5_NATL_16   659     # 659.25 Hz
+#define F5_NATL_16   698     # 698.46 Hz
+#define F5_SHRP_16   740     # 739.99 Hz
+#define G5_NATL_16   784     # 783.99 Hz
+#define G5_SHRP_16   831     # 830.61 Hz
+#define A5_NATL_16   880     # 880.00 Hz
+#define A5_SHRP_16   932     # 932.33 Hz
+#define B5_NATL_16   988     # 987.77 Hz
+
+# --- OCTAVE 6 (TREBLE HIGHS8) ---
+#define C6_NATL_16    1047    # Target: 1046.50 Hz -> Reg: 955  -> Gen: 1047.12 Hz (Diff: +0.62 Hz)
+#define C6_SHRP_16    1109    # Target: 1108.73 Hz -> Reg: 901  -> Gen: 1109.88 Hz (Diff: +1.15 Hz)
+#define D6_NATL_16    1175    # Target: 1174.66 Hz -> Reg: 851  -> Gen: 1175.09 Hz (Diff: +0.43 Hz)
+#define D6_SHRP_16    1245    # Target: 1244.51 Hz -> Reg: 803  -> Gen: 1245.33 Hz (Diff: +0.82 Hz)
+#define E6_NATL_16    1319    # Target: 1318.51 Hz -> Reg: 758  -> Gen: 1319.26 Hz (Diff: +0.75 Hz)
+#define F6_NATL_16    1397    # Target: 1396.91 Hz -> Reg: 715  -> Gen: 1398.60 Hz (Diff: +1.69 Hz)
+#define F6_SHRP_16    1480    # Target: 1479.98 Hz -> Reg: 675  -> Gen: 1481.48 Hz (Diff: +1.50 Hz)
+#define G6_NATL_16    1568    # Target: 1567.98 Hz -> Reg: 637  -> Gen: 1569.86 Hz (Diff: +1.88 Hz)
+#define G6_SHRP_16    1661    # Target: 1661.22 Hz -> Reg: 602  -> Gen: 1661.13 Hz (Diff: -0.09 Hz)
+#define A6_NATL_16    1760    # Target: 1760.00 Hz -> Reg: 568  -> Gen: 1760.56 Hz (Diff: +0.56 Hz)
+#define A6_SHRP_16    1865    # Target: 1864.66 Hz -> Reg: 536  -> Gen: 1865.67 Hz (Diff: +1.01 Hz)
+#define B6_NATL_16    1976    # Target: 1975.53 Hz -> Reg: 506  -> Gen: 1976.28 Hz (Diff: +0.75 Hz)
+
+#define C7_NATL_16     2093    # Target: 2093.00 Hz -> Generates: 2096.44 Hz
+
+# --- 16-BIT FLAT ALIASES ---
+#define D1_FLAT_16    35      # Enharmonic: C1_SHRP
+#define E1_FLAT_16    39      # Enharmonic: D1_SHRP
+#define G1_FLAT_16    46      # Enharmonic: F1_SHRP
+#define A1_FLAT_16    52      # Enharmonic: G1_SHRP
+#define B1_FLAT_16    58      # Enharmonic: A1_SHRP
+
+#define D2_FLAT_16    69      # Enharmonic: C2_SHRP
+#define E2_FLAT_16    78      # Enharmonic: D2_SHRP
+#define G2_FLAT_16    93      # Enharmonic: F2_SHRP
+#define A2_FLAT_16    104     # Enharmonic: G2_SHRP
+#define B2_FLAT_16    117     # Enharmonic: A2_SHRP
+
+#define D3_FLAT_16    139     # Enharmonic: C3_SHRP
+#define E3_FLAT_16    156     # Enharmonic: D3_SHRP
+#define G3_FLAT_16    185     # Enharmonic: F3_SHRP
+#define A3_FLAT_16    208     # Enharmonic: G3_SHRP
+#define B3_FLAT_16    233     # Enharmonic: A3_SHRP
+
+#define D4_FLAT_16    277     # Enharmonic: C4_SHRP
+#define E4_FLAT_16    311     # Enharmonic: D4_SHRP
+#define G4_FLAT_16    370     # Enharmonic: F4_SHRP
+#define A4_FLAT_16    415     # Enharmonic: G4_SHRP
+#define B4_FLAT_16    466     # Enharmonic: A4_SHRP
+
+#define D5_FLAT_16    554     # Enharmonic: C5_SHRP
+#define E5_FLAT_16    622     # Enharmonic: D5_SHRP
+#define G5_FLAT_16    740     # Enharmonic: F5_SHRP
+#define A5_FLAT_16    831     # Enharmonic: G5_SHRP
+#define B5_FLAT_16    932     # Enharmonic: A5_SHRP
+
+#define D6_FLAT_16    1109    # Enharmonic: C6_SHRP
+#define E6_FLAT_16    1245    # Enharmonic: D6_SHRP
+#define G6_FLAT_16    1480    # Enharmonic: F6_SHRP
+#define A6_FLAT_16    1661    # Enharmonic: G6_SHRP
+#define B6_FLAT_16    1865    # Enharmonic: A6_SHRP
+
+
+# --- OCTAVE 4 (8-BIT MIDDLE NOTES) ---
+#define B3_NATL_8     247     # Target: 246.94 Hz -> Generates: 244.14 Hz (Clamps to 255 - slightly flat)
+#define C4_NATL_8     262     # Target: 261.63 Hz -> Generates: 262.29 Hz (calc_top: 237)
+#define C4_SHRP_8     277     # Target: 277.18 Hz -> Generates: 276.61 Hz (calc_top: 225)
+#define D4_NATL_8     294     # Target: 293.66 Hz -> Generates: 294.11 Hz (calc_top: 211)
+#define D4_SHRP_8     311     # Target: 311.13 Hz -> Generates: 310.88 Hz (calc_top: 200)
+#define E4_NATL_8     330     # Target: 330.00 Hz -> Generates: 330.68 Hz (calc_top: 188)
+#define F4_NATL_8     349     # Target: 349.23 Hz -> Generates: 349.16 Hz (calc_top: 178)
+#define F4_SHRP_8     370     # Target: 369.99 Hz -> Generates: 370.37 Hz (calc_top: 168)
+#define G4_NATL_8     392     # Target: 392.00 Hz -> Generates: 393.06 Hz (calc_top: 158)
+#define G4_SHRP_8     415     # Target: 415.30 Hz -> Generates: 416.66 Hz (calc_top: 149)
+#define A4_NATL_8     440     # Target: 440.00 Hz -> Generates: 440.14 Hz (calc_top: 141)
+#define A4_SHRP_8     466     # Target: 466.16 Hz -> Generates: 466.42 Hz (calc_top: 133)
+#define B4_NATL_8     494     # Target: 493.88 Hz -> Generates: 496.03 Hz (calc_top: 125)
+
+# --- OCTAVE 5 (8-BIT MID-TREBLE RANGE) ---
+#define C5_NATL_8    523     # Target: 523.25 Hz  -> Generates: 523.56 Hz
+#define C5_SHRP_8    554     # Target: 554.37 Hz  -> Generates: 555.56 Hz
+#define D5_NATL_8    587     # Target: 587.33 Hz  -> Generates: 588.24 Hz
+#define D5_SHRP_8    622     # Target: 622.25 Hz  -> Generates: 621.12 Hz
+#define E5_NATL_8    659     # Target: 659.25 Hz  -> Generates: 661.16 Hz
+#define F5_NATL_8    698     # Target: 698.46 Hz  -> Generates: 699.30 Hz
+#define F5_SHRP_8    740     # Target: 739.99 Hz  -> Generates: 740.74 Hz
+#define G5_NATL_8    784     # Target: 783.99 Hz  -> Generates: 784.31 Hz
+#define G5_SHRP_8    831     # Target: 830.61 Hz  -> Generates: 833.33 Hz
+#define A5_NATL_8    880     # Target: 880.00 Hz  -> Generates: 884.96 Hz
+#define A5_SHRP_8    932     # Target: 932.33 Hz  -> Generates: 934.58 Hz
+#define B5_NATL_8    988     # Target: 987.77 Hz  -> Generates: 990.10 Hz
+
+# --- OCTAVE 6 (8-BIT TWEETER NOTES) ---
+#define C6_NATL_8    1047    # 1046.50 Hz
+#define C6_SHRP_8    1109    # 1108.73 Hz
+#define D6_NATL_8    1175    # 1174.66 Hz
+#define D6_SHRP_8    1245    # 1244.51 Hz
+#define E6_NATL_8    1319    # 1318.51 Hz
+#define F6_NATL_8    1397    # 1396.91 Hz
+#define F6_SHRP_8    1480    # 1479.98 Hz
+#define G6_NATL_8    1568    # 1567.98 Hz
+#define G6_SHRP_8    1661    # 1661.22 Hz
+#define A6_NATL_8    1760    # 1760.00 Hz
+#define A6_SHRP_8    1865    # 1864.66 Hz
+#define B6_NATL_8    1976    # 1975.53 Hz
+
+# --- OCTAVE 7 (8-BIT HIGHS CEILING - PSC = 256 Context) ---
+#define C7_NATL_8     2093    # Target: 2093.00 Hz -> Generates: 2083.33 Hz (calc_top: 29)
+#define C7_SHRP_8     2217    # Target: 2217.46 Hz -> Generates: 2232.14 Hz (calc_top: 27)
+#define D7_NATL_8     2349    # Target: 2349.32 Hz -> Generates: 2314.81 Hz (calc_top: 26)
+#define D7_SHRP_8     2489    # Target: 2489.02 Hz -> Generates: 2500.00 Hz (calc_top: 24)
+#define E7_NATL_8     2637    # Target: 2637.02 Hz -> Generates: 2604.16 Hz (calc_top: 23)
+#define F7_NATL_8     2794    # Target: 2793.83 Hz -> Generates: 2717.39 Hz (calc_top: 22)
+#define F7_SHRP_8     2960    # Target: 2959.96 Hz -> Generates: 2976.19 Hz (calc_top: 20)
+#define G7_NATL_8     3136    # Target: 3135.96 Hz -> Generates: 3125.00 Hz (calc_top: 19)
+#define G7_SHRP_8     3322    # Target: 3322.44 Hz -> Generates: 3289.47 Hz (calc_top: 18)
+#define A7_NATL_8     3520    # Target: 3520.00 Hz -> Generates: 3472.22 Hz (calc_top: 17)
+#define A7_SHRP_8     3729    # Target: 3729.31 Hz -> Generates: 3676.47 Hz (calc_top: 16)
+#define B7_NATL_8     3951    # Target: 3951.07 Hz -> Generates: 3906.25 Hz (calc_top: 15)
+
+# --- 8-BIT FLAT ALIASES ---
+#define D4_FLAT_8     277     # Enharmonic: C4_SHRP
+#define E4_FLAT_8     311     # Enharmonic: D4_SHRP
+#define G4_FLAT_8     370     # Enharmonic: F4_SHRP
+#define A4_FLAT_8     415     # Enharmonic: G4_SHRP
+#define B4_FLAT_8     466     # Enharmonic: A4_SHRP
+
+#define D5_FLAT_8     554     # Enharmonic: C5_SHRP
+#define E5_FLAT_8     622     # Enharmonic: D5_SHRP
+#define G5_FLAT_8     740     # Enharmonic: F5_SHRP
+#define A5_FLAT_8     831     # Enharmonic: G5_SHRP
+#define B5_FLAT_8     932     # Enharmonic: A5_SHRP
+
+#define D6_FLAT_8     1109    # Enharmonic: C6_SHRP
+#define E6_FLAT_8     1245    # Enharmonic: D6_SHRP
+#define G6_FLAT_8     1480    # Enharmonic: F6_SHRP
+#define A6_FLAT_8     1661    # Enharmonic: G6_SHRP
+#define B6_FLAT_8     1865    # Enharmonic: A6_SHRP
+
+
+############################################################################
+#                                                                          #
+#       The following are for use with the beep command that can           #
+#       take floating point frequencies.                                   #
+#                                                                          #
+############################################################################
+
+# --- OCTAVE 0 (ULTRA-LOW / SUB-AUDIO BOUNDARY) ---
+#define C0_NATL       16.35
+#define C0_SHRP       17.32
+#define D0_NATL       18.35
+#define D0_SHRP       19.45
+#define E0_NATL       20.60
+#define F0_NATL       21.83
+#define F0_SHRP       23.12
+#define G0_NATL       24.50
+#define G0_SHRP       25.96
+#define A0_NATL       27.50
+#define A0_SHRP       29.14
+#define B0_NATL       30.87
+
+# --- OCTAVE 1 (SUB-BASS RANGE) ---
+#define C1_NATL       32.70
+#define C1_SHRP       34.65
+#define D1_NATL       36.71
+#define D1_SHRP       38.89
+#define E1_NATL       41.20
+#define F1_NATL       43.65
+#define F1_SHRP       46.25
+#define G1_NATL       49.0
+#define G1_SHRP       51.91
+#define A1_NATL       55.0
+#define A1_SHRP       58.27
+#define B1_NATL       61.74
+
+# --- OCTAVE 2 (BASS RANGE) ---
+#define C2_NATL       65.41
+#define C2_SHRP       69.30
+#define D2_NATL       73.42
+#define D2_SHRP       77.78
+#define E2_NATL       82.41
+#define F2_NATL       87.31
+#define F2_SHRP       92.50
+#define G2_NATL       98.0
+#define G2_SHRP       103.83
+#define A2_NATL       110.0
+#define A2_SHRP       116.54
+#define B2_NATL       123.47
+
+# --- OCTAVE 3 (LOW-MID RANGE) ---
+#define C3_NATL       130.81
+#define C3_SHRP       138.59
+#define D3_NATL       146.83
+#define D3_SHRP       155.56
+#define E3_NATL       164.81
+#define F3_NATL       174.61
+#define F3_SHRP       185.0
+#define G3_NATL       196.0
+#define G3_SHRP       207.65
+#define A3_NATL       220.0
+#define A3_SHRP       233.08
+#define B3_NATL       246.94
+
+# --- OCTAVE 4 (MIDDLE / CONCERT PITCH RANGE) ---
+#define C4_NATL       261.63
+#define C4_SHRP       277.18
+#define D4_NATL       293.66
+#define D4_SHRP       311.13
+#define E4_NATL       329.63
+#define F4_NATL       349.23
+#define F4_SHRP       369.99
+#define G4_NATL       392.0
+#define G4_SHRP       415.30
+#define A4_NATL       440.0
+#define A4_SHRP       466.16
+#define B4_NATL       493.88
+
+# --- OCTAVE 5 (TREBLE RANGE) ---
+#define C5_NATL       523.25
+#define C5_SHRP       554.37
+#define D5_NATL       587.33
+#define D5_SHRP       622.25
+#define E5_NATL       659.26
+#define F5_NATL       698.46
+#define F5_SHRP       739.99
+#define G5_NATL       783.99
+#define G5_SHRP       830.61
+#define A5_NATL       880.0
+#define A5_SHRP       932.33
+#define B5_NATL       987.77
+
+# --- OCTAVE 6 (HIGH TREBLE RANGE) ---
+#define C6_NATL       1046.50
+#define C6_SHRP       1108.73
+#define D6_NATL       1174.66
+#define D6_SHRP       1244.51
+#define E6_NATL       1318.51
+#define F6_NATL       1396.91
+#define F6_SHRP       1479.98
+#define G6_NATL       1567.98
+#define G6_SHRP       1661.22
+#define A6_NATL       1760.0
+#define A6_SHRP       1864.66
+#define B6_NATL       1975.53
+
+# --- OCTAVE 7 (UPPER TREBLE RANGE) ---
+#define C7_NATL       2093.0
+#define C7_SHRP       2217.46
+#define D7_NATL       2349.32
+#define D7_SHRP       2489.02
+#define E7_NATL       2637.02
+#define F7_NATL       2793.83
+#define F7_SHRP       2959.96
+#define G7_NATL       3135.96
+#define G7_SHRP       3322.44
+#define A7_NATL       3520.0
+#define A7_SHRP       3729.31
+#define B7_NATL       3951.07
+
+# --- OCTAVE 8 (ULTRA-HIGH RANGE - UP TO 5000 HZ) ---
+#define C8_NATL       4186.01
+#define C8_SHRP       4434.92
+#define D8_NATL       4698.64
+#define D8_SHRP       4978.03
+
+
+# --- ENHARMONIC FLAT ALIASES (OCTAVES 0 - 8) ---
+#define D0_FLAT       17.32   # Enharmonic: C0_SHRP
+#define E0_FLAT       19.45   # Enharmonic: D0_SHRP
+#define G0_FLAT       23.12   # Enharmonic: F0_SHRP
+#define A0_FLAT       25.96   # Enharmonic: G0_SHRP
+#define B0_FLAT       29.14   # Enharmonic: A0_SHRP
+
+#define D1_FLAT       34.65   # Enharmonic: C1_SHRP
+#define E1_FLAT       38.89   # Enharmonic: D1_SHRP
+#define G1_FLAT       46.25   # Enharmonic: F1_SHRP
+#define A1_FLAT       51.91   # Enharmonic: G1_SHRP
+#define B1_FLAT       58.27   # Enharmonic: A1_SHRP
+
+#define D2_FLAT       69.30   # Enharmonic: C2_SHRP
+#define E2_FLAT       77.78   # Enharmonic: D2_SHRP
+#define G2_FLAT       92.50   # Enharmonic: F2_SHRP
+#define A2_FLAT       103.83  # Enharmonic: G2_SHRP
+#define B2_FLAT       116.54  # Enharmonic: A2_SHRP
+
+#define D3_FLAT       138.59  # Enharmonic: C3_SHRP
+#define E3_FLAT       155.56  # Enharmonic: D3_SHRP
+#define G3_FLAT       185.0   # Enharmonic: F3_SHRP
+#define A3_FLAT       207.65  # Enharmonic: G3_SHRP
+#define B3_FLAT       233.08  # Enharmonic: A3_SHRP
+
+#define D4_FLAT       277.18  # Enharmonic: C4_SHRP
+#define E4_FLAT       311.13  # Enharmonic: D4_SHRP
+#define G4_FLAT       369.99  # Enharmonic: F4_SHRP
+#define A4_FLAT       415.30  # Enharmonic: G4_SHRP
+#define B4_FLAT       466.16  # Enharmonic: A4_SHRP
+
+#define D5_FLAT       554.37  # Enharmonic: C5_SHRP
+#define E5_FLAT       622.25  # Enharmonic: D5_SHRP
+#define G5_FLAT       739.99  # Enharmonic: F5_SHRP
+#define A5_FLAT       830.61  # Enharmonic: G5_SHRP
+#define B5_FLAT       932.33  # Enharmonic: A5_SHRP
+
+#define D6_FLAT       1108.73 # Enharmonic: C6_SHRP
+#define E6_FLAT       1244.51 # Enharmonic: D6_SHRP
+#define G6_FLAT       1479.98 # Enharmonic: F6_SHRP
+#define A6_FLAT       1661.22 # Enharmonic: G6_SHRP
+#define B6_FLAT       1864.66 # Enharmonic: A6_SHRP
+
+#define D7_FLAT       2217.46 # Enharmonic: C7_SHRP
+#define E7_FLAT       2489.02 # Enharmonic: D7_SHRP
+#define G7_FLAT       2959.96 # Enharmonic: F7_SHRP
+#define A7_FLAT       3322.44 # Enharmonic: G7_SHRP
+#define B7_FLAT       3729.31 # Enharmonic: A7_SHRP
+
+#define D8_FLAT       4434.92 # Enharmonic: C8_SHRP
+#define E8_FLAT       4978.03 # Enharmonic: D8_SHRP
+
+
+
+
+exit

@@ -1,0 +1,719 @@
+Pardus pcs 1
+verbosity 1
+gui_update_period 17 # Keep the gui alive for a bit to allow the 'Interrupt' button to show
+
+# First-Class Pointer Arrangement of "Minuet in G Major" (BWV Anh. 114)
+
+#include music.pch
+#include stdpard.pch
+
+# --- GLOBAL VARIABLES & POINTERS ---
+# (Moved outside the loop to respect global scope and prevent re-definition errors)
+def_var string actname1 _
+def_var string actname2 _
+def_var int current_pitch1 0
+def_var int current_pitch2 0
+def_var int duty 0
+def_var int step_idx 0
+def_var int target_bass_ptr 0
+def_var int target_treble_ptr 0
+def_var float sleep_time 0.0
+
+def_func main
+    get_actuators
+
+# Safety Layer: Clean up any pre-existing actuators of the same type and ID to
+# the ones we will be definitng below (even if they are of a different name) to
+# prevent duplicate definition errors later:
+
+act_getname ACT_MLEVEL 1 actname1
+set_condexp actname1 != null
+do_if Condexp
+  undef_actuator actname1
+enddo
+
+act_getname ACT_MLEVEL 2 actname2
+set_condexp actname2 != null
+do_if Condexp
+  undef_actuator actname2
+enddo
+
+    # 1. Instantiate 16-BIT BASS voice channel
+    def_actuator ACT_MLEVEL 1 ML_pwm1
+    act_set ML_pwm1 INFO_ML_TYPE  MLT_PWM        
+    act_set ML_pwm1 INFO_ML_PSC   PWM_PSC_8      
+    act_set ML_pwm1 INFO_PIN_P0  9               
+    
+    # 2. Instantiate 8-BIT TREBLE voice channel
+    def_actuator ACT_MLEVEL 2 ML_pwm2
+    act_set ML_pwm2 INFO_ML_TYPE  MLT_PWM        
+    act_set ML_pwm2 INFO_ML_PSC   PWM_PSC_256    
+    act_set ML_pwm2 INFO_PIN_P0  3               
+
+    # =====================================================================
+    # COMPACT TRANSLATION TABLES (Unique Pitches Only)
+    # =====================================================================
+    
+    # BASS DEFINITIONS (23 Unique states)
+    act_set ML_pwm1 INFO_ML_TTABLE  0   0           500  # Sustain
+    act_set ML_pwm1 INFO_ML_TTABLE  1   G2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  2   B2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  3   C3_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  4   D3_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  5   A2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  6   F3_SHRP_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  7   G3_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  8   A3_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  9   C4_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  10  B3_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  11  F2_SHRP_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  12  E2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  13  F2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  14  E3_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  15  C2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  16  G3_SHRP_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  17  D2_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  18  G1_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  19  A1_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  20  B1_NATL_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  21  C3_SHRP_16  500
+    act_set ML_pwm1 INFO_ML_TTABLE  22  1           0   # Rest
+
+    # TREBLE DEFINITIONS (18 Unique states)
+    act_set ML_pwm2 INFO_ML_TTABLE  0   0           500  # Sustain
+    act_set ML_pwm2 INFO_ML_TTABLE  1   D6_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  2   G5_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  3   A5_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  4   B5_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  5   C6_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  6   E6_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  7   F6_SHRP_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  8   G6_NATL_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  9   F5_SHRP_8   500
+    act_set ML_pwm2 INFO_ML_TTABLE  10  F5_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  11  E5_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  12  D5_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  13  C5_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  14  A4_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  15  B6_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  16  A6_NATL_8   500  
+    act_set ML_pwm2 INFO_ML_TTABLE  17  C6_SHRP_8   500  
+
+
+# BASS DEFINITIONS (16-Bit Timer Context)
+#define G2_NATL_B  1   # Maps to G2_NATL_16
+#define B2_NATL_B  2   # Maps to B2_NATL_16
+#define C3_NATL_B  3   # Maps to C3_NATL_16
+#define D3_NATL_B  4   # Maps to D3_NATL_16
+#define A2_NATL_B  5   # Maps to A2_NATL_16
+#define F3_SHRP_B  6   # Maps to F3_SHRP_16
+#define G3_NATL_B  7   # Maps to G3_NATL_16
+#define A3_NATL_B  8   # Maps to A3_NATL_16
+#define C4_NATL_B  9   # Maps to C4_NATL_16
+#define B3_NATL_B  10  # Maps to B3_NATL_16
+#define F2_SHRP_B  11  # Maps to F2_SHRP_16
+#define E2_NATL_B  12  # Maps to E2_NATL_16
+#define F2_NATL_B  13  # Maps to F2_NATL_16
+#define E3_NATL_B  14  # Maps to E3_NATL_16
+#define C2_NATL_B  15  # Maps to C2_NATL_16
+#define G3_SHRP_B  16  # Maps to G3_SHRP_16
+#define D2_NATL_B  17  # Maps to D2_NATL_16
+#define G1_NATL_B  18  # Maps to G1_NATL_16
+#define A1_NATL_B  19  # Maps to A1_NATL_16
+#define B1_NATL_B  20  # Maps to B1_NATL_16
+#define C3_SHRP_B  21  # Maps to C3_SHRP_16 
+#define REST_B     22 
+
+# TREBLE DEFINITIONS (8-Bit Timer Context)
+#define D6_NATL_T  1   # Maps to D6_NATL_8
+#define G5_NATL_T  2   # Maps to G5_NATL_8
+#define A5_NATL_T  3   # Maps to A5_NATL_8
+#define B5_NATL_T  4   # Maps to B5_NATL_8
+#define C6_NATL_T  5   # Maps to C6_NATL_8
+#define E6_NATL_T  6   # Maps to E6_NATL_8
+#define F6_SHRP_T  7   # Maps to F6_SHRP_8
+#define G6_NATL_T  8   # Maps to G6_NATL_8
+#define F5_SHRP_T  9   # Maps to F5_SHRP_8
+#define F5_NATL_T  10  # Maps to F5_NATL_8 
+#define E5_NATL_T  11  # Maps to E5_NATL_8 
+#define D5_NATL_T  12  # Maps to D5_NATL_8 
+#define C5_NATL_T  13  # Maps to C5_NATL_8 
+#define A4_NATL_T  14  # Maps to A4_NATL_8 
+#define B6_NATL_T  15  # Maps to B6_NATL_8 
+#define A6_NATL_T  16  # Maps to A6_NATL_8 
+#define C6_SHRP_T  17  # Maps to C6_SHRP_8  
+
+
+
+
+    # =====================================================================
+    # PLAY ORDER ARRAYS
+    # =====================================================================
+    def_array int BassSeq 192 0
+    def_array int TrebleSeq 192 0
+
+    # --- Treble Sequence Mapping ---
+    # M1:
+    set_var TrebleSeq[0] D6_NATL_T
+    set_var TrebleSeq[1] 0
+    set_var TrebleSeq[2] G5_NATL_T
+    set_var TrebleSeq[3] A5_NATL_T
+    set_var TrebleSeq[4] B5_NATL_T
+    set_var TrebleSeq[5] C6_NATL_T
+
+    # M2:
+    set_var TrebleSeq[6] D6_NATL_T
+    set_var TrebleSeq[7] 0
+    set_var TrebleSeq[8] G5_NATL_T
+    set_var TrebleSeq[9] 0
+    set_var TrebleSeq[10] G5_NATL_T
+    set_var TrebleSeq[11] 0
+
+    # M3:
+    set_var TrebleSeq[12] E6_NATL_T
+    set_var TrebleSeq[13] 0
+    set_var TrebleSeq[14] C6_NATL_T
+    set_var TrebleSeq[15] D6_NATL_T
+    set_var TrebleSeq[16] E6_NATL_T
+    set_var TrebleSeq[17] F6_SHRP_T
+
+    # M4:
+    set_var TrebleSeq[18] G6_NATL_T
+    set_var TrebleSeq[19] 0
+    set_var TrebleSeq[20] G5_NATL_T
+    set_var TrebleSeq[21] 0
+    set_var TrebleSeq[22] G5_NATL_T
+    set_var TrebleSeq[23] 0
+
+    # M5:
+    set_var TrebleSeq[24] C6_NATL_T
+    set_var TrebleSeq[25] 0
+    set_var TrebleSeq[26] D6_NATL_T
+    set_var TrebleSeq[27] C6_NATL_T
+    set_var TrebleSeq[28] B5_NATL_T
+    set_var TrebleSeq[29] A5_NATL_T
+
+    # M6:
+    set_var TrebleSeq[30] B5_NATL_T
+    set_var TrebleSeq[31] 0
+    set_var TrebleSeq[32] C6_NATL_T
+    set_var TrebleSeq[33] B5_NATL_T
+    set_var TrebleSeq[34] A5_NATL_T
+    set_var TrebleSeq[35] G5_NATL_T
+
+    # M7:
+    set_var TrebleSeq[36] F5_SHRP_T
+    set_var TrebleSeq[37] 0
+    set_var TrebleSeq[38] G5_NATL_T
+    set_var TrebleSeq[39] A5_NATL_T
+    set_var TrebleSeq[40] B5_NATL_T
+    set_var TrebleSeq[41] G5_NATL_T
+
+    # M8:
+    set_var TrebleSeq[42] B5_NATL_T
+    set_var TrebleSeq[43] 0
+    set_var TrebleSeq[44] A5_NATL_T
+    set_var TrebleSeq[45] 0
+    set_var TrebleSeq[46] 0
+    set_var TrebleSeq[47] 0
+
+    # M9:
+    set_var TrebleSeq[48] D6_NATL_T
+    set_var TrebleSeq[49] 0
+    set_var TrebleSeq[50] G5_NATL_T
+    set_var TrebleSeq[51] A5_NATL_T
+    set_var TrebleSeq[52] B5_NATL_T
+    set_var TrebleSeq[53] C6_NATL_T
+
+    # M10:
+    set_var TrebleSeq[54] D6_NATL_T
+    set_var TrebleSeq[55] 0
+    set_var TrebleSeq[56] G5_NATL_T
+    set_var TrebleSeq[57] 0
+    set_var TrebleSeq[58] G5_NATL_T
+    set_var TrebleSeq[59] 0
+
+    # M11:
+    set_var TrebleSeq[60] E6_NATL_T
+    set_var TrebleSeq[61] 0
+    set_var TrebleSeq[62] C6_NATL_T
+    set_var TrebleSeq[63] D6_NATL_T
+    set_var TrebleSeq[64] E6_NATL_T
+    set_var TrebleSeq[65] F6_SHRP_T
+
+    # M12:
+    set_var TrebleSeq[66] G6_NATL_T
+    set_var TrebleSeq[67] 0
+    set_var TrebleSeq[68] G5_NATL_T
+    set_var TrebleSeq[69] 0
+    set_var TrebleSeq[70] G5_NATL_T
+    set_var TrebleSeq[71] 0
+
+    # M13:
+    set_var TrebleSeq[72] C6_NATL_T
+    set_var TrebleSeq[73] 0
+    set_var TrebleSeq[74] D6_NATL_T
+    set_var TrebleSeq[75] C6_NATL_T
+    set_var TrebleSeq[76] B5_NATL_T
+    set_var TrebleSeq[77] A5_NATL_T
+
+    # M14:
+    set_var TrebleSeq[78] B5_NATL_T
+    set_var TrebleSeq[79] 0
+    set_var TrebleSeq[80] C6_NATL_T
+    set_var TrebleSeq[81] B5_NATL_T
+    set_var TrebleSeq[82] A5_NATL_T
+    set_var TrebleSeq[83] G5_NATL_T
+
+    # M15:
+    set_var TrebleSeq[84] A5_NATL_T
+    set_var TrebleSeq[85] 0
+    set_var TrebleSeq[86] B5_NATL_T
+    set_var TrebleSeq[87] A5_NATL_T
+    set_var TrebleSeq[88] G5_NATL_T
+    set_var TrebleSeq[89] F5_SHRP_T
+
+    # M16:
+    set_var TrebleSeq[90] G5_NATL_T
+    set_var TrebleSeq[91] 0
+    set_var TrebleSeq[92] 0
+    set_var TrebleSeq[93] 0
+    set_var TrebleSeq[94] 0
+    set_var TrebleSeq[95] 0
+
+    # M17:
+    set_var TrebleSeq[96] B6_NATL_T
+    set_var TrebleSeq[97] 0
+    set_var TrebleSeq[98] G6_NATL_T
+    set_var TrebleSeq[99] A6_NATL_T
+    set_var TrebleSeq[100] B6_NATL_T
+    set_var TrebleSeq[101] G6_NATL_T
+
+    # M18:
+    set_var TrebleSeq[102] A6_NATL_T
+    set_var TrebleSeq[103] 0
+    set_var TrebleSeq[104] D6_NATL_T
+    set_var TrebleSeq[105] E6_NATL_T
+    set_var TrebleSeq[106] F6_SHRP_T
+    set_var TrebleSeq[107] D6_NATL_T
+
+    # M19:
+    set_var TrebleSeq[108] G6_NATL_T
+    set_var TrebleSeq[109] 0
+    set_var TrebleSeq[110] E6_NATL_T
+    set_var TrebleSeq[111] F6_SHRP_T
+    set_var TrebleSeq[112] G6_NATL_T
+    set_var TrebleSeq[113] D6_NATL_T
+
+    # M20:
+    set_var TrebleSeq[114] C6_SHRP_T
+    set_var TrebleSeq[115] 0
+    set_var TrebleSeq[116] B5_NATL_T
+    set_var TrebleSeq[117] C6_SHRP_T
+    set_var TrebleSeq[118] A5_NATL_T
+    set_var TrebleSeq[119] 0
+
+    # M21:
+    set_var TrebleSeq[120] A5_NATL_T
+    set_var TrebleSeq[121] B5_NATL_T
+    set_var TrebleSeq[122] C6_SHRP_T
+    set_var TrebleSeq[123] D6_NATL_T
+    set_var TrebleSeq[124] E6_NATL_T
+    set_var TrebleSeq[125] F6_SHRP_T
+
+    # M22:
+    set_var TrebleSeq[126] G6_NATL_T
+    set_var TrebleSeq[127] 0
+    set_var TrebleSeq[128] F6_SHRP_T
+    set_var TrebleSeq[129] 0
+    set_var TrebleSeq[130] E6_NATL_T
+    set_var TrebleSeq[131] 0
+
+    # M23:
+    set_var TrebleSeq[132] F6_SHRP_T
+    set_var TrebleSeq[133] 0
+    set_var TrebleSeq[134] A6_NATL_T
+    set_var TrebleSeq[135] 0
+    set_var TrebleSeq[136] C6_SHRP_T
+    set_var TrebleSeq[137] 0
+
+    # M24:
+    set_var TrebleSeq[138] D6_NATL_T
+    set_var TrebleSeq[139] 0
+    set_var TrebleSeq[140] 0
+    set_var TrebleSeq[141] 0
+    set_var TrebleSeq[142] 0
+    set_var TrebleSeq[143] 0
+
+    # M25:
+    set_var TrebleSeq[144] D6_NATL_T
+    set_var TrebleSeq[145] 0
+    set_var TrebleSeq[146] G5_NATL_T
+    set_var TrebleSeq[147] F5_SHRP_T
+    set_var TrebleSeq[148] G5_NATL_T
+    set_var TrebleSeq[149] 0
+
+    # M26:
+    set_var TrebleSeq[150] E6_NATL_T
+    set_var TrebleSeq[151] 0
+    set_var TrebleSeq[152] G5_NATL_T
+    set_var TrebleSeq[153] F5_SHRP_T
+    set_var TrebleSeq[154] G5_NATL_T
+    set_var TrebleSeq[155] 0
+
+    # M27:
+    set_var TrebleSeq[156] D6_NATL_T
+    set_var TrebleSeq[157] 0
+    set_var TrebleSeq[158] C6_NATL_T
+    set_var TrebleSeq[159] 0
+    set_var TrebleSeq[160] B5_NATL_T
+    set_var TrebleSeq[161] 0
+
+    # M28:
+    set_var TrebleSeq[162] A5_NATL_T
+    set_var TrebleSeq[163] G5_NATL_T
+    set_var TrebleSeq[164] F5_SHRP_T
+    set_var TrebleSeq[165] G5_NATL_T
+    set_var TrebleSeq[166] A5_NATL_T
+    set_var TrebleSeq[167] 0
+
+    # M29:
+    set_var TrebleSeq[168] D5_NATL_T
+    set_var TrebleSeq[169] E5_NATL_T
+    set_var TrebleSeq[170] F5_SHRP_T
+    set_var TrebleSeq[171] G5_NATL_T
+    set_var TrebleSeq[172] A5_NATL_T
+    set_var TrebleSeq[173] B5_NATL_T
+
+    # M30:
+    set_var TrebleSeq[174] C6_NATL_T
+    set_var TrebleSeq[175] 0
+    set_var TrebleSeq[176] B5_NATL_T
+    set_var TrebleSeq[177] 0
+    set_var TrebleSeq[178] A5_NATL_T
+    set_var TrebleSeq[179] 0
+
+    # M31:
+    set_var TrebleSeq[180] B5_NATL_T
+    set_var TrebleSeq[181] D6_NATL_T
+    set_var TrebleSeq[182] G5_NATL_T
+    set_var TrebleSeq[183] 0
+    set_var TrebleSeq[184] F5_SHRP_T
+    set_var TrebleSeq[185] 0
+
+    # M32:
+    set_var TrebleSeq[186] G5_NATL_T
+    set_var TrebleSeq[187] 0
+    set_var TrebleSeq[188] 0
+    set_var TrebleSeq[189] 0
+    set_var TrebleSeq[190] 0
+    set_var TrebleSeq[191] 0
+
+
+    # --- Bass Sequence (M1 to M32) ---
+
+    # M1:
+    set_var BassSeq[0] G2_NATL_B
+    set_var BassSeq[1] 0
+    set_var BassSeq[2] 0
+    set_var BassSeq[3] 0
+    set_var BassSeq[4] A2_NATL_B
+    set_var BassSeq[5] 0
+
+    # M2:
+    set_var BassSeq[6] B2_NATL_B
+    set_var BassSeq[7] 0
+    set_var BassSeq[8] 0
+    set_var BassSeq[9] 0
+    set_var BassSeq[10] 0
+    set_var BassSeq[11] 0
+
+    # M3:
+    set_var BassSeq[12] C3_NATL_B
+    set_var BassSeq[13] 0
+    set_var BassSeq[14] 0
+    set_var BassSeq[15] 0
+    set_var BassSeq[16] 0
+    set_var BassSeq[17] 0
+
+    # M4:
+    set_var BassSeq[18] B2_NATL_B
+    set_var BassSeq[19] 0
+    set_var BassSeq[20] 0
+    set_var BassSeq[21] 0
+    set_var BassSeq[22] 0
+    set_var BassSeq[23] 0
+
+    # M5:
+    set_var BassSeq[24] A2_NATL_B
+    set_var BassSeq[25] 0
+    set_var BassSeq[26] 0
+    set_var BassSeq[27] 0
+    set_var BassSeq[28] 0
+    set_var BassSeq[29] 0
+
+    # M6:
+    set_var BassSeq[30] G2_NATL_B
+    set_var BassSeq[31] 0
+    set_var BassSeq[32] 0
+    set_var BassSeq[33] 0
+    set_var BassSeq[34] 0
+    set_var BassSeq[35] 0
+
+    # M7:
+    set_var BassSeq[36] D3_NATL_B
+    set_var BassSeq[37] 0
+    set_var BassSeq[38] B2_NATL_B
+    set_var BassSeq[39] 0
+    set_var BassSeq[40] G2_NATL_B
+    set_var BassSeq[41] 0
+
+    # M8:
+    set_var BassSeq[42] D3_NATL_B
+    set_var BassSeq[43] 0
+    set_var BassSeq[44] D2_NATL_B
+    set_var BassSeq[45] C3_NATL_B
+    set_var BassSeq[46] B2_NATL_B
+    set_var BassSeq[47] A2_NATL_B
+
+    # M9:
+    set_var BassSeq[48] B2_NATL_B
+    set_var BassSeq[49] 0
+    set_var BassSeq[50] 0
+    set_var BassSeq[51] 0
+    set_var BassSeq[52] A2_NATL_B
+    set_var BassSeq[53] 0
+
+    # M10:
+    set_var BassSeq[54] G2_NATL_B
+    set_var BassSeq[55] 0
+    set_var BassSeq[56] B2_NATL_B
+    set_var BassSeq[57] 0
+    set_var BassSeq[58] G2_NATL_B
+    set_var BassSeq[59] 0
+
+    # M11:
+    set_var BassSeq[60] C3_NATL_B
+    set_var BassSeq[61] 0
+    set_var BassSeq[62] 0
+    set_var BassSeq[63] 0
+    set_var BassSeq[64] 0
+    set_var BassSeq[65] 0
+
+    # M12:
+    set_var BassSeq[66] B2_NATL_B
+    set_var BassSeq[67] 0
+    set_var BassSeq[68] C3_NATL_B
+    set_var BassSeq[69] B2_NATL_B
+    set_var BassSeq[70] A2_NATL_B
+    set_var BassSeq[71] G2_NATL_B
+
+    # M13:
+    set_var BassSeq[72] A2_NATL_B
+    set_var BassSeq[73] 0
+    set_var BassSeq[74] 0
+    set_var BassSeq[75] 0
+    set_var BassSeq[76] F2_SHRP_B
+    set_var BassSeq[77] 0
+
+    # M14:
+    set_var BassSeq[78] G2_NATL_B
+    set_var BassSeq[79] 0
+    set_var BassSeq[80] 0
+    set_var BassSeq[81] 0
+    set_var BassSeq[82] B2_NATL_B
+    set_var BassSeq[83] 0
+
+    # M15:
+    set_var BassSeq[84] C3_NATL_B
+    set_var BassSeq[85] 0
+    set_var BassSeq[86] D3_NATL_B
+    set_var BassSeq[87] 0
+    set_var BassSeq[88] D2_NATL_B
+    set_var BassSeq[89] 0
+
+    # M16:
+    set_var BassSeq[90] G2_NATL_B
+    set_var BassSeq[91] 0
+    set_var BassSeq[92] 0
+    set_var BassSeq[93] 0
+    set_var BassSeq[94] G1_NATL_B
+    set_var BassSeq[95] 0
+
+    # M17:
+    set_var BassSeq[96] G2_NATL_B
+    set_var BassSeq[97] 0
+    set_var BassSeq[98] 0
+    set_var BassSeq[99] 0
+    set_var BassSeq[100] 0
+    set_var BassSeq[101] 0
+
+    # M18:
+    set_var BassSeq[102] F2_SHRP_B
+    set_var BassSeq[103] 0
+    set_var BassSeq[104] 0
+    set_var BassSeq[105] 0
+    set_var BassSeq[106] 0
+    set_var BassSeq[107] 0
+
+    # M19: 
+    set_var BassSeq[108] E2_NATL_B
+    set_var BassSeq[109] 0
+    set_var BassSeq[110] G2_NATL_B
+    set_var BassSeq[111] 0
+    set_var BassSeq[112] E2_NATL_B
+    set_var BassSeq[113] 0
+
+    # M20:
+    set_var BassSeq[114] A2_NATL_B
+    set_var BassSeq[115] 0
+    set_var BassSeq[116] 0
+    set_var BassSeq[117] 0
+    set_var BassSeq[118] A1_NATL_B
+    set_var BassSeq[119] 0
+
+    # M21:
+    set_var BassSeq[120] A2_NATL_B
+    set_var BassSeq[121] 0
+    set_var BassSeq[122] 0
+    set_var BassSeq[123] 0
+    set_var BassSeq[124] 0
+    set_var BassSeq[125] 0
+
+    # M22:
+    set_var BassSeq[126] B2_NATL_B
+    set_var BassSeq[127] 0
+    set_var BassSeq[128] D3_NATL_B
+    set_var BassSeq[129] 0
+    set_var BassSeq[130] C3_SHRP_B
+    set_var BassSeq[131] 0
+
+    # M23:
+    set_var BassSeq[132] D3_NATL_B
+    set_var BassSeq[133] 0
+    set_var BassSeq[134] F2_SHRP_B
+    set_var BassSeq[135] 0
+    set_var BassSeq[136] A2_NATL_B
+    set_var BassSeq[137] 0
+
+    # M24:
+    set_var BassSeq[138] D3_NATL_B
+    set_var BassSeq[139] 0
+    set_var BassSeq[140] D2_NATL_B
+    set_var BassSeq[141] 0
+    set_var BassSeq[142] C3_NATL_B
+    set_var BassSeq[143] 0
+
+    # M25:
+    set_var BassSeq[144] B2_NATL_B
+    set_var BassSeq[145] 0
+    set_var BassSeq[146] D3_NATL_B
+    set_var BassSeq[147] 0
+    set_var BassSeq[148] B2_NATL_B
+    set_var BassSeq[149] 0
+
+    # M26:
+    set_var BassSeq[150] C3_NATL_B
+    set_var BassSeq[151] 0
+    set_var BassSeq[152] E3_NATL_B
+    set_var BassSeq[153] 0
+    set_var BassSeq[154] C3_NATL_B
+    set_var BassSeq[155] 0
+
+    # M27:
+    set_var BassSeq[156] B2_NATL_B
+    set_var BassSeq[157] 0
+    set_var BassSeq[158] A2_NATL_B
+    set_var BassSeq[159] 0
+    set_var BassSeq[160] G2_NATL_B
+    set_var BassSeq[161] 0
+
+    # M28:
+    set_var BassSeq[162] D3_NATL_B
+    set_var BassSeq[163] 0
+    set_var BassSeq[164] 0
+    set_var BassSeq[165] 0
+    set_var BassSeq[166] REST_B
+    set_var BassSeq[167] 0
+
+    # M29:
+    set_var BassSeq[168] D2_NATL_B
+    set_var BassSeq[169] 0
+    set_var BassSeq[170] 0
+    set_var BassSeq[171] 0
+    set_var BassSeq[172] F2_SHRP_B
+    set_var BassSeq[173] 0
+
+    # M30:
+    set_var BassSeq[174] E2_NATL_B
+    set_var BassSeq[175] 0
+    set_var BassSeq[176] G2_NATL_B
+    set_var BassSeq[177] 0
+    set_var BassSeq[178] F2_SHRP_B
+    set_var BassSeq[179] 0
+
+    # M31:
+    set_var BassSeq[180] G2_NATL_B
+    set_var BassSeq[181] 0
+    set_var BassSeq[182] B1_NATL_B
+    set_var BassSeq[183] 0
+    set_var BassSeq[184] D2_NATL_B
+    set_var BassSeq[185] 0
+
+    # M32:
+    set_var BassSeq[186] G2_NATL_B
+    set_var BassSeq[187] 0
+    set_var BassSeq[188] D2_NATL_B
+    set_var BassSeq[189] 0
+    set_var BassSeq[190] G1_NATL_B
+    set_var BassSeq[191] 0
+
+
+
+
+    # =====================================================================
+    # PLAY 
+    # =====================================================================
+
+#define STARTING_POINT 0    
+set_var step_idx STARTING_POINT
+set_condexp step_idx == STARTING_POINT
+
+gui_update_period 0 # Don't waste cycles on the GUI
+
+loop_while Condexp
+
+    # Set the base rest period
+    set_var sleep_time 0.175
+
+    # Pull the exact pointer value out of our sequence arrays
+    set_var target_bass_ptr BassSeq[step_idx]
+    set_var target_treble_ptr TrebleSeq[step_idx]
+
+    # Get the frequency values from the translation tables via our pointers
+    act_get ML_pwm1 INFO_ML_TTABLE target_bass_ptr current_pitch1 duty
+    act_get ML_pwm2 INFO_ML_TTABLE target_treble_ptr current_pitch2 duty
+
+    # Activate the actuators if they are not in a sustain period 
+    do_if current_pitch1
+       act_set ML_pwm1 INFO_ML_LEVEL target_bass_ptr
+       sub_var sleep_time 0.051 # Correct rest for time it takes to do this
+    enddo
+
+    do_if current_pitch2
+       act_set ML_pwm2 INFO_ML_LEVEL target_treble_ptr
+       sub_var sleep_time 0.051 # Correct rest for time it takes to do this
+    enddo
+    
+    # Wait the alloted time to pace the music
+    sleep sleep_time                 
+    
+    add_var step_idx 1
+    set_condexp step_idx <= 191            
+endloop
+    
+    act_halt ML_pwm1
+    act_halt ML_pwm2
+    
+return
+exit

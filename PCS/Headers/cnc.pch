@@ -1,0 +1,84 @@
+Pardus pch 1
+
+################################################################################
+# cnc.pch                                                                      #
+#                                                                              #
+# This is a header file I use with many of my practical  scripts.              #
+# The pin mappings, direction constants, etc. used here are correct for my CNC #
+# stage setup and connections but you must edit them as required to be correct #
+# for your own machinery or else you can do serious damage to your hardware.   #
+#                                                               PJT 04.09.2026 #
+################################################################################
+
+
+#define AFFA_IGNORE     1
+#define AFFA_EXIT       2
+
+##################################################
+# You should confirm these with practicals:      #
+#                                                #
+
+#define LIM_LEFT    1
+#define LIM_FRONT   1
+#define LIM_UP      1
+#define LIM_RIGHT   2
+#define LIM_BACK    2
+#define LIM_DOWN    2
+
+#define DIRNRBD 1
+#define DIRNLFU 0
+
+#                                                #
+##################################################
+
+
+    #################
+  ###               ###
+###  PIN DEFINITIONS  ###
+  ###               ###
+    #################
+
+####################
+#  ARDUINO INPUTS  #
+####################
+
+########################################
+# Analogue pins, not going to drivers: #
+#                                      #
+#define OPTO_XL 0
+#define OPTO_XR 1
+#define OPTO_YF 2
+#define OPTO_YB 3
+#define OPTO_ZU 5
+#define OPTO_ZD 4
+#                                      #
+########################################
+
+########################################
+# Analogue pins for driver DIAG pins:  #
+#                                      #
+#define DIAG_X  8
+#define DIAG_Y  9
+#define DIAG_Z  10
+#                                      #
+########################################
+
+
+########################################
+#   ARDUINO OUTPUTS TO DRIVER INPUTS   #
+########################################
+
+#define ENA_X  33
+#define ENA_Y  34
+#define ENA_Z  35
+
+#define PUL_X  22
+#define PUL_Y  23
+#define PUL_Z  24
+
+#define DIR_X  30
+#define DIR_Y  31
+#define DIR_Z  32
+
+
+exit

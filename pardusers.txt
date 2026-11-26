@@ -1,0 +1,4 @@
+# pardserver automated user database file
+parduser1:1783002017:0:$argon2id$v=19$m=65536,t=2,p=1$K/RZjrZIOiX4jbkNNGcCfw$FRHR2THUX80d6xPysmfedlv63ITJjuRqYtHkJ8TG4Y8
+parduser2:1783001986:0:$argon2id$v=19$m=65536,t=2,p=1$sZdLDlViEQbfTUzraFn/zg$0UulPHYK51gH/BJIitou4n+jmWjlXFklN0Z0clC6C1A
+lab_assistant_alpha:1782991599:1:$argon2id$v=19$m=65536,t=2,p=1$Fk+6K8XhNmQYWyKaWOG6MA$hTGO45oBSQdnR6nRo0wAx6ONs5fOhHqsqjlxbDWLt7U

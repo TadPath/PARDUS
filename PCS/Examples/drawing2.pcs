@@ -1,0 +1,121 @@
+Pardus pcs 1
+
+verbosity 1
+
+#include stdpard.pch
+
+def_var string msg _
+
+# Initialize, clear, and display the preview overlay canvas
+preview_draw_buffer 1
+preview_draw_clear
+preview_clear
+preview_draw_show
+preview_draw_blend 0
+
+def_func main
+ # Allocation: 293 total elements (indices 0 to 292)
+ def_array int glyph_gar 293 0
+
+ # =================================================================
+ # STEP 1: INITIALISE ENVIRONMENT (CURSOR POSITION & LINE WIDTH)
+ # =================================================================
+ set_var glyph_gar[0]  GSI_TYPE_ENV
+ set_var glyph_gar[1]  10     # OP_PREVIEW_DRAW_CURSOR
+ set_var glyph_gar[2] 150     # X position for Pac-Man
+ set_var glyph_gar[3] 200     # Y position for Pac-Man
+
+
+ # =================================================================
+ # STEP 2: GSI_TYPE_MGLYPH (-4) - 16x16 YELLOW MONO PAC-MAN (HEX MODE!)
+ # =================================================================
+ set_var glyph_gar[4]  GSI_TYPE_MGLYPH
+ set_var glyph_gar[5]   0     # R0 (Transparent background)
+ set_var glyph_gar[6]   0     # G0
+ set_var glyph_gar[7]   0     # B0
+ set_var glyph_gar[8]  255     # R1 (Yellow foreground)
+ set_var glyph_gar[9]  255     # G1
+ set_var glyph_gar[10]  0     # B1
+ set_var glyph_gar[11] 16     # Height
+ set_var glyph_gar[12] 16     # Width
+
+ # The 16 rows of binary sprite data in clean, readable Hex format
+ set_var glyph_gar[13] 0x07E00000   # Row 0  - Smooth circular top cap
+ set_var glyph_gar[14] 0x1FE00000   # Row 1  - Curve expansion
+ set_var glyph_gar[15] 0x3FE00000   # Row 2  - Curve expansion
+ set_var glyph_gar[16] 0x7FE00000   # Row 3  - Front skull width edge
+ set_var glyph_gar[17] 0x7FC00000   # Row 4  - Upper lip starting anchor point
+ set_var glyph_gar[18] 0x7F800000   # Row 5  - Open mouth angle slant line
+ set_var glyph_gar[19] 0x7F000000   # Row 6  - Mouth interior gap spaces
+ set_var glyph_gar[20] 0x7E000000   # Row 7  - Mouth apex back center line
+ set_var glyph_gar[21] 0x7E000000   # Row 8  - Mouth apex back center line
+ set_var glyph_gar[22] 0x7F000000   # Row 9  - Mouth interior gap spaces
+ set_var glyph_gar[23] 0x7F800000   # Row 10 - Open mouth angle slant line
+ set_var glyph_gar[24] 0x7FC00000   # Row 11 - Lower lip starting anchor point
+ set_var glyph_gar[25] 0x7FE00000   # Row 12 - Front jaw width edge
+ set_var glyph_gar[26] 0x3FE00000   # Row 13 - Curve retraction
+ set_var glyph_gar[27] 0x1FE00000   # Row 14 - Curve retraction
+ set_var glyph_gar[28] 0x07E00000   # Row 15 - Smooth circular bottom cap
+
+
+ # =================================================================
+ # STEP 3: UPDATE ENVIRONMENT (SHIFT POSITION FOR COLOUR GRID)
+ # =================================================================
+ set_var glyph_gar[29]  GSI_TYPE_ENV
+ set_var glyph_gar[30]  10     # OP_PREVIEW_DRAW_CURSOR
+ set_var glyph_gar[31] 350     # X position for Colour Matrix
+ set_var glyph_gar[32] 200     # Y position for Colour Matrix
+
+ # =================================================================
+ # STEP 4: GSI_TYPE_CGLYPH (-5) - 16x16 RAINBOW SPECTRUM PATTERN
+ # =================================================================
+ set_var glyph_gar[33]  GSI_TYPE_CGLYPH
+ set_var glyph_gar[34]  16     # Height
+ set_var glyph_gar[35]  16     # Width
+
+ # Define loop variables globally at the top of the function frame
+ def_var int r_idx 0
+ def_var int c_idx 0
+ def_var int color_val 0
+ def_var int g_comp 0  
+ def_var int target_cell 36 
+
+ set_condexp r_idx < 16
+ loop_while Condexp
+   set_var c_idx 0
+   set_condexp c_idx < 16
+   loop_while Condexp
+     
+     set_var color_val r_idx
+     mul_var color_val 15   
+     mul_var color_val 65536 
+     
+     set_var g_comp c_idx
+     mul_var g_comp 15      
+     mul_var g_comp 256     
+     add_var color_val g_comp
+     
+     add_var color_val 255       
+
+     # Inject calculated decimal pixel value straight into array position
+     set_var glyph_gar[target_cell] color_val
+
+     add_var target_cell 1
+     add_var c_idx 1
+     set_condexp c_idx < 16
+   endloop
+   add_var r_idx 1
+   set_condexp r_idx < 16
+ endloop
+
+ # =================================================================
+ # STEP 5: TERMINATION BOUNDARY
+ # =================================================================
+ set_var glyph_gar[target_cell] GSI_TYPE_END
+
+ # Execute the virtual machine using the correct array dereference syntax
+ preview_draw_array glyph_gar[0]
+
+return
+
+exit

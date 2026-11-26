@@ -1,0 +1,54 @@
+Pardus pcs 1
+verbosity 1
+
+#############################################
+#    Testing the milliduration command      #
+#############################################
+
+def_var string msg _       # For printing messages
+def_var int idx 0          # Loop index
+def_var int millidur 0     # To hold the interval duraction
+def_var int startmillis 0  # To hold the start time monotonic ticks so that
+                           # milliduration has a start point reference.
+def_func main
+  print_clear
+
+  set_str msg --- Starting milliduration test ---
+  print_value msg 2
+
+  set_var startmillis Millis              # Millis is a PCS system variable
+  set_str msg Starting the stop watch at: # that reports the current monotonic
+  add_var msg Space                       # millisecond ticks whenever it is
+  add_var msg startmillis                 # used.
+  print_value msg 2
+
+  set_condexp idx == 0
+  loop_while Condexp
+
+      sleep 0.25
+    
+      milliduration startmillis millidur # Get the number of milliseconds from
+      set_str msg milliseconds elapsed:  # startmillis to now.
+      add_var msg Space
+      add_var msg millidur
+      print_value msg 2
+
+      add_var idx 1
+      set_condexp idx < 5
+
+  endloop
+
+return
+exit
+
+--- Scratchpad ---
+
+Here is what the output looks like:
+
+--- Starting milliduration test ---
+Starting the stop watch at: 436157
+milliseconds elapsed: 276
+milliseconds elapsed: 531
+milliseconds elapsed: 786
+milliseconds elapsed: 1041
+milliseconds elapsed: 1295

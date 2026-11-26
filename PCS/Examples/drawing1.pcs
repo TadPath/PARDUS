@@ -1,0 +1,149 @@
+Pardus pcs 1
+
+verbosity 1
+
+#include stdpard.pch
+
+def_var string msg _
+
+# Initialize, clear, and display the preview overlay canvas
+preview_draw_buffer 1
+preview_draw_clear
+preview_clear
+preview_draw_show
+preview_draw_blend 0
+
+def_func main
+ # Allocation: 69 total elements to pack all sub-interpreter routines
+ def_array int master_gar 69 0
+
+ # =================================================================
+ # STEP 1: GSI_TYPE_ENV - Setup Environment Variables
+ # =================================================================
+ set_var master_gar[0]  GSI_TYPE_ENV
+ set_var master_gar[1]   9     # OP_PREVIEW_DRAW_COLOUR
+ set_var master_gar[2]  91     # R
+ set_var master_gar[3]  255    # G
+ set_var master_gar[4]  91     # B (Bright Light Green Color)
+ 
+ set_var master_gar[5]  10     # OP_PREVIEW_DRAW_CURSOR
+ set_var master_gar[6]  80     # X
+ set_var master_gar[7]  80     # Y
+ 
+ set_var master_gar[8]   3     # OP_PREVIEW_DRAW_LWIDTH
+ set_var master_gar[9]   4     # Thickness = 4 pixels
+
+ # =================================================================
+ # STEP 2: GSI_TYPE_PLOT - Draw Shapes Using Current Env
+ # =================================================================
+ set_var master_gar[10] GSI_TYPE_PLOT
+ set_var master_gar[11]  2     # RECT (type = 2)
+ set_var master_gar[12]  0     # Filled = FALSE
+ set_var master_gar[13] 220     # Dest X
+ set_var master_gar[14] 160     # Dest Y
+
+ # =================================================================
+ # STEP 3: GSI_TYPE_ENV - Update Env (Change Color and Cursor)
+ # =================================================================
+ set_var master_gar[15] GSI_TYPE_ENV
+ set_var master_gar[16]  9     # OP_PREVIEW_DRAW_COLOUR
+ set_var master_gar[17] 255    # R
+ set_var master_gar[18] 255    # G
+ set_var master_gar[19] 91     # B (Yellow Color)
+ 
+ set_var master_gar[20] 10     # OP_PREVIEW_DRAW_CURSOR
+ set_var master_gar[21] 300    # X
+ set_var master_gar[22] 100    # Y
+
+ # =================================================================
+ # STEP 4: GSI_TYPE_STRING - Render Text
+ # =================================================================
+ set_var master_gar[23] GSI_TYPE_STRING
+ set_var master_gar[24]  2     # Font Size Scale = 2
+ set_var master_gar[25] 256    # Bg R 256 = default
+ set_var master_gar[26] 256    # Bg G 256 = default
+ set_var master_gar[27] 256    # Bg B 256 = default
+ set_var master_gar[28]  0     # Invert 0 = don't
+ set_var master_gar[29] 80     # 'P'
+ set_var master_gar[30] 67     # 'C'
+ set_var master_gar[31] 83     # 'S'
+ set_var master_gar[32] 32     # space
+ set_var master_gar[33] 79     # 'O'
+ set_var master_gar[34] 75     # 'K'
+ set_var master_gar[35] 33     # '!'
+
+ # =================================================================
+ # STEP 5: GSI_TYPE_ENV - Update Env (Set Up Partials)
+ # =================================================================
+ set_var master_gar[36] GSI_TYPE_ENV
+ set_var master_gar[37]  5     # OP_PREVIEW_DRAW_ANGLES
+ set_var master_gar[38] 90     # Arc Width = 90 degrees
+ set_var master_gar[39] 180    # Rotation = 180 degrees
+ 
+ set_var master_gar[40] 10     # OP_PREVIEW_DRAW_CURSOR
+ set_var master_gar[41] 450    # X
+ set_var master_gar[42] 300    # Y
+
+ # =================================================================
+ # STEP 6: GSI_TYPE_PLOT - Draw Partial Ellipse Wedge Slice
+ # =================================================================
+ set_var master_gar[43] GSI_TYPE_PLOT
+ set_var master_gar[44]  3     # ELLIPSE (type = 3)
+ set_var master_gar[45]  0     # Filled = FALSE (Wireframe wedge check)
+ set_var master_gar[46] 80     # Radius X
+ set_var master_gar[47] 60     # Radius Y
+
+ # =================================================================
+ # STEP 7: GSI_TYPE_MGLYPH - Packed Monochrome Icon Test
+ # =================================================================
+ # R0, G0, B0 = 0, 0, 0 (Transparent background per r|g|b check)
+ # R1, G1, B1 = 0, 255, 255 (Cyan foreground)
+ # Height = 4, Width = 32 (Requires exactly 4 packed integers)
+ set_var master_gar[48] GSI_TYPE_MGLYPH
+ set_var master_gar[49]  0     # R0
+ set_var master_gar[50]  0     # G0
+ set_var master_gar[51]  0     # B0
+ set_var master_gar[52]  0     # R1
+ set_var master_gar[53] 255    # G1
+ set_var master_gar[54] 255    # B1
+ set_var master_gar[55]  4     # Height
+ set_var master_gar[56] 32     # Width
+ 
+ # 4-row bitmask test data (Decimal equivalents of 32-bit hex masks)
+ # row 0: 0x55555555 -> Alternating bits 0101...
+ set_var master_gar[57] 1431655765 
+ # row 1: 0xAAAAAAAA -> Alternating bits 1010...
+ set_var master_gar[58] -1431655766 
+ # row 2: 0xFFFF0000 -> First 16 solid, last 16 empty
+ set_var master_gar[59] -65536 
+ # row 3: 0x0000FFFF -> First 16 empty, last 16 solid
+ set_var master_gar[60] 65535
+
+ # =================================================================
+ # STEP 8: GSI_TYPE_CGLYPH - Packed Colour Pixels Test
+ # =================================================================
+ # Height = 2, Width = 2. Followed by 4 packed color code elements.
+ # Cursor inherits (450, 300) from the previous env task coordinate step
+ set_var master_gar[61] GSI_TYPE_CGLYPH
+ set_var master_gar[62]  2     # Height
+ set_var master_gar[63]  2     # Width
+ # Pixel 0: 5996799  (Hex 0x005B80FF -> R=91, G=128, B=255)
+ set_var master_gar[64] 5996799
+ # Pixel 1: 16711680 (Hex 0x00FF0000 -> Pure Red)
+ set_var master_gar[65] 16711680
+ # Pixel 2: 65280    (Hex 0x0000FF00 -> Pure Green)
+ set_var master_gar[66] 65280
+ # Pixel 3: 5996799  (Hex 0x005B80FF -> Repeat color match)
+ set_var master_gar[67] 5996799
+
+ # =================================================================
+ # STEP 9: CRITICAL FIX - ADD TERMINATION BLOCK TOKEN
+ # =================================================================
+ set_var master_gar[68] GSI_TYPE_END
+
+ # Execute the virtual machine using the correct array dereference syntax
+ preview_draw_array master_gar[0]
+
+return
+
+exit

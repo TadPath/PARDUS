@@ -1,0 +1,237 @@
+Pardus pcs 1
+
+verbosity 1
+
+####################################################
+# Maths commands test - simplified Weiner filter.  #
+####################################################
+
+def_func main
+
+ def_array float inre 25 0
+ def_array float inim 25 0
+ def_array float psfre 25 0
+ def_array float psfim 25 0
+ def_array float s25   25 25
+ def_array float parray 25 0.0
+
+ def_var int rdx 0
+ def_var int cdx 0
+ def_var int pos 0
+ def_var int toint 0
+ def_var string msg _
+
+ call_func init_image
+ set_str msg The original input real image array ...
+ print_value msg 2
+ math_array parray[0] = inre[0]
+ call_func print_array
+
+ call_func init_psf
+ set_str msg The original input real PSF array ...
+ print_value msg 2
+ math_array parray[0] = psfre[0]
+ call_func print_array
+
+ # Normalise the PSF
+ math_array psfre[0] norl1
+ math_array psfre[0] mul s25[0]
+
+ # Make cyclic (copy output back into input arrays)
+ fourier cyclise 0 5 5 psfre[0] psfim[0] psfre[0] psfim[0]
+
+ set_str msg The normalised cyclic PSF real array ...
+ print_value msg 2
+ math_array parray[0] = psfre[0]
+ call_func print_array
+
+ # Forward transform the PSF
+ fourier transform 1 5 5 psfre[0] psfim[0]
+
+ # Forward transform the Image
+ fourier transform 1 5 5 inre[0] inim[0]
+
+ # Complex multiplication (Fourier domain convolution)
+ cmath_array inre[0] inim[0] mul psfre[0] psfim[0]
+
+ # =================================================================
+ # WIENER FILTER MATHEMATICAL CORE
+ # =================================================================
+
+ # 2. Define complex temporary workspace arrays
+ def_array float numre 25 0.0
+ def_array float numim 25 0.0
+ def_array float denre 25 0.0
+ def_array float denim 25 0.0
+
+ # 3. Define the Wiener Constant K (Noise-to-Signal Ratio)
+ def_array float knsr 25 0.000001
+
+ # Step A: Calculate the denominator power spectrum |H|^2
+ cmath_array denre[0] denim[0] = psfre[0] psfim[0]
+ cmath_array denre[0] denim[0] pow
+
+ # Step B: Add the noise constant K to the real part of the denominator: (|H|^2 + K)
+ math_array denre[0] add knsr[0]
+
+ # Step C: Calculate the complex conjugate of the PSF numerator: H*
+ cmath_array numre[0] numim[0] = psfre[0] psfim[0]
+ cmath_array numre[0] numim[0] conj
+
+ # Step D: Multiply the blurred image spectrum by the conjugate numerator: F * H*
+ cmath_array inre[0] inim[0] mul numre[0] numim[0]
+
+ # Step E: Divide the results by the stabilized denominator: (F * H*) / (|H|^2 + K)
+ cmath_array inre[0] inim[0] div denre[0] denim[0]
+
+ # =================================================================
+
+ # Inverse Fourier Transform back to restore the sharp spatial image
+ fourier transform 0 5 5 inre[0] inim[0] inre[0] inim[0]
+ 
+ # Output the final deconvolution results
+ set_str msg The Wiener Restored Real Image Array rounded to Ints ...
+ print_value msg 2
+ math_array parray[0] = inre[0]
+ call_func print_array_int
+
+ set_str msg The Wiener Restored Real Image Array ...
+ print_value msg 2
+ call_func print_array
+
+ set_str msg The Wiener Restored Imaginary Array ...
+ print_value msg 2
+ math_array parray[0] = inim[0]
+ call_func print_array
+
+return
+
+def_func print_array
+ set_var pos 0
+ set_var rdx 0
+ set_condexp rdx < 5
+ loop_while Condexp
+    set_str msg
+    set_var cdx 0
+    set_condexp cdx < 5
+    loop_while Condexp
+      add_var msg parray[pos]
+      add_var msg Space
+      add_var pos 1
+      add_var cdx 1
+      set_condexp cdx < 5
+    endloop
+    print_value msg 2
+    add_var rdx 1
+    set_condexp rdx < 5
+ endloop
+ print_value Space 2
+ return
+
+def_func print_array_int
+ set_var pos 0
+ set_var rdx 0
+ set_condexp rdx < 5
+ loop_while Condexp
+    set_str msg
+    set_var cdx 0
+    set_condexp cdx < 5
+    loop_while Condexp
+      set_var toint parray[pos]
+      add_var msg toint
+      add_var msg Space
+      add_var pos 1
+      add_var cdx 1
+      set_condexp cdx < 5
+    endloop
+    print_value msg 2
+    add_var rdx 1
+    set_condexp rdx < 5
+ endloop
+ print_value Space 2
+ return
+
+def_func init_psf
+ # Load a Gaussian PSF kernel:
+ #   0   0   0   0   0
+ #   0   1   2   1   0
+ #   0   2   4   2   0
+ #   0   1   2   1   0
+ #   0   0   0   0   0
+ set_var psfre[0] 0
+ set_var psfre[1] 0
+ set_var psfre[2] 0
+ set_var psfre[3] 0
+ set_var psfre[4] 0
+
+ set_var psfre[5] 0
+ set_var psfre[6] 1
+ set_var psfre[7] 2
+ set_var psfre[8] 1
+ set_var psfre[9] 0
+
+ set_var psfre[10] 0
+ set_var psfre[11] 2
+ set_var psfre[12] 4
+ set_var psfre[13] 2
+ set_var psfre[14] 0
+
+ set_var psfre[15] 0
+ set_var psfre[16] 1
+ set_var psfre[17] 2
+ set_var psfre[18] 1
+ set_var psfre[19] 0
+
+ set_var psfre[20] 0
+ set_var psfre[21] 0
+ set_var psfre[22] 0
+ set_var psfre[23] 0
+ set_var psfre[24] 0
+return
+
+
+def_func init_image
+ # Load the starting image:
+ #   0   0   0   0   0
+ #   0   25  60  2   0
+ #   0   0   0   5   0
+ #   0   0   0   11  0
+ #   0   0   0   0   0
+ set_var inre[0] 0
+ set_var inre[1] 0
+ set_var inre[2] 0
+ set_var inre[3] 0
+ set_var inre[4] 0
+
+ set_var inre[5] 0
+ set_var inre[6] 25
+ set_var inre[7] 60
+ set_var inre[8] 2
+ set_var inre[9] 0
+
+ set_var inre[10] 0
+ set_var inre[11] 0
+ set_var inre[12] 0
+ set_var inre[13] 5
+ set_var inre[14] 0
+
+ set_var inre[15] 0
+ set_var inre[16] 0
+ set_var inre[17] 0
+ set_var inre[18] 11
+ set_var inre[19] 0
+
+ set_var inre[20] 0
+ set_var inre[21] 0
+ set_var inre[22] 0
+ set_var inre[23] 0
+ set_var inre[24] 0
+return
+
+
+
+
+
+exit
+
+
