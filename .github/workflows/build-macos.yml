@@ -16,7 +16,7 @@ jobs:
       - name: Install build dependencies via Homebrew
         run: |
           brew update
-          brew install gtk4 zeromq libsodium libpng jpeg-turbo fontconfig pkg-config dylibbundler
+          brew install gcc gtk4 zeromq libsodium libpng jpeg-turbo fontconfig pkg-config dylibbundler
 
       - name: Build PARDUS.app and PARDUS-macOS.dmg
         run: |
