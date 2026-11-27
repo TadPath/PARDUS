@@ -11966,7 +11966,8 @@ int sv_match_credentials(char *unamestr, char *passwdstr,int *udx)
         // To prevent timing attacks, simulate the cryptographic delay anyway
         // Use a dummy hash string that always fails validation
         char dummy_hash[crypto_pwhash_STRBYTES]= "$argon2id$v=19$m=16,t=2,p=1$ZHVtbXlzYWx0$dummyhash";
-        if(crypto_pwhash_str_verify(dummy_hash, passwdstr, strlen(passwdstr)));
+        int dummy_rc = crypto_pwhash_str_verify(dummy_hash, passwdstr, strlen(passwdstr));
+        (void)dummy_rc;
         // Send the bad news
         dbedited = 1;
         retval = 3; goto end_credentials_check;

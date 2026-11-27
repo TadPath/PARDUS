@@ -658,9 +658,9 @@ int Z_U=6;
 #define cZ_D 5
 #define cZ_U 6
 
-uint8_t GUI_StageUnitType; // Type of unit used for the step counts
-                           // 0 = number of maxmsdenom steps.
-                           // 1 = calibrated units
+int GUI_StageUnitType; // Type of unit used for the step counts
+                       // 0 = number of maxmsdenom steps.
+                       // 1 = calibrated units
 
 char GUI_unitname[32]; // To store the current name of stage real world units.
 double GUI_maxcalibri_x = 1.0;
@@ -2569,7 +2569,7 @@ int enumerate_camera_settings(void)
 {
  char name[MAX_ARGLEN], miname[MAX_ARGLEN], *line, *csettings;
  int returnval, minimum, maximum, step, currval, idx, mendx, lnum;
- uint32_t numset, udx, ctrlid;
+ uint32_t numset = 0, udx, ctrlid;
  size_t nomlen;
  uint8_t is_heading;
 
@@ -17877,6 +17877,7 @@ void effect_gui_command(int cmd)
 
         break;
     case MS_DENOM:
+{
         // 1. Secure the raw text string pointer directly from the input widget
         const char *raw_entry_text =
                               gtk_editable_get_text(GTK_EDITABLE(entry_xcoord));
@@ -17900,6 +17901,7 @@ void effect_gui_command(int cmd)
         // Construct command.
         snprintf(cmd_str, sizeof(cmd_str), "act_set 1 %d %d %"PRId32,
                                                  axidx, INFO_MSDENOM, localmsd);
+}
         break;
     case FF_CORRECTION:
     case DF_CORRECTION:
@@ -22339,6 +22341,7 @@ int32_t *modvar_i=NULL;
      if(vtype2 == VDT_STR) str2 = cptr2;
     break;
     case VVNAT_USER:
+{
      // This is a user variable - it could be a scaler or it could be an array.
      // To find out let's get its index and check its Count:
      int vi_res_r = run_var_index(modifier_arg, &vidx_mod, &write_idx_mod);
@@ -22354,6 +22357,7 @@ int32_t *modvar_i=NULL;
        scalar_mod = true;
        if(vtype2 == VDT_STR) str2 = cptr2;
       }
+}
     break;
     default: break;
    }
@@ -38372,7 +38376,7 @@ int script_run(PCS_Program *prog, unsigned int *linenum, char *errmsg, void (*sr
        // For the purpose of GUI stage setup scripts, see if this is for the 
        // act_type = ACT_STEPPER and, if so, set the global unit variable for
        // the GUI.
-       if(i32==ACT_STEPPER) GUI_StageUnitType = (uint8_t)j32;
+       if(i32==ACT_STEPPER) GUI_StageUnitType = (int)j32;
 
       PC++; // Explicitly advance linear index row to process next command
      break;
