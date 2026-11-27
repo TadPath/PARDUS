@@ -1,5 +1,3 @@
-name: Build macOS DMG Bundle
-
 name: Build PARDUS Release Packages
 
 on:
@@ -40,6 +38,7 @@ jobs:
           path: build_deb/*.deb
 
   build-macos:
+    if: ${{ inputs.target == 'macos' || inputs.target == 'all' }}
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -47,7 +46,6 @@ jobs:
 
       - name: Install build dependencies via Homebrew
         run: |
-          brew update
           brew install gtk4 zeromq libsodium libpng jpeg-turbo fontconfig pkg-config dylibbundler
 
       - name: Build PARDUS.app and PARDUS-macOS.dmg
