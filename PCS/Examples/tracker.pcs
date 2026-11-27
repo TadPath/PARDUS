@@ -1,0 +1,194 @@
+Pardus pcs 1
+
+verbosity 1
+
+#include stdpard.pch
+
+##########################################################
+# Test PCS Tackers on a Live Preview Stream              #
+##########################################################
+
+def_var string msg _
+
+# Initialize, clear, and display the preview overlay canvas
+preview_draw_buffer 3
+preview_draw_clear
+preview_clear
+preview_draw_show
+preview_draw_blend 1
+
+# Varibles to collect the output results of the search.
+# These will also be the position of the box that is used to acquire the target
+# whenver a new tracker is initialised.
+def_var int found_row 208
+def_var int found_col 288
+def_var float match_score 0.0
+
+
+def_func main
+
+# Create preview overlay graphics array for the bounding box displays.
+def_array int gar 18 0
+# Set the data for the tracker box (blue)
+ set_var gar[0]  GSI_TYPE_ENV
+ set_var gar[1]  OP_PREVIEW_DRAW_COLOUR
+ set_var gar[2]  255    # R (Bright Red)
+ set_var gar[3]  64     # G
+ set_var gar[4]  64     # B
+ set_var gar[5]  OP_PREVIEW_DRAW_LWIDTH
+ set_var gar[6]  4
+ set_var gar[7]  OP_PREVIEW_DRAW_DESTTYPE  # Use dimensions for destinations
+ set_var gar[8]  1
+ #define BOXROW 11  # This is what gets updated with each tracking pass
+ #define BOXCOL 10  # This is what gets updated with each tracking pass
+ set_var gar[9]  OP_PREVIEW_DRAW_CURSOR
+ set_var gar[BOXCOL]  0     # X
+ set_var gar[BOXROW]  0     # Y
+ set_var gar[12] GSI_TYPE_PLOT 
+ set_var gar[13] PDS_RECT 
+ set_var gar[14] FALSE # Not filled 
+ set_var gar[15] 64    # Rectangle width and height
+ set_var gar[16] 64    # 
+ set_var gar[17] GSI_TYPE_END 
+
+ def_var string tktype zmncc
+ def_var string inp _
+ def_var int tracker_initialised 0
+ def_var float frame_delay 0.05
+ def_var int aether 5
+
+# Create trackers   # Default is a ZMNCC tracker
+def_var string tnom t1            # We can use variables to store tracker names.
+def_tracker tktype tnom 64 128 16
+
+
+print_clear
+set_str msg Press [q]=quit, [s]=start/stop live, [c]=COM, [g]=GHT, [h]=HOG, [k]=KLT, [z]=ZMNCC
+print_value Space 2
+print_value msg
+loop_while aether
+   print_value Space
+   sub_var aether 1
+endloop
+
+
+
+# Start / Stop the interactive preview and tracking loop
+preview_choice:
+
+set_var tracker_initialised 0
+set_str inp            # Set inp to ""
+poll_user ON OFF inp   # Get input from the user
+set_condexp inp == q
+goto end_of_script if Condexp
+set_condexp inp == s
+call_func track_live if Condexp
+set_var found_row 208
+set_var found_col 288
+goto preview_choice
+
+end_of_script:
+ call_func undef_trackers
+
+return
+
+def_func track_live
+
+
+loop_while TRUE                 # while(1) { ... } i.e. an infinite loop
+
+   get_preview OFF 0 0 FALSE    # Grab a preview image - but don't display it yet (FALSE).
+
+   set_str inp                  # Set inp to ""
+   poll_user OFF OFF inp        # See if user pressed a key and put that into inp
+
+   set_condexp inp == s         # Get out of this infinite preview loop and
+   goto input_again if Condexp  # function if user pressed 's' and go back to main
+
+   set_condexp inp == z
+   do_if Condexp                # If user pressed 'z' toggle to the ZMNCC tracker
+    set_str tktype zmncc
+    call_func init_tracker_t1 
+   enddo
+
+   set_condexp inp == h
+   do_if Condexp                # If user pressed 'h' toggle to the HOG tracker
+    set_str tktype hog
+    call_func init_tracker_t1 
+   enddo
+
+   set_condexp inp == g
+   do_if Condexp                # If user pressed 'g' toggle to the GHT tracker
+    set_str tktype ght
+    call_func init_tracker_t1 
+   enddo
+
+   set_condexp inp == c
+   do_if Condexp                # If user pressed 'c' toggle to the COM tracker
+    set_str tktype com
+    call_func init_tracker_t1 
+   enddo
+
+   set_condexp inp == k
+   do_if Condexp                # If user pressed 'k' toggle to the KLT tracker
+    set_str tktype klt
+    call_func init_tracker_t1 
+   enddo
+
+
+   set_condexp inp == q
+   do_if Condexp                # If user pressed 'q' quit the program
+     call_func undef_trackers
+     goto terminus  
+   enddo
+
+   do_if tracker_initialised
+     track tnom found_row found_col match_score
+     set_var frame_delay 0.02
+   else
+     set_var frame_delay 0.05
+   enddo
+
+   # Draw bounding box for Tracker
+   set_var gar[BOXCOL]  found_col     # X
+   set_var gar[BOXROW]  found_row     # Y
+   preview_draw_array gar[0]
+
+   sleep frame_delay  # Pause to avoid flicker
+
+   do_if tracker_initialised
+     call_func print_track_results
+   enddo
+
+endloop
+
+input_again:
+return
+
+def_func init_tracker_t1
+ undef_tracker tnom
+ def_tracker  tktype tnom  64 128 16
+ set_tracker tnom TKSET_SEARCHSIG 4500
+ init_tracker tnom found_row found_col CCHAN_R
+ set_var tracker_initialised 1
+return
+
+def_func print_track_results
+  set_str msg Tracking (
+  add_var msg tktype
+  cat_str msg ):
+  add_var msg Space
+  add_var msg found_row
+  add_var msg Space
+  add_var msg found_col
+  add_var msg Space
+  add_var msg match_score
+  print_value msg 3
+return
+
+def_func undef_trackers
+ undef_tracker tnom
+return
+
+terminus:
+exit
