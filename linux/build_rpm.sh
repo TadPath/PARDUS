@@ -18,6 +18,7 @@ tar -czf "$RPMTOP/SOURCES/pardus-${VERSION}.tar.gz" \
     --exclude='.git' --exclude='build_*' .
 
 printf '%s\n' \
+  '%global debug_package %{nil}' \
   'Name:           pardus' \
   "Version:        ${VERSION}" \
   "Release:        ${RELEASE}" \
@@ -98,8 +99,16 @@ printf '%s\n' \
   '%config(noreplace) %{_sysconfdir}/pardus/pardusers.txt' \
   '%config(noreplace) %{_sysconfdir}/pardus/pcscli.cfg' \
   '%config(noreplace) %attr(0600,root,root) %{_sysconfdir}/pardus/server_identity.key' \
+  '' \
+  '%changelog' \
+  '* Fri Nov 27 2026 TadPath <https://codeberg.org/TadPath/PARDUS> - 1.0.0-1' \
+  '- Initial RPM release' \
   > "$RPMTOP/SPECS/pardus.spec"
 
 rpmbuild --define "_topdir $RPMTOP" -bb "$RPMTOP/SPECS/pardus.spec"
 cp "$RPMTOP/RPMS/${ARCH}/"*.rpm "$BUILD_DIR/"
 echo "==> Done! Fedora RPM ready at: $BUILD_DIR/"
+
+
+
+

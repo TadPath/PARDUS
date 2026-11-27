@@ -102,7 +102,7 @@ printf '%s\n' \
   "Priority: optional" \
   "Architecture: ${ARCH}" \
   "Installed-Size: ${INSTALLED_KB}" \
-  "Maintainer: TadPath <https://codeberg.org>" \
+  "Maintainer: TadPath <https://codeberg.org/TadPath/PARDUS>" \
   "Depends: libgtk-4-1, libzmq5, libsodium23, libpng16-16 | libpng16-16t64, libjpeg8 | libjpeg62-turbo, libfontconfig1, libpulse0, libx11-6" \
   "Description: PARDUS Remote Robotics and Vision Automation Suite" \
   " Includes pardclient (GTK 4 GUI), pcs-cli (command-line runner)," \
