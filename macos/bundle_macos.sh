@@ -93,12 +93,14 @@ if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
             -x "$loader" \
             -d "$FRAMEWORKS" \
             -p "@executable_path/../Frameworks" </dev/null || true
+        install_name_tool -delete_rpath "@executable_path/../Frameworks/" "$loader" 2>/dev/null || true
     done
-    GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" \
+    DYLD_LIBRARY_PATH="$FRAMEWORKS" GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" \
         gdk-pixbuf-query-loaders > "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
     sed -i '' "s|$RESOURCES/|@executable_path/../Resources/|g" \
         "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
 fi
+
 
 echo "==> 5. Copying Manuals, AI Guides, PCS Samples, and Default Configs..."
 cp "$ROOT_DIR/macos/Info.plist" "$CONTENTS/Info.plist"
@@ -119,6 +121,7 @@ printf '%s\n' \
   '' \
   'export XDG_DATA_DIRS="$RES/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"' \
   'export GSETTINGS_SCHEMA_DIR="$RES/share/glib-2.0/schemas"' \
+  'export GDK_PIXBUF_MODULE_FILE="$RES/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"' \
   '' \
   'USER_CFG_DIR="$HOME/Library/Application Support/pardus"' \
   'mkdir -p "$USER_CFG_DIR"' \
@@ -138,6 +141,7 @@ printf '%s\n' \
   'exec "$DIR/pardclient" "$@"' \
   > "$MACOS_BIN/PARDUSLauncher"
 chmod +x "$MACOS_BIN/PARDUSLauncher"
+
 
 echo "==> 7. Ad-hoc signing PARDUS.app and building PARDUS-macOS.dmg..."
 codesign --force --deep --sign - "$APP_DIR"
