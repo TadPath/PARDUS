@@ -88,12 +88,22 @@ mkdir -p "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders"
 if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
     cp -L "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"
     for loader in "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so; do
-        dylibbundler -of -od -b \
+        dylibbundler -of -od -cd -b \
             -s "$BREW_LIB" \
             -x "$loader" \
             -d "$FRAMEWORKS" \
             -p "@executable_path/../Frameworks" </dev/null || true
         install_name_tool -delete_rpath "@executable_path/../Frameworks/" "$loader" 2>/dev/null || true
+    done
+    for extra in "$BREW_LIB"/librsvg-2*.dylib "$BREW_LIB"/libtiff*.dylib; do
+        if [ -f "$extra" ]; then
+            cp -nL "$extra" "$FRAMEWORKS/" || true
+            dylibbundler -of -od -cd -b \
+                -s "$BREW_LIB" \
+                -x "$FRAMEWORKS/$(basename "$extra")" \
+                -d "$FRAMEWORKS" \
+                -p "@executable_path/../Frameworks" </dev/null || true
+        fi
     done
     DYLD_LIBRARY_PATH="$FRAMEWORKS" GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" \
         gdk-pixbuf-query-loaders > "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
