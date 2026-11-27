@@ -1,12 +1,44 @@
 name: Build macOS DMG Bundle
 
+name: Build PARDUS Release Packages
+
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which package to build'
+        required: true
+        default: 'linux-deb'
+        type: choice
+        options:
+          - linux-deb
+          - macos
+          - all
 
 jobs:
+  build-linux-deb:
+    if: ${{ inputs.target == 'linux-deb' || inputs.target == 'all' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libzmq3-dev libsodium-dev libpng-dev libjpeg-dev libfontconfig-dev libpulse-dev libx11-dev dpkg-dev
+
+      - name: Build Debian .deb package
+        run: |
+          chmod +x linux/build_deb.sh
+          ./linux/build_deb.sh
+
+      - name: Upload Linux .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PARDUS-Linux-amd64-deb
+          path: build_deb/*.deb
+
   build-macos:
     runs-on: macos-latest
     steps:
