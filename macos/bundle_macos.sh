@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 BUILD_DIR="$ROOT_DIR/build_macos"
@@ -24,7 +24,6 @@ MEDIA_LIBS=$(pkg-config --libs gtk4 libpng libjpeg fontconfig)
 ZMQ_CFLAGS=$(pkg-config --cflags libzmq libsodium)
 ZMQ_LIBS=$(pkg-config --libs libzmq libsodium)
 
-
 cc -O2 $GTK_CFLAGS $ZMQ_CFLAGS -Wall -Wno-format-truncation \
    resources.c pardclient.c -o "$MACOS_BIN/pardclient" \
    $GTK_LIBS $ZMQ_LIBS -lm -lpng -ljpeg -lfontconfig \
@@ -35,7 +34,6 @@ cc -O2 -w $GTK_CFLAGS $ZMQ_CFLAGS \
    $GTK_LIBS $ZMQ_LIBS -lm -lpng -ljpeg -lfontconfig \
    -framework AudioToolbox -framework CoreFoundation
 
-
 clang -std=gnu2x -O2 -Wall $ZMQ_CFLAGS \
    pardserver.c -o "$MACOS_BIN/pardserver" \
    $ZMQ_LIBS -lm
@@ -45,7 +43,6 @@ clang -std=gnu2x -x objective-c -fobjc-arc -O2 -Wall $MEDIA_CFLAGS \
    $MEDIA_LIBS -lm \
    -framework Foundation -framework AVFoundation -framework CoreMedia \
    -framework CoreVideo -framework IOKit -framework CoreFoundation -framework AudioToolbox
-
 
 echo "==> 2. Generating pardus.icns and dove.icns..."
 make_icns() {
@@ -67,15 +64,18 @@ make_icns() {
 [ -f "dove.png" ]       && make_icns "dove.png"       "$RESOURCES/dove.icns"
 
 echo "==> 3. Bundling Homebrew shared libraries (.dylib) into Contents/Frameworks..."
+BREW_PREFIX="$(brew --prefix)"
+BREW_LIB="$BREW_PREFIX/lib"
+
 for bin in pardclient pcs-cli pardserver pardcap; do
     dylibbundler -od -b \
+        -s "$BREW_LIB" \
         -x "$MACOS_BIN/$bin" \
         -d "$FRAMEWORKS" \
-        -p "@executable_path/../Frameworks"
+        -p "@executable_path/../Frameworks" </dev/null
 done
 
 echo "==> 4. Bundling GTK 4 GSettings schemas and GdkPixbuf loaders..."
-BREW_PREFIX="$(brew --prefix)"
 PIXBUF_VER=$(pkg-config --variable=gdk_pixbuf_binary_version gdk-pixbuf-2.0)
 
 mkdir -p "$RESOURCES/share/glib-2.0/schemas"
@@ -100,7 +100,6 @@ if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
         "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
 fi
 
-
 echo "==> 5. Copying Manuals, AI Guides, PCS Samples, and Default Configs..."
 cp "$ROOT_DIR/macos/Info.plist" "$CONTENTS/Info.plist"
 printf "APPL????" > "$CONTENTS/PkgInfo"
@@ -113,7 +112,34 @@ for cfg in pardserver.config pardusers.txt server_identity.key pcscli.cfg; do
 done
 
 echo "==> 6. Creating PARDUSLauncher wrapper (GUI + .dove Finder double-click)..."
-cat > "$MACOS_BIN/PARDUSLauncher"  7. Ad-hoc signing PARDUS.app and building PARDUS-macOS.dmg..."
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'DIR="$(cd "$(dirname "$0")" && pwd)"' \
+  'RES="$(cd "$DIR/../Resources" && pwd)"' \
+  '' \
+  'export XDG_DATA_DIRS="$RES/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"' \
+  'export GSETTINGS_SCHEMA_DIR="$RES/share/glib-2.0/schemas"' \
+  '' \
+  'USER_CFG_DIR="$HOME/Library/Application Support/pardus"' \
+  'mkdir -p "$USER_CFG_DIR"' \
+  'for cfg in pardserver.config pardusers.txt server_identity.key pcscli.cfg; do' \
+  '    if [ -f "$RES/$cfg" ] && [ ! -f "$USER_CFG_DIR/$cfg" ]; then' \
+  '        cp "$RES/$cfg" "$USER_CFG_DIR/$cfg"' \
+  '    fi' \
+  'done' \
+  '' \
+  'if [ $# -gt 0 ] && [[ "$1" == *.dove ]]; then' \
+  '    DOVE_FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"' \
+  '    osascript -e "tell application \"Terminal\"" -e "activate" -e "do script \"'\''$DIR/pcs-cli'\'' '\''$DOVE_FILE'\''\"" -e "end tell"' \
+  '    exit 0' \
+  'fi' \
+  '' \
+  'cd "$HOME"' \
+  'exec "$DIR/pardclient" "$@"' \
+  > "$MACOS_BIN/PARDUSLauncher"
+chmod +x "$MACOS_BIN/PARDUSLauncher"
+
+echo "==> 7. Ad-hoc signing PARDUS.app and building PARDUS-macOS.dmg..."
 codesign --force --deep --sign - "$APP_DIR"
 
 cp -R "$APP_DIR" "$DMG_STAGING/"
