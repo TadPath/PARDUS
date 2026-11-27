@@ -86,7 +86,13 @@ fi
 
 mkdir -p "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders"
 if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
+    # 1. Generate loaders.cache while loaders still point to Homebrew paths
+    gdk-pixbuf-query-loaders > "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
+
+    # 2. Copy loaders and make them writable so dylibbundler can rewrite paths
     cp -L "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"
+    chmod -R u+w "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders"
+
     for loader in "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders/"*.so; do
         dylibbundler -of -od -cd -b \
             -s "$BREW_LIB" \
@@ -95,9 +101,11 @@ if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
             -p "@executable_path/../Frameworks" </dev/null || true
         install_name_tool -delete_rpath "@executable_path/../Frameworks/" "$loader" 2>/dev/null || true
     done
+
     for extra in "$BREW_LIB"/librsvg-2*.dylib "$BREW_LIB"/libtiff*.dylib; do
         if [ -f "$extra" ]; then
             cp -nL "$extra" "$FRAMEWORKS/" || true
+            chmod -R u+w "$FRAMEWORKS"
             dylibbundler -of -od -cd -b \
                 -s "$BREW_LIB" \
                 -x "$FRAMEWORKS/$(basename "$extra")" \
@@ -105,11 +113,13 @@ if [ -d "$BREW_PREFIX/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" ]; then
                 -p "@executable_path/../Frameworks" </dev/null || true
         fi
     done
-    DYLD_LIBRARY_PATH="$FRAMEWORKS" GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders" \
-        gdk-pixbuf-query-loaders > "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
-    sed -i '' "s|$RESOURCES/|@executable_path/../Resources/|g" \
+
+    # 3. Rewrite loader directory paths in loaders.cache to relative bundle paths
+    ORIG_LOADER_DIR="$(dirname "$(grep -m1 '\.so"' "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache" | tr -d '"')")"
+    sed -i '' "s|$ORIG_LOADER_DIR|@executable_path/../Resources/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders|g" \
         "$RESOURCES/lib/gdk-pixbuf-2.0/$PIXBUF_VER/loaders.cache"
 fi
+
 
 
 echo "==> 5. Copying Manuals, AI Guides, PCS Samples, and Default Configs..."
