@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - linux-deb
+          - linux-rpm
           - macos
           - all
 
@@ -58,3 +59,28 @@ jobs:
         with:
           name: PARDUS-macOS-arm64
           path: build_macos/PARDUS-macOS.dmg
+
+  build-linux-rpm:
+    if: ${{ inputs.target == 'linux-rpm' || inputs.target == 'all' }}
+    runs-on: ubuntu-24.04
+    container:
+      image: fedora:latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y rpm-build gcc pkgconf-pkg-config tar gzip gtk4-devel zeromq-devel libsodium-devel libpng-devel libjpeg-turbo-devel fontconfig-devel pulseaudio-libs-devel libX11-devel
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Fedora .rpm package
+        run: |
+          chmod +x linux/build_rpm.sh
+          ./linux/build_rpm.sh
+
+      - name: Upload Fedora .rpm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PARDUS-Fedora-x86_64-rpm
+          path: build_rpm/*.rpm
+

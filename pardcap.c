@@ -24955,7 +24955,7 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
  char msgtxt[MSGTXT_LEN],cname[64],statmn[32],statvar[32];
  gchar *markup,*gsdstr;
  const char *numstr=NULL;
- int MFidx,retval,manualfocus; // For correct manual focus warning
+ int MFidx=-1,retval,manualfocus; // For correct manual focus warning
  const char *format = "<span foreground=\"red\">\%s</span>";
  char *format_als = "<span foreground=\"black\" font=\"monospace\""
  " weight=\"bold\">\%s</span><span foreground=\"magenta\" font=\"monospace\""
@@ -25979,12 +25979,14 @@ static void btn_cs_apply_click(GtkWidget *widget, gpointer data)
         if(retval){ // OK - no excuse, this really is an error:
           if(get_camera_control(ctrl_id[MFidx], &currval)) snprintf(msgtxt,sizeof(msgtxt),"FAIL");
           else snprintf(msgtxt,sizeof(msgtxt),"%-7d",currval);
-          gtk_label_set_text(GTK_LABEL(CamsetWidget[MFidx+1]),msgtxt);
-          markup = g_markup_printf_escaped (format, msgtxt);
-          gtk_label_set_markup (GTK_LABEL(CamsetWidget[MFidx+1]), markup);
-          g_free (markup);
-          snprintf(msgtxt,sizeof(msgtxt),"Failed to set control %s to value %d (VIDIOC_S_CTRL)","Focus, Absolute",atoi(gtk_editable_get_text(GTK_EDITABLE(CamsetWidget[MFidx]))));
-          show_message(msgtxt,"Warning: ",MT_ERR,0);
+          if (MFidx >= 0){
+            gtk_label_set_text(GTK_LABEL(CamsetWidget[MFidx+1]),msgtxt);
+            markup = g_markup_printf_escaped (format, msgtxt);
+            gtk_label_set_markup (GTK_LABEL(CamsetWidget[MFidx+1]), markup);
+            g_free (markup);
+            snprintf(msgtxt,sizeof(msgtxt),"Failed to set control %s to value %d (VIDIOC_S_CTRL)","Focus, Absolute",atoi(gtk_editable_get_text(GTK_EDITABLE(CamsetWidget[MFidx]))));
+            show_message(msgtxt,"Warning: ",MT_ERR,0);
+           }
           esdx++;
        } else { 
         // MF was set without error, increment the success counter
